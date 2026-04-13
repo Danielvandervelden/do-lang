@@ -1,7 +1,7 @@
 ---
 name: do
 description: |
-  Token-efficient meta programming language for Claude Code and Codex. Provides workspace initialization, project scanning, task refinement, and structured execution with minimal token overhead through flat agent hierarchies (no nested subagents).
+  Token-efficient meta programming language for Claude Code and Codex. Provides workspace initialization, project scanning, task refinement, and structured execution with minimal token overhead through flat agent hierarchies.
   
   ALWAYS use this skill when:
   - User mentions /do:init, /do:scan, /do:task, /do:continue, or /do:debug
@@ -10,8 +10,6 @@ description: |
   - User mentions "do-lang" or the "do" meta programming language
   - User wants efficient task execution without token bloat
   - User needs workspace health checks or validation
-  
-  This skill replaces GSD for users who want lower token usage.
 ---
 
 # do

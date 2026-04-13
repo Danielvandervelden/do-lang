@@ -1,0 +1,17 @@
+{
+  "version": "0.1.0",
+  "project_name": "{{PROJECT_NAME}}",
+  "database_entry": false,
+  "active_task": null,
+  "auto_grill_threshold": 0.9,
+  "council_reviews": {
+    "planning": {
+      "enabled": true,
+      "model": "codex-1"
+    },
+    "execution": {
+      "enabled": false,
+      "model": "o3"
+    }
+  }
+}

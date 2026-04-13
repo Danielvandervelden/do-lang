@@ -25,7 +25,7 @@ const os = require("os");
 // Constants
 const PLUGIN_ROOT = path.join(
   process.env.HOME,
-  ".claude/plugins/cache/openai-codex/codex/1.0.1"
+  ".claude/plugins/cache/openai-codex/codex/1.0.1",
 );
 const CODEX_COMPANION = path.join(PLUGIN_ROOT, "scripts/codex-companion.mjs");
 const DEFAULT_TIMEOUT = 90000; // 90 seconds per RESEARCH.md
@@ -39,6 +39,117 @@ const ALL_VERDICTS = [...PLAN_VERDICTS, ...CODE_VERDICTS];
 // Valid reviewer options (per D-39)
 const VALID_REVIEWERS = ["claude", "codex", "gemini", "random", "both"];
 
+// ============================================================================
+// Workspace Config Functions (D-49, D-54, D-55, D-56)
+// ============================================================================
+
+/**
+ * Find workspace config by traversing up from start path
+ * Per D-56: supports running from project subdirectories
+ * @param {string} startPath - Starting directory
+ * @returns {string|null} Path to .do-workspace.json or null
+ */
+function findWorkspaceConfig(startPath) {
+  let current = path.resolve(startPath);
+  const root = path.parse(current).root;
+
+  while (current !== root) {
+    const configPath = path.join(current, ".do-workspace.json");
+    if (fs.existsSync(configPath)) {
+      return configPath;
+    }
+    current = path.dirname(current);
+  }
+  return null;
+}
+
+/**
+ * Load workspace config from .do-workspace.json
+ * Per D-49: extends existing fields with AI-related fields
+ * @param {string} startPath - Starting directory for search
+ * @returns {Object|null} Parsed config or null
+ */
+function loadWorkspaceConfig(startPath = process.cwd()) {
+  const configPath = findWorkspaceConfig(startPath);
+  if (!configPath) return null;
+
+  try {
+    const content = fs.readFileSync(configPath, "utf-8");
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve config with cascade: project -> workspace -> defaults
+ * Per D-54: project config overrides workspace config
+ * Per D-55: cascading fields: availableTools, defaultReviewer, council_reviews
+ * Per D-56: resolution order is project -> workspace -> hardcoded
+ * @param {string|null} projectConfigPath - Path to project .do/config.json
+ * @param {string} workspaceStartPath - Starting path for workspace search
+ * @returns {Object} Resolved config
+ */
+function resolveConfig(
+  projectConfigPath = null,
+  workspaceStartPath = process.cwd(),
+) {
+  // Hardcoded defaults (per D-56)
+  const defaults = {
+    availableTools: [],
+    defaultReviewer: "random",
+    council_reviews: {
+      planning: true,
+      execution: true,
+      reviewer: "random",
+    },
+  };
+
+  // Load workspace config
+  const workspaceConfig = loadWorkspaceConfig(workspaceStartPath) || {};
+
+  // Load project config
+  let projectConfig = {};
+  if (projectConfigPath && fs.existsSync(projectConfigPath)) {
+    try {
+      projectConfig = JSON.parse(fs.readFileSync(projectConfigPath, "utf-8"));
+    } catch {
+      projectConfig = {};
+    }
+  }
+
+  // Cascade: defaults <- workspace <- project
+  // Per D-54: project overrides workspace
+  return {
+    availableTools:
+      projectConfig.availableTools ||
+      workspaceConfig.availableTools ||
+      defaults.availableTools,
+    defaultReviewer:
+      projectConfig.council_reviews?.reviewer ||
+      workspaceConfig.defaultReviewer ||
+      defaults.defaultReviewer,
+    council_reviews: {
+      planning:
+        projectConfig.council_reviews?.planning ??
+        workspaceConfig.council_reviews?.planning ??
+        defaults.council_reviews.planning,
+      execution:
+        projectConfig.council_reviews?.execution ??
+        workspaceConfig.council_reviews?.execution ??
+        defaults.council_reviews.execution,
+      reviewer:
+        projectConfig.council_reviews?.reviewer ||
+        workspaceConfig.defaultReviewer ||
+        defaults.council_reviews.reviewer,
+    },
+  };
+}
+
+// ============================================================================
+// Runtime Detection
+// ============================================================================
+
 /**
  * Detect which runtime we're in (per D-40)
  * @returns {'claude'|'codex'} Current runtime
@@ -48,30 +159,41 @@ function detectRuntime() {
 }
 
 /**
- * Get available reviewers for the current runtime (per D-42)
+ * Get available reviewers for the current runtime
+ * Per D-42: available reviewers depend on runtime (self-review prevention)
+ * Per D-55: reads availableTools from workspace config
+ * Per council concern #3: accepts pre-resolved config to ensure cascade is properly wired
  * @param {string} currentRuntime - 'claude' or 'codex'
+ * @param {Object|null} resolvedConfig - Config from resolveConfig() or null to load fresh
  * @returns {string[]} Available reviewer options
  */
-function getAvailableReviewers(currentRuntime) {
+function getAvailableReviewers(currentRuntime, resolvedConfig = null) {
+  // Load config if not provided (per concern #3: caller should provide for proper cascade)
+  const config = resolvedConfig || resolveConfig(null, process.cwd());
+  const configuredTools = config.availableTools || [];
+
+  if (configuredTools.length > 0) {
+    // Filter out current runtime to prevent self-review (per D-40)
+    return configuredTools.filter((t) => t !== currentRuntime);
+  }
+
+  // Fallback to hardcoded if no workspace config
   if (currentRuntime === "claude") {
-    // In Claude runtime: Codex and Gemini available
     return ["codex", "gemini"];
   } else if (currentRuntime === "codex") {
-    // In Codex runtime: Claude and Gemini available
     return ["claude", "gemini"];
   }
-  // Fallback
   return ["codex", "gemini"];
 }
 
 /**
  * Select a random reviewer using Python (per D-41)
  * @param {string[]} available - Available reviewer options
- * @returns {string} Selected reviewer
+ * @returns {string|null} Selected reviewer, or null if none available
  */
 function selectRandomReviewer(available) {
   if (available.length === 0) {
-    return "gemini"; // Fallback
+    return null; // No reviewers available - caller must handle gracefully
   }
   if (available.length === 1) {
     return available[0];
@@ -99,10 +221,11 @@ function selectRandomReviewer(available) {
  * Select reviewer based on configuration and runtime (per D-39, D-40, D-41, D-42)
  * @param {string} configured - Configured reviewer value
  * @param {string} currentRuntime - Current runtime ('claude' or 'codex')
- * @returns {string} Selected reviewer
+ * @param {string[]|null} availableOverride - Optional override for available reviewers (from getAvailableReviewers with config)
+ * @returns {string|null} Selected reviewer, or null if none available
  */
-function selectReviewer(configured, currentRuntime) {
-  const available = getAvailableReviewers(currentRuntime);
+function selectReviewer(configured, currentRuntime, availableOverride = null) {
+  const available = availableOverride || getAvailableReviewers(currentRuntime);
 
   // 'both' is always valid
   if (configured === "both") {
@@ -202,7 +325,7 @@ function parseFindings(response) {
 
   // Try to extract from "### Key Findings" section
   const findingsMatch = response.match(
-    /###\s*Key Findings\s*\n([\s\S]*?)(?=\n###|\n##|$)/i
+    /###\s*Key Findings\s*\n([\s\S]*?)(?=\n###|\n##|$)/i,
   );
   if (findingsMatch) {
     const lines = findingsMatch[1].split("\n");
@@ -227,7 +350,7 @@ function parseRecommendations(response) {
 
   // Try to extract from "### Recommendations" section
   const recsMatch = response.match(
-    /###\s*Recommendations\s*\n([\s\S]*?)(?=\n###|\n##|$)/i
+    /###\s*Recommendations\s*\n([\s\S]*?)(?=\n###|\n##|$)/i,
   );
   if (recsMatch) {
     const lines = recsMatch[1].split("\n");
@@ -249,7 +372,11 @@ function parseRecommendations(response) {
  * @param {string} reviewType - Review type: 'plan' or 'code'
  * @returns {Promise<Object>} Invocation result
  */
-async function invokeCodex(briefPath, timeout = DEFAULT_TIMEOUT, reviewType = "plan") {
+async function invokeCodex(
+  briefPath,
+  timeout = DEFAULT_TIMEOUT,
+  reviewType = "plan",
+) {
   return new Promise((resolve) => {
     // Check if companion script exists
     if (!fs.existsSync(CODEX_COMPANION)) {
@@ -264,7 +391,7 @@ async function invokeCodex(briefPath, timeout = DEFAULT_TIMEOUT, reviewType = "p
     const proc = spawn(
       "node",
       [CODEX_COMPANION, "task", "--wait", "--prompt-file", briefPath],
-      { stdio: ["inherit", "pipe", "pipe"] }
+      { stdio: ["inherit", "pipe", "pipe"] },
     );
 
     let stdout = "";
@@ -311,14 +438,23 @@ async function invokeCodex(briefPath, timeout = DEFAULT_TIMEOUT, reviewType = "p
  * @param {string} reviewType - Review type: 'plan' or 'code'
  * @returns {Promise<Object>} Invocation result
  */
-async function runGeminiOnce(briefPath, workspace, timeout, reviewType = "plan") {
+async function runGeminiOnce(
+  briefPath,
+  workspace,
+  timeout,
+  reviewType = "plan",
+) {
   return new Promise((resolve) => {
     // Read brief content
     let briefContent;
     try {
       briefContent = fs.readFileSync(briefPath, "utf-8");
     } catch (err) {
-      resolve({ success: false, error: `Failed to read brief: ${err.message}`, output: "" });
+      resolve({
+        success: false,
+        error: `Failed to read brief: ${err.message}`,
+        output: "",
+      });
       return;
     }
 
@@ -335,7 +471,7 @@ async function runGeminiOnce(briefPath, workspace, timeout, reviewType = "plan")
         "-o",
         "text",
       ],
-      { stdio: ["pipe", "pipe", "pipe"] }
+      { stdio: ["pipe", "pipe", "pipe"] },
     );
 
     let stdout = "";
@@ -386,9 +522,19 @@ async function runGeminiOnce(briefPath, workspace, timeout, reviewType = "plan")
  * @param {string} reviewType - Review type: 'plan' or 'code'
  * @returns {Promise<Object>} Invocation result
  */
-async function invokeGemini(briefPath, workspace, timeout = DEFAULT_TIMEOUT, reviewType = "plan") {
+async function invokeGemini(
+  briefPath,
+  workspace,
+  timeout = DEFAULT_TIMEOUT,
+  reviewType = "plan",
+) {
   for (let attempt = 0; attempt <= GEMINI_MAX_RETRIES; attempt++) {
-    const result = await runGeminiOnce(briefPath, workspace, timeout, reviewType);
+    const result = await runGeminiOnce(
+      briefPath,
+      workspace,
+      timeout,
+      reviewType,
+    );
     if (result.success) return result;
 
     // Check for rate limit
@@ -414,7 +560,12 @@ async function invokeGemini(briefPath, workspace, timeout = DEFAULT_TIMEOUT, rev
  * @param {string} reviewType - Review type: 'plan' or 'code'
  * @returns {Promise<Object>} Combined result
  */
-async function invokeBoth(briefPath, workspace, timeout = DEFAULT_TIMEOUT, reviewType = "plan") {
+async function invokeBoth(
+  briefPath,
+  workspace,
+  timeout = DEFAULT_TIMEOUT,
+  reviewType = "plan",
+) {
   const currentRuntime = detectRuntime();
 
   // Per D-42: In Claude Code, use Codex + Gemini. In Codex runtime, use Claude + Gemini.
@@ -464,9 +615,16 @@ async function invokeBoth(briefPath, workspace, timeout = DEFAULT_TIMEOUT, revie
       combinedVerdict = verdicts[0];
     } else {
       // Disagreement - use more cautious verdict
-      const cautionOrder = ["RETHINK", "CHANGES_REQUESTED", "CONCERNS", "NITPICKS_ONLY", "LOOKS_GOOD", "APPROVED"];
+      const cautionOrder = [
+        "RETHINK",
+        "CHANGES_REQUESTED",
+        "CONCERNS",
+        "NITPICKS_ONLY",
+        "LOOKS_GOOD",
+        "APPROVED",
+      ];
       combinedVerdict = verdicts.sort(
-        (a, b) => cautionOrder.indexOf(a) - cautionOrder.indexOf(b)
+        (a, b) => cautionOrder.indexOf(a) - cautionOrder.indexOf(b),
       )[0];
     }
   } else if (verdicts.length === 1) {
@@ -497,6 +655,7 @@ async function invokeBoth(briefPath, workspace, timeout = DEFAULT_TIMEOUT, revie
  * @param {string} options.taskFile - Path to task markdown file
  * @param {string} options.reviewer - Configured reviewer value
  * @param {string} options.workspace - Workspace path
+ * @param {string} options.projectConfigPath - Path to project .do/config.json (optional)
  * @param {number} options.timeout - Timeout in milliseconds
  * @returns {Promise<Object>} Council result
  */
@@ -508,21 +667,57 @@ async function invokeCouncil(options) {
     workspace = process.cwd(),
     filesModified = "",
     timeout = DEFAULT_TIMEOUT,
+    projectConfigPath = null, // NEW: Add optional project config path
   } = options;
 
   // Validate type
   if (!["plan", "code"].includes(type)) {
-    return { success: false, error: `Invalid review type: ${type}`, advisor: null };
+    return {
+      success: false,
+      error: `Invalid review type: ${type}`,
+      advisor: null,
+    };
   }
 
   // Validate task file exists
   if (!fs.existsSync(taskFile)) {
-    return { success: false, error: `Task file not found: ${taskFile}`, advisor: null };
+    return {
+      success: false,
+      error: `Task file not found: ${taskFile}`,
+      advisor: null,
+    };
   }
+
+  // CRITICAL per council concern #3: Resolve config with proper cascade
+  // Project config overrides workspace config per D-54
+  const resolvedConfig = resolveConfig(projectConfigPath, workspace);
 
   // Detect runtime and select reviewer
   const currentRuntime = detectRuntime();
-  const selectedReviewer = selectReviewer(reviewer, currentRuntime);
+
+  // CRITICAL per council concern #3: Pass resolvedConfig to getAvailableReviewers
+  // This ensures the cascade (project -> workspace -> defaults) is properly wired
+  const available = getAvailableReviewers(currentRuntime, resolvedConfig);
+
+  // Use reviewer from options, or fall back to config default
+  const effectiveReviewer =
+    reviewer !== "random" ? reviewer : resolvedConfig.defaultReviewer;
+  const selectedReviewer = selectReviewer(
+    effectiveReviewer,
+    currentRuntime,
+    available,
+  );
+
+  // Handle case where no reviewers are available (e.g., single-tool setup)
+  if (selectedReviewer === null) {
+    return {
+      success: true,
+      skipped: true,
+      reason: "No external reviewers available for this runtime/config combination",
+      advisor: null,
+      verdict: null,
+    };
+  }
 
   // Select template based on review type
   const templateFile =
@@ -570,7 +765,11 @@ async function invokeCouncil(options) {
       result = await invokeBoth(briefPath, workspace, timeout, type);
       break;
     default:
-      return { success: false, error: `Unknown reviewer: ${selectedReviewer}`, advisor: null };
+      return {
+        success: false,
+        error: `Unknown reviewer: ${selectedReviewer}`,
+        advisor: null,
+      };
   }
 
   // Clean up temp brief file if we created one
@@ -624,7 +823,7 @@ Examples:
 
   if (!type || !taskFile) {
     console.error(
-      JSON.stringify({ error: "--type and --task-file are required" })
+      JSON.stringify({ error: "--type and --task-file are required" }),
     );
     process.exit(1);
   }
@@ -642,17 +841,25 @@ Examples:
 
 // Export for programmatic use and testing
 module.exports = {
+  // Runtime and reviewer selection
   detectRuntime,
   selectReviewer,
+  getAvailableReviewers,
+  selectRandomReviewer,
+  // Parsing functions
   parseVerdict,
   parseFindings,
   parseRecommendations,
+  // Invocation functions
   invokeCodex,
   invokeGemini,
   invokeBoth,
   invokeCouncil,
-  getAvailableReviewers,
-  selectRandomReviewer,
+  // Config functions (D-49, D-54, D-55, D-56)
+  findWorkspaceConfig,
+  loadWorkspaceConfig,
+  resolveConfig,
+  // Constants
   PLUGIN_ROOT,
   CODEX_COMPANION,
   DEFAULT_TIMEOUT,

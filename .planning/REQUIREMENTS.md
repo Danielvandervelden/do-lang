@@ -124,19 +124,19 @@ Spawns verify agent to check implementation vs plan.
 Council reviews task plan before implementation (configurable).
 
 **Acceptance:**
-- [ ] Configurable via `.do/config.json` (`council_reviews.planning`)
-- [ ] Spawns council advisor (Codex or Claude depending on runtime)
-- [ ] Briefing template system for consistent reviews
-- [ ] Incorporates feedback before proceeding
+- [x] Configurable via `.do/config.json` (`council_reviews.planning`)
+- [x] Spawns council advisor (Codex or Claude depending on runtime)
+- [x] Briefing template system for consistent reviews
+- [x] Incorporates feedback before proceeding
 
 ### F-02: AI Council - Implementation Review
 Council reviews implementation after execution (configurable).
 
 **Acceptance:**
-- [ ] Configurable via `.do/config.json` (`council_reviews.execution`)
-- [ ] Bidirectional: Claude reviews Codex, Codex reviews Claude
-- [ ] Reviews against task requirements
-- [ ] Can flag issues requiring revision
+- [x] Configurable via `.do/config.json` (`council_reviews.execution`)
+- [x] Bidirectional: Claude reviews Codex, Codex reviews Claude
+- [x] Reviews against task requirements
+- [x] Can flag issues requiring revision
 
 ### F-03: Codex CLI Support
 Full `/do:*` workflow works in Codex CLI.

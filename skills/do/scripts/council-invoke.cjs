@@ -20,6 +20,7 @@
 const { spawn, execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 
 // Constants
 const PLUGIN_ROOT = path.join(
@@ -131,11 +132,12 @@ function selectReviewer(configured, currentRuntime) {
 /**
  * Parse verdict from advisor response (per RESEARCH.md)
  * @param {string} response - Advisor response text
+ * @param {string} type - Review type: 'plan' or 'code'
  * @returns {string} Extracted verdict
  */
-function parseVerdict(response) {
+function parseVerdict(response, type = "plan") {
   if (!response) {
-    return "CONCERNS";
+    return type === "code" ? "CHANGES_REQUESTED" : "CONCERNS";
   }
 
   // Try structured format first: ### Verdict\n<VERDICT>
@@ -147,10 +149,30 @@ function parseVerdict(response) {
     }
   }
 
-  // Sentiment fallback
+  // Sentiment fallback - depends on review type
   const lower = response.toLowerCase();
 
-  // Check for RETHINK indicators
+  if (type === "code") {
+    // Code review verdicts: APPROVED, NITPICKS_ONLY, CHANGES_REQUESTED
+    if (
+      lower.includes("approved") ||
+      lower.includes("lgtm") ||
+      lower.includes("ship it")
+    ) {
+      return "APPROVED";
+    }
+    if (
+      lower.includes("nitpick") ||
+      lower.includes("minor") ||
+      lower.includes("style only")
+    ) {
+      return "NITPICKS_ONLY";
+    }
+    // Default to cautious for code reviews
+    return "CHANGES_REQUESTED";
+  }
+
+  // Plan review verdicts: LOOKS_GOOD, CONCERNS, RETHINK
   if (
     lower.includes("rethink") ||
     lower.includes("fundamentally") ||
@@ -158,8 +180,6 @@ function parseVerdict(response) {
   ) {
     return "RETHINK";
   }
-
-  // Check for LOOKS_GOOD indicators
   if (
     lower.includes("looks good") ||
     lower.includes("solid") ||
@@ -168,7 +188,7 @@ function parseVerdict(response) {
     return "LOOKS_GOOD";
   }
 
-  // Default to cautious
+  // Default to cautious for plan reviews
   return "CONCERNS";
 }
 
@@ -226,9 +246,10 @@ function parseRecommendations(response) {
  * Invoke Codex via companion script (per RESEARCH.md)
  * @param {string} briefPath - Path to briefing file
  * @param {number} timeout - Timeout in milliseconds
+ * @param {string} reviewType - Review type: 'plan' or 'code'
  * @returns {Promise<Object>} Invocation result
  */
-async function invokeCodex(briefPath, timeout = DEFAULT_TIMEOUT) {
+async function invokeCodex(briefPath, timeout = DEFAULT_TIMEOUT, reviewType = "plan") {
   return new Promise((resolve) => {
     // Check if companion script exists
     if (!fs.existsSync(CODEX_COMPANION)) {
@@ -262,7 +283,7 @@ async function invokeCodex(briefPath, timeout = DEFAULT_TIMEOUT) {
         resolve({
           success: true,
           output: stdout,
-          verdict: parseVerdict(stdout),
+          verdict: parseVerdict(stdout, reviewType),
           findings: parseFindings(stdout),
           recommendations: parseRecommendations(stdout),
         });
@@ -287,9 +308,10 @@ async function invokeCodex(briefPath, timeout = DEFAULT_TIMEOUT) {
  * @param {string} briefPath - Path to briefing file
  * @param {string} workspace - Workspace path
  * @param {number} timeout - Timeout in milliseconds
+ * @param {string} reviewType - Review type: 'plan' or 'code'
  * @returns {Promise<Object>} Invocation result
  */
-async function runGeminiOnce(briefPath, workspace, timeout) {
+async function runGeminiOnce(briefPath, workspace, timeout, reviewType = "plan") {
   return new Promise((resolve) => {
     // Read brief content
     let briefContent;
@@ -336,7 +358,7 @@ async function runGeminiOnce(briefPath, workspace, timeout) {
         resolve({
           success: true,
           output: stdout,
-          verdict: parseVerdict(stdout),
+          verdict: parseVerdict(stdout, reviewType),
           findings: parseFindings(stdout),
           recommendations: parseRecommendations(stdout),
         });
@@ -361,11 +383,12 @@ async function runGeminiOnce(briefPath, workspace, timeout) {
  * @param {string} briefPath - Path to briefing file
  * @param {string} workspace - Workspace path
  * @param {number} timeout - Timeout in milliseconds
+ * @param {string} reviewType - Review type: 'plan' or 'code'
  * @returns {Promise<Object>} Invocation result
  */
-async function invokeGemini(briefPath, workspace, timeout = DEFAULT_TIMEOUT) {
+async function invokeGemini(briefPath, workspace, timeout = DEFAULT_TIMEOUT, reviewType = "plan") {
   for (let attempt = 0; attempt <= GEMINI_MAX_RETRIES; attempt++) {
-    const result = await runGeminiOnce(briefPath, workspace, timeout);
+    const result = await runGeminiOnce(briefPath, workspace, timeout, reviewType);
     if (result.success) return result;
 
     // Check for rate limit
@@ -383,22 +406,46 @@ async function invokeGemini(briefPath, workspace, timeout = DEFAULT_TIMEOUT) {
 }
 
 /**
- * Run both advisors in parallel (per D-43)
+ * Run both available advisors in parallel (per D-43, D-42)
+ * Runtime-aware: excludes current runtime from advisors to prevent self-review
  * @param {string} briefPath - Path to briefing file
  * @param {string} workspace - Workspace path
  * @param {number} timeout - Timeout in milliseconds
+ * @param {string} reviewType - Review type: 'plan' or 'code'
  * @returns {Promise<Object>} Combined result
  */
-async function invokeBoth(briefPath, workspace, timeout = DEFAULT_TIMEOUT) {
-  const [codexResult, geminiResult] = await Promise.allSettled([
-    invokeCodex(briefPath, timeout),
-    invokeGemini(briefPath, workspace, timeout),
-  ]);
+async function invokeBoth(briefPath, workspace, timeout = DEFAULT_TIMEOUT, reviewType = "plan") {
+  const currentRuntime = detectRuntime();
 
-  const codex =
-    codexResult.status === "fulfilled"
+  // Per D-42: In Claude Code, use Codex + Gemini. In Codex runtime, use Claude + Gemini.
+  // Claude-as-reviewer deferred to Phase 12, so for now always use Codex + Gemini
+  // but skip Codex if we're in Codex runtime (use Gemini only)
+  let advisorPromises;
+  let advisorNames;
+
+  if (currentRuntime === "codex") {
+    // In Codex runtime: only Gemini available (Claude support deferred to Phase 12)
+    advisorPromises = [invokeGemini(briefPath, workspace, timeout, reviewType)];
+    advisorNames = ["gemini"];
+  } else {
+    // In Claude Code runtime: Codex + Gemini
+    advisorPromises = [
+      invokeCodex(briefPath, timeout, reviewType),
+      invokeGemini(briefPath, workspace, timeout, reviewType),
+    ];
+    advisorNames = ["codex", "gemini"];
+  }
+
+  const results = await Promise.allSettled(advisorPromises);
+
+  const codexResult = advisorNames.includes("codex") ? results[0] : null;
+  const geminiResult = advisorNames.includes("codex") ? results[1] : results[0];
+
+  const codex = codexResult
+    ? codexResult.status === "fulfilled"
       ? codexResult.value
-      : { success: false, error: codexResult.reason };
+      : { success: false, error: codexResult.reason }
+    : null;
   const gemini =
     geminiResult.status === "fulfilled"
       ? geminiResult.value
@@ -406,7 +453,7 @@ async function invokeBoth(briefPath, workspace, timeout = DEFAULT_TIMEOUT) {
 
   // Synthesize results
   const verdicts = [];
-  if (codex.success) verdicts.push(codex.verdict);
+  if (codex && codex.success) verdicts.push(codex.verdict);
   if (gemini.success) verdicts.push(gemini.verdict);
 
   // Determine combined verdict
@@ -459,6 +506,7 @@ async function invokeCouncil(options) {
     taskFile,
     reviewer = "random",
     workspace = process.cwd(),
+    filesModified = "",
     timeout = DEFAULT_TIMEOUT,
   } = options;
 
@@ -476,31 +524,58 @@ async function invokeCouncil(options) {
   const currentRuntime = detectRuntime();
   const selectedReviewer = selectReviewer(reviewer, currentRuntime);
 
-  // Create briefing file (would typically use template, but for now use task file directly)
-  const briefPath = taskFile;
+  // Select template based on review type
+  const templateFile =
+    type === "plan"
+      ? path.join(__dirname, "../references/council-brief-plan.md")
+      : path.join(__dirname, "../references/council-brief-code.md");
+
+  // Create briefing file from template
+  let briefPath = taskFile; // Fallback to task file if template not found
+  if (fs.existsSync(templateFile)) {
+    const template = fs.readFileSync(templateFile, "utf8");
+    const taskContent = fs.readFileSync(taskFile, "utf8");
+
+    // Replace placeholders in template
+    const brief = template
+      .replace(/\{\{TASK_FILE\}\}/g, taskFile)
+      .replace(/\{\{TASK_CONTENT\}\}/g, taskContent)
+      .replace(/\{\{WORKSPACE\}\}/g, workspace)
+      .replace(/\{\{FILES_MODIFIED\}\}/g, filesModified || "Not specified")
+      .replace(/\{\{REVIEW_TYPE\}\}/g, type);
+
+    // Write to temp file
+    briefPath = path.join(os.tmpdir(), `council-brief-${Date.now()}.md`);
+    fs.writeFileSync(briefPath, brief, "utf8");
+  }
 
   // Invoke selected advisor(s)
   let result;
   switch (selectedReviewer) {
     case "codex":
-      result = await invokeCodex(briefPath, timeout);
+      result = await invokeCodex(briefPath, timeout, type);
       result.advisor = "codex";
       break;
     case "gemini":
-      result = await invokeGemini(briefPath, workspace, timeout);
+      result = await invokeGemini(briefPath, workspace, timeout, type);
       result.advisor = "gemini";
       break;
     case "claude":
       // Claude-as-reviewer only valid in Codex runtime (Phase 12)
       // For now, fall back to gemini
-      result = await invokeGemini(briefPath, workspace, timeout);
+      result = await invokeGemini(briefPath, workspace, timeout, type);
       result.advisor = "gemini";
       break;
     case "both":
-      result = await invokeBoth(briefPath, workspace, timeout);
+      result = await invokeBoth(briefPath, workspace, timeout, type);
       break;
     default:
       return { success: false, error: `Unknown reviewer: ${selectedReviewer}`, advisor: null };
+  }
+
+  // Clean up temp brief file if we created one
+  if (briefPath !== taskFile && fs.existsSync(briefPath)) {
+    fs.unlinkSync(briefPath);
   }
 
   return result;
@@ -517,18 +592,19 @@ Council Invocation
 Usage: node council-invoke.cjs --type plan|code --task-file <path> [options]
 
 Options:
-  --type <plan|code>     Review type (required)
-  --task-file <path>     Path to task markdown file (required)
-  --reviewer <value>     Reviewer selection (default: random)
-                         Values: claude, codex, gemini, random, both
-  --workspace <path>     Workspace path for Gemini (default: cwd)
-  --timeout <ms>         Timeout in milliseconds (default: 90000)
-  --help, -h             Show this help message
+  --type <plan|code>       Review type (required)
+  --task-file <path>       Path to task markdown file (required)
+  --reviewer <value>       Reviewer selection (default: random)
+                           Values: claude, codex, gemini, random, both
+  --workspace <path>       Workspace path for Gemini (default: cwd)
+  --files-modified <list>  Comma-separated list of modified files (for code reviews)
+  --timeout <ms>           Timeout in milliseconds (default: 90000)
+  --help, -h               Show this help message
 
 Examples:
   node council-invoke.cjs --type plan --task-file .do/tasks/my-task.md
   node council-invoke.cjs --type code --task-file .do/tasks/my-task.md --reviewer codex
-  node council-invoke.cjs --type plan --task-file .do/tasks/my-task.md --reviewer both
+  node council-invoke.cjs --type code --task-file .do/tasks/my-task.md --files-modified "src/a.js,src/b.js"
 `);
     process.exit(0);
   }
@@ -543,6 +619,7 @@ Examples:
   const taskFile = getArg("--task-file");
   const reviewer = getArg("--reviewer") || "random";
   const workspace = getArg("--workspace") || process.cwd();
+  const filesModified = getArg("--files-modified");
   const timeout = parseInt(getArg("--timeout") || DEFAULT_TIMEOUT, 10);
 
   if (!type || !taskFile) {
@@ -552,7 +629,7 @@ Examples:
     process.exit(1);
   }
 
-  invokeCouncil({ type, taskFile, reviewer, workspace, timeout })
+  invokeCouncil({ type, taskFile, reviewer, workspace, filesModified, timeout })
     .then((result) => {
       console.log(JSON.stringify(result, null, 2));
       process.exit(result.success ? 0 : 1);

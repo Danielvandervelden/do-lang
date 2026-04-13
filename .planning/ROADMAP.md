@@ -14,7 +14,7 @@
 | 8 | Verification Agent | Complete | 2026-04-13 |
 | 9 | Task Resume | Complete | 2026-04-13 |
 | 10 | Debug Mode | Complete | 2026-04-13 |
-| 11 | AI Council Integration | [ ] Pending | — |
+| 11 | 2/2 | Complete   | 2026-04-13 |
 | 12 | Codex Adapter | [ ] Pending | — |
 
 ---
@@ -285,12 +285,18 @@ Plans:
 
 **Requirements:** F-01, F-02
 
+**Plans:** 2/2 plans complete
+
+Plans:
+- [x] 11-01-PLAN.md — Create council-invoke.cjs script, council-brief.md template, update config-template.json
+- [x] 11-02-PLAN.md — Integrate council into stage-execute.md (plan review) and stage-verify.md (code review)
+
 **Deliverables:**
-- Council review skill/logic
-- Briefing template system
-- Plan review integration (after refinement)
-- Implementation review integration (after execution)
-- Configurable per-project
+- Council invocation script with runtime detection and reviewer selection
+- Briefing template system with plan/code review modes
+- Plan review integration (Step E-1 before execution)
+- Code review integration (Step V-1 before verification)
+- Configurable per-project via `council_reviews.*` config
 
 **Success Criteria:**
 - [ ] `config.json` `council_reviews.planning` enables plan review

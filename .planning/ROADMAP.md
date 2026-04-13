@@ -7,7 +7,7 @@
 | 1 | Package Foundation | [ ] Pending | TS-01 |
 | 2 | Workspace Detection & Init | [ ] Pending | TS-02 |
 | 3 | 1/1 | Complete   | 2026-04-13 |
-| 4 | 1/3 | In Progress|  |
+| 4 | 2/3 | In Progress|  |
 | 5 | Task Creation & Refine Agent | [ ] Pending | TS-06 |
 | 6 | Grill-Me Agent | [ ] Pending | TS-07 |
 | 7 | Context Decision & Implementation | [ ] Pending | TS-08, TS-09 |
@@ -99,11 +99,11 @@ Plans:
 
 **Requirements:** TS-04, TS-05
 
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 - [x] 04-01-PLAN.md — Create scan-project.cjs detection script and template files
-- [ ] 04-02-PLAN.md — Add /do:scan skill to SKILL.md with Auto-scan and Interview modes
+- [x] 04-02-PLAN.md — Add /do:scan skill to SKILL.md with Auto-scan and Interview modes
 - [ ] 04-03-PLAN.md — Create database entry gate check for /do:task
 
 **Deliverables:**

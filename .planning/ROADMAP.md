@@ -50,6 +50,11 @@ Plans:
 
 **Requirements:** TS-02
 
+**Plans:** 1 plan
+
+Plans:
+- [ ] 02-01-PLAN.md — Implement /do:init with interactive setup, templates, and health check
+
 **Deliverables:**
 - `/do:init` skill (workspace level)
 - Detection logic for CLAUDE.md marker

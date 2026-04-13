@@ -1,0 +1,81 @@
+# AGENTS.md Template
+
+This template contains generic patterns for any workspace. Placeholders are replaced during `/do:init`.
+
+---
+
+# AGENTS.md
+
+Instructions for AI coding assistants working in this workspace.
+
+## Workspace Configuration
+
+- **Workspace root:** `{{WORKSPACE_PATH}}`
+- **Database:** `{{DATABASE_PATH}}`
+- **Git projects:** `{{GITHUB_PROJECTS_PATH}}`
+
+## Loading context
+
+Whenever you need to do anything in a project, like creating something or using some specific technology, grab any relevant context from `{{DATABASE_PATH}}/__index__.md`. This is a barrel import style markdown file, in which we define where you can find more information or context regarding a certain subject.
+
+When a task references a project by name, look it up in `__index__.md` to get the project folder and database folder before doing anything else. If multiple folders exist for the same project name (e.g. `project-frontend`, `project-backend`), always ask the user which one they want to work in before proceeding.
+
+When building or modifying anything in shared folders (e.g., `src/common/`), also load the relevant topic files from `{{DATABASE_PATH}}/shared/` to ensure compliance with shared standards.
+
+## Writing context
+
+Write to the database when: you solved a non-obvious problem, discovered a project-specific pattern, or used a wrapper/abstraction that future tasks would need to know about.
+
+Don't document: standard library usage, one-off fixes, things already covered by the project's README, volatile data (specific API payloads, temporary workarounds), auto-generated files, or project-specific configuration files.
+
+After completing work that involved a non-obvious pattern, abstraction, or wrapper, proactively check if the relevant database doc exists and has content. If it's empty or missing, document it or suggest documenting it.
+
+Keep updating the barrel import references in `__index__.md` and `project.md` if you notice any drift or changes. If you find new tech that isn't yet in the `project.md`, add it.
+
+## Database folder naming
+
+The database folder name under `{{DATABASE_PATH}}/projects/` must match the exact project folder name in `{{GITHUB_PROJECTS_PATH}}/`. For example, if the repo lives at `{{GITHUB_PROJECTS_PATH}}/org/my-project/`, the database folder is `{{DATABASE_PATH}}/projects/my-project/`.
+
+## project.md structure
+
+Every `project.md` must include these sections:
+
+- **General info** (intro paragraph below the title): what the project is, its purpose, repo path, environments
+- **Tech Stack**: frameworks, libraries, key packages
+- **Key Directories**: a concise list of the most important directories and what they contain
+- **Components**: barrel import links to detailed docs for complex components/wrappers (in `components/` subfolder)
+- **Conventions**: branch naming, commit prefixes, naming rules, translation approach, etc.
+- **Tech**: barrel import links to topic files for smaller patterns like utilities (in `tech/` subfolder)
+- **Features**: barrel import links to documented features (in `features/` subfolder)
+
+Database subfolders per project: `tech/`, `components/`, `features/`.
+
+## Git conventions
+
+- **Always work on a feature branch** — never commit directly to main/master
+- **Conventional commits** — use commitlint-style prefixes (feat, fix, chore, docs, refactor, test)
+- Check the project's `project.md` for the exact list of allowed prefixes and branch naming format
+
+## Reuse before building
+
+**Before creating any component**, check the project's database docs for existing shared components that already handle the same concern. Never hand-roll something when a shared component already exists.
+
+This applies to both direct implementation and task descriptions — always reference existing shared components so future agents don't reinvent them.
+
+## API types
+
+**NEVER assume an API shape.** Always look up the actual generated type/interface before writing code that consumes an API response or constructs API arguments. If a type can't be found, stop and flag it — a missing type means something is wrong.
+
+When generated types aren't enough to understand the API behavior, check the backend repo (see `__index__.md` for location) to read serializers, models, and views.
+
+## Formatting
+
+After finishing edits to a file, always format it with the project's formatter (e.g., `npx prettier --write <file>`). Check the project's `project.md` or config files to determine which formatter is used. Never leave unformatted files behind.
+
+## Database bootstrapping
+
+Before starting any task in a project, check that its `project.md` and any linked markdown files in the database actually have content. If they are empty or missing, populate them first by scanning the codebase (e.g., `package.json`, folder structure, README) and asking the user for anything you can't infer. Do not begin implementation until the project's database context is filled in.
+
+---
+
+*Generated by `/do:init` v{{VERSION}}*

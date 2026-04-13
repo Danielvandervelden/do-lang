@@ -43,6 +43,20 @@ This section should have enough detail that /do:continue can
 fully understand the task without additional context.
 -->
 
+## Clarifications
+
+<!--
+Populated by grill-me flow when confidence < threshold.
+Format:
+
+### <Factor> (was: <old_value> -> now: <new_value>)
+**Q:** <question asked>
+**A:** <user's answer>
+
+If user overrides before reaching threshold:
+"User override at confidence <score>"
+-->
+
 ## Context Loaded
 
 {{CONTEXT_LOADED}}
@@ -81,12 +95,29 @@ If no concerns, note: "None identified."
 ## Execution Log
 
 <!--
-This section is populated during the implementation phase.
-Each entry should include: timestamp, action taken, result.
+This section is populated during the implementation phase (per D-20).
 
-Format:
+Entry format:
 ### YYYY-MM-DD HH:MM
-- Action: <what was done>
-- Result: <outcome>
-- Files: <files modified>
+**Files:**
+- `path/to/file.ts` - Change summary
+
+**Decisions:**
+- Plan said X - chose approach Y because Z
+- [If error] Tried A, failed because B, resolved with C
+
+**Status:** In progress / Execution complete
+
+Context decision is logged first:
+### <timestamp>
+**Context decision:** [AskUserQuestion|inline prompt] - user chose [Yes|No]
+
+Final entry has summary:
+### <timestamp>
+**Status:** Execution complete
+
+**Summary:**
+- Files modified: <count>
+- Decisions made: <count>
+- Deviations: <count or "none">
 -->

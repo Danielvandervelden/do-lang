@@ -2,20 +2,20 @@
 
 ## Progress
 
-| Phase | Name | Status | Requirements |
-|-------|------|--------|--------------|
-| 1 | Package Foundation | [ ] Pending | TS-01 |
-| 2 | Workspace Detection & Init | [ ] Pending | TS-02 |
-| 3 | 1/1 | Complete   | 2026-04-13 |
-| 4 | 3/3 | Complete   | 2026-04-13 |
-| 5 | 2/2 | Complete   | 2026-04-13 |
-| 6 | Grill-Me Agent | [ ] Pending | TS-07 |
-| 7 | Context Decision & Implementation | [ ] Pending | TS-08, TS-09 |
-| 8 | Verification Agent | [ ] Pending | TS-10 |
-| 9 | Task Resume | [ ] Pending | TS-11 |
-| 10 | Debug Mode | [ ] Pending | TS-12 |
-| 11 | AI Council Integration | [ ] Pending | F-01, F-02 |
-| 12 | Codex Adapter | [ ] Pending | F-03, F-04 |
+| Phase | Name | Status | Completed |
+|-------|------|--------|-----------|
+| 1 | Package Foundation | [ ] Pending | — |
+| 2 | Workspace Detection & Init | [ ] Pending | — |
+| 3 | Project Setup | Complete | 2026-04-13 |
+| 4 | Database Scanning | Complete | 2026-04-13 |
+| 5 | Task Creation & Refine Agent | Complete | 2026-04-13 |
+| 6 | Grill-Me Agent | Complete | 2026-04-13 |
+| 7 | Context Decision & Implementation | Complete | 2026-04-13 |
+| 8 | Verification Agent | [ ] Pending | — |
+| 9 | Task Resume | [ ] Pending | — |
+| 10 | Debug Mode | [ ] Pending | — |
+| 11 | AI Council Integration | [ ] Pending | — |
+| 12 | Codex Adapter | [ ] Pending | — |
 
 ---
 
@@ -150,9 +150,14 @@ Plans:
 
 ## Phase 6: Grill-Me Agent
 
-**Goal:** Create agent that forces clarification when confidence is low.
+**Goal:** Implement grill-me logic within /do:continue that forces clarification when confidence is low.
 
 **Requirements:** TS-07
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 06-01-PLAN.md — Add Clarifications section to task-template.md and implement /do:continue with grill-me flow
 
 **Deliverables:**
 - Grill-me agent definition
@@ -174,6 +179,12 @@ Plans:
 **Goal:** Ask about context clear, then execute the task.
 
 **Requirements:** TS-08, TS-09
+
+**Plans:** 1/2 plans executed
+
+Plans:
+- [x] 07-01-PLAN.md — Extract grill-me to stage-grill.md, refactor SKILL.md into stage router
+- [x] 07-02-PLAN.md — Create stage-execute.md with context clear decision and execution flow
 
 **Deliverables:**
 - AskUserQuestion for clear decision

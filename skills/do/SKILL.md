@@ -24,7 +24,7 @@ Token-efficient meta programming language for Claude Code and Codex. Execute tas
 | `/do:scan` | Scan project and create database entry |
 | `/do:task` | Create and refine a task |
 | `/do:abandon` | Abandon active task |
-| `/do:continue` | Resume from last task state (Phase 9) |
+| `/do:continue` | Resume from last task state |
 | `/do:debug` | Structured debugging workflow (Phase 10) |
 
 ---
@@ -911,9 +911,59 @@ Mark the active task as abandoned and allow starting a new task.
 7. Update config.json: `active_task: null`
 8. Display: "Task abandoned: <filename>. You can now start a new task with /do:task."
 
+## /do:continue
+
+Resume the active task from its current state.
+
+### Stage Detection
+
+**Step 1: Load active task**
+
+Read `.do/config.json` to get `active_task`.
+If no active task, display: "No active task. Run /do:task to create one."
+
+Check if task file exists at `.do/tasks/<active_task>`:
+- If file does NOT exist (stale pointer):
+  - Display: "Warning: active_task points to missing file '<active_task>'. Clearing stale reference."
+  - Update config.json: set `active_task: null`
+  - Display: "No active task. Run /do:task to create one."
+  - Stop
+
+Read task file at `.do/tasks/<active_task>`.
+Parse YAML frontmatter for `stage`, `stages`, and `confidence`.
+
+**Step 2: Route by stage**
+
+Read `auto_grill_threshold` from `.do/config.json` (default 0.9 if not set).
+
+| Stage | Condition | Reference File |
+|-------|-----------|----------------|
+| refinement | stages.grilling: in_progress | @skills/do/references/stage-grill.md |
+| refinement | stages.grilling: pending AND confidence < threshold | @skills/do/references/stage-grill.md |
+| refinement | stages.grilling: complete OR confidence >= threshold | @skills/do/references/stage-execute.md |
+| execution | any | @skills/do/references/stage-execute.md |
+| verification | any | Display: "Verification not yet implemented. (Phase 8)" |
+| abandoned | any | Display: "Task was abandoned. Run /do:task to create a new one." |
+
+**NOTE:** `grilling` is NOT a valid top-level stage value. Grill status is tracked via `stages.grilling` field (pending/in_progress/complete). The routing checks `stages.grilling: complete` BEFORE checking confidence, ensuring user overrides via "Proceed anyway" are respected.
+
+### Stage Reference Loading
+
+Based on the routing table above, load and follow the appropriate reference file:
+
+**For grill-me (refinement with confidence < threshold or grilling in_progress):**
+@skills/do/references/stage-grill.md
+
+**For execution (refinement ready or execution stage):**
+@skills/do/references/stage-execute.md
+
+**For verification:**
+Display: "Verification not yet implemented. (Phase 8)"
+
+Follow the instructions in the loaded reference file to complete the stage.
+
 ## Planned Commands
 
-- `/do:continue` - Resume from last task state
 - `/do:debug` - Structured debugging workflow
 
 ## Architecture

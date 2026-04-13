@@ -7,13 +7,21 @@ description: "{{DESCRIPTION}}"
 # Stage tracking (linear by default)
 # Valid stages: refinement, grilling, execution, verification, verified, complete, abandoned
 # Note: 'verified' is intermediate state between verification pass and UAT approval
+# Note: 'abandoned' is set when user abandons task via /do:task or /do:abandon
+# When abandoned, 'pre_abandon_stage' preserves the previous stage for resume capability
+# Abandoned tasks remain in .do/tasks/ and can be resumed via /do:continue --task <file>
 stage: refinement
 stages:
   refinement: in_progress
   grilling: pending
   execution: pending
   verification: pending
-  abandoned: false
+  abandoned: false  # Set to true when task is abandoned
+                    # When abandoned, the in-progress stage entry is also set to 'abandoned'
+                    # for state consistency (e.g., execution: abandoned)
+
+# pre_abandon_stage: null  # Set to previous stage when task is abandoned (e.g., "execution")
+                           # Used by /do:continue --task to restore the task to its prior state
 
 # Council review tracking (prevents re-running on resume)
 council_review_ran:

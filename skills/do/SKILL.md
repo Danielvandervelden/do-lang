@@ -25,7 +25,7 @@ Token-efficient meta programming language for Claude Code and Codex. Execute tas
 | `/do:task` | Create and refine a task |
 | `/do:abandon` | Abandon active task |
 | `/do:continue` | Resume from last task state |
-| `/do:debug` | Structured debugging workflow (Phase 10) |
+| `/do:debug` | Structured debugging workflow |
 
 ---
 
@@ -1002,9 +1002,92 @@ Follow the instructions in the loaded reference file to complete the stage.
 - **Resume preamble:**
   - @skills/do/references/resume-preamble.md - Shared resume logic for context reload and summary display
 
-## Planned Commands
+## /do:debug
 
-- `/do:debug` - Structured debugging workflow
+Structured debugging workflow using scientific method: hypothesis -> test -> confirm/reject.
+
+### Usage
+
+```
+/do:debug "description of the bug or unexpected behavior"
+```
+
+### Prerequisites
+
+- Project must be initialized (`.do/config.json` exists)
+- `.do/debug/` directory will be created if not exists
+
+### Active Session Detection (per D-45, D-46)
+
+**Step 1: Check for active debug session**
+
+```bash
+node <skill-path>/scripts/debug-session.cjs check
+```
+
+Parse JSON output. If `active: true`:
+
+Display blocking message:
+```
+Active debug: <filename> (status: <status>)
+Current hypothesis: <hypothesis or "None yet">
+
+Options:
+- Continue - Resume this session
+- Close - Mark as abandoned, start fresh
+- Force new - Keep this session, start another (override constraint)
+
+Enter choice:
+```
+
+Wait for user response:
+- **Continue:** Load stage-debug.md and resume
+- **Close:** Set debug file status to `abandoned`, clear `active_debug` in config, proceed to new session
+- **Force new:** Proceed to new session without clearing active
+
+If `stale: true` in output:
+- Display: "Warning: active_debug points to missing file '<stale>'. Clearing stale reference."
+- Clear `active_debug` in config
+- Proceed to new session
+
+**Step 2: Create new debug session**
+
+If no active session (or user chose Close/Force new):
+
+```bash
+node <skill-path>/scripts/debug-session.cjs create "<trigger>"
+```
+
+If user wants to link to active task (per D-48):
+- Check if `active_task` is set in config.json
+- If set, ask:
+  ```
+  Link this debug session to active task: <active_task>? (yes/no)
+  ```
+- If yes, pass taskRef to create command
+
+Parse output for `filename` and `path`.
+
+Update config.json: `active_debug: <filename>`
+
+**Step 3: Load debug workflow**
+
+@skills/do/references/stage-debug.md
+
+Follow the steps in stage-debug.md starting from the appropriate status:
+- If new session: Start at Step D1 (Gathering)
+- If resuming: Start at Step D0 (Resume Check)
+
+### Files
+
+- **Session management script:**
+  - @skills/do/scripts/debug-session.cjs
+
+- **Debug workflow reference:**
+  - @skills/do/references/stage-debug.md
+
+- **Debug template:**
+  - @skills/do/references/debug-template.md
 
 ## Architecture
 

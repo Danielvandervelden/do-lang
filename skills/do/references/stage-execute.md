@@ -145,9 +145,9 @@ After all execution is complete:
 
 3. Display completion message:
 ```
-Execution complete. Proceeding to verification. (Phase 8 - not yet implemented)
+Execution complete. Proceeding to verification.
 
-Run /do:continue to proceed when verification is implemented.
+Run /do:continue to verify and complete the task.
 ```
 
 ---

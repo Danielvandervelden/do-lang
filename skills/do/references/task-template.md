@@ -5,7 +5,8 @@ updated: {{CREATED_AT}}
 description: "{{DESCRIPTION}}"
 
 # Stage tracking (linear by default)
-# Valid stages: refinement, grilling, execution, verification, abandoned
+# Valid stages: refinement, grilling, execution, verification, verified, complete, abandoned
+# Note: 'verified' is intermediate state between verification pass and UAT approval
 stage: refinement
 stages:
   refinement: in_progress
@@ -120,4 +121,36 @@ Final entry has summary:
 - Files modified: <count>
 - Decisions made: <count>
 - Deviations: <count or "none">
+-->
+
+## Verification Results
+
+<!--
+This section is populated during the verification phase.
+
+Entry format:
+### Approach Checklist
+- [x] Step 1 from Approach section
+- [x] Step 2 from Approach section
+- [ ] Step 3 (INCOMPLETE: reason why)
+
+### Quality Checks
+- **Lint:** PASS|FAIL (npm run <script>)
+- **Types:** PASS|FAIL (npm run <script>)
+- **Tests:** PASS|FAIL (npm run <script>)
+  [If FAIL, truncated output below]
+
+### Result: PASS|FAIL
+- Checklist: X/Y complete
+- Quality: X/Y passing
+- Blocking issue: <if any>
+
+### UAT
+[When Result is PASS]
+Generated checklist:
+1. [ ] User-observable behavior 1
+2. [ ] User-observable behavior 2
+
+User response: [pending|yes|no]
+[If no] Reason: <what user reported>
 -->

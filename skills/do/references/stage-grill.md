@@ -58,7 +58,7 @@ If user types "Proceed anyway" (case-insensitive):
   - `stages.grilling: complete`
   - `stages.refinement: complete`
 - Update `updated` timestamp
-- Display: "Proceeding with confidence <score>. Ready for implementation. (Phase 7 - not yet implemented)"
+- Display: "Proceeding with confidence <score>. Ready for implementation. Run /do:continue to start execution."
 - Stop grill-me flow
 
 Otherwise, process the answer.
@@ -95,7 +95,7 @@ If confidence.score >= auto_grill_threshold:
   Confidence: <old_score> -> <new_score> (+<delta>)
   <factor> improved.
   
-  Confidence threshold met. Ready for implementation. (Phase 7 - not yet implemented)
+  Confidence threshold met. Ready for implementation. Run /do:continue to start execution.
   ```
 - Stop grill-me flow
 

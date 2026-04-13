@@ -942,7 +942,8 @@ Read `auto_grill_threshold` from `.do/config.json` (default 0.9 if not set).
 | refinement | stages.grilling: pending AND confidence < threshold | @skills/do/references/stage-grill.md |
 | refinement | stages.grilling: complete OR confidence >= threshold | @skills/do/references/stage-execute.md |
 | execution | any | @skills/do/references/stage-execute.md |
-| verification | any | Display: "Verification not yet implemented. (Phase 8)" |
+| verification | any | @skills/do/references/stage-verify.md |
+| verified | any | @skills/do/references/stage-verify.md |
 | abandoned | any | Display: "Task was abandoned. Run /do:task to create a new one." |
 
 **NOTE:** `grilling` is NOT a valid top-level stage value. Grill status is tracked via `stages.grilling` field (pending/in_progress/complete). The routing checks `stages.grilling: complete` BEFORE checking confidence, ensuring user overrides via "Proceed anyway" are respected.
@@ -957,8 +958,8 @@ Based on the routing table above, load and follow the appropriate reference file
 **For execution (refinement ready or execution stage):**
 @skills/do/references/stage-execute.md
 
-**For verification:**
-Display: "Verification not yet implemented. (Phase 8)"
+**For verification or verified:**
+@skills/do/references/stage-verify.md
 
 Follow the instructions in the loaded reference file to complete the stage.
 

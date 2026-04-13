@@ -11,7 +11,7 @@
 | 5 | Task Creation & Refine Agent | Complete | 2026-04-13 |
 | 6 | Grill-Me Agent | Complete | 2026-04-13 |
 | 7 | Context Decision & Implementation | Complete | 2026-04-13 |
-| 8 | Verification Agent | [ ] Pending | — |
+| 8 | 1/1 | Complete   | 2026-04-13 |
 | 9 | Task Resume | [ ] Pending | — |
 | 10 | Debug Mode | [ ] Pending | — |
 | 11 | AI Council Integration | [ ] Pending | — |
@@ -206,6 +206,11 @@ Plans:
 **Goal:** Verify implementation matches the task requirements.
 
 **Requirements:** TS-10
+
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] 08-01-PLAN.md — Create stage-verify.md, update task-template.md, and wire routing in SKILL.md
 
 **Deliverables:**
 - Verify agent definition

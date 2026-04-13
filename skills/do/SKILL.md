@@ -22,7 +22,7 @@ Token-efficient meta programming language for Claude Code and Codex. Execute tas
 |---------|---------|
 | `/do:init` | Initialize workspace or run health check |
 | `/do:scan` | Scan project and create database entry |
-| `/do:task` | Create and refine a task |
+| `/do:task` | Create and refine a task (requires /do:scan first) |
 | `/do:continue` | Resume from last task state |
 | `/do:debug` | Structured debugging workflow |
 
@@ -685,9 +685,49 @@ Use user-provided values for:
   - @skills/do/references/tech-readme.md
   - @skills/do/references/features-readme.md
 
+## /do:task (Planned - Phase 5)
+
+Create and refine a task with AI assistance.
+
+### Prerequisites
+
+Before /do:task can run, it checks:
+
+1. **Workspace initialized** - `.do-workspace.json` exists at workspace root
+2. **Project initialized** - `.do/config.json` exists in project
+3. **Database entry exists** - `<database>/projects/<project-name>/project.md` exists
+
+### Database Entry Gate
+
+**Per D-14, D-15, D-16: Check before proceeding**
+
+Run the check script:
+
+```bash
+node <skill-path>/scripts/check-database-entry.cjs --message
+```
+
+If database entry missing, display error and stop:
+
+```
+This project needs a database entry before running /do:task.
+
+Expected path: <database>/projects/<project-name>/project.md
+
+Run /do:scan to create the database entry.
+```
+
+### Files
+
+- **Gate script:**
+  - @skills/do/scripts/check-database-entry.cjs
+
+### Implementation
+
+(Full implementation in Phase 5)
+
 ## Planned Commands
 
-- `/do:task` - Create and refine a task with AI assistance
 - `/do:continue` - Resume from last task state
 - `/do:debug` - Structured debugging workflow
 

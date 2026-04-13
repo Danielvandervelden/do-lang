@@ -438,9 +438,255 @@ Next steps:
   - `skills/do/scripts/workspace-health.cjs` - Node.js workspace health check implementation
   - `skills/do/scripts/project-health.cjs` - Node.js project health check implementation
 
+## /do:scan
+
+Scan a project's codebase and create a database entry with tech stack, structure, and conventions.
+
+### Prerequisites
+
+- Workspace must be initialized (`/do:init` completed)
+- Must be run from a project directory (has `.git/` or `package.json` or `requirements.txt`)
+- Project must have `.do/` folder initialized
+
+### Mode Selection
+
+**Per D-09: Use inline prompts (not AskUserQuestion)**
+
+Display mode selection prompt:
+
+```
+/do:scan - Database Entry Creation
+
+This will create a database entry for: <detected-project-name>
+
+Choose a mode:
+1. Auto-scan - Infer everything from codebase, edit project.md after
+2. Interview - Walk through questions to fill in details
+
+Enter 1 or 2 (default: 1):
+```
+
+Wait for user response.
+
+### Auto-Scan Mode
+
+**Step 1: Run scan-project.cjs**
+
+```bash
+node <skill-path>/scripts/scan-project.cjs <project-path>
+```
+
+Parse JSON output. If `monorepo` field is not null, display warning:
+```
+Warning: This appears to be a monorepo (<type>).
+<warning message from scan output>
+Continue anyway? (yes/no, default: no)
+```
+
+**Step 2: Read workspace config**
+
+```bash
+cat <workspace-root>/.do-workspace.json
+```
+
+Extract `database` path.
+
+**Step 3: Check for existing entry**
+
+```bash
+test -f <database>/projects/<project-name>/project.md
+```
+
+If exists, prompt:
+```
+Database entry already exists at:
+<database>/projects/<project-name>/project.md
+
+Overwrite? (yes/no, default: no)
+```
+
+Wait for response. If "no", abort.
+
+**Step 4: Create database entry folder structure**
+
+```bash
+mkdir -p <database>/projects/<project-name>/components
+mkdir -p <database>/projects/<project-name>/tech
+mkdir -p <database>/projects/<project-name>/features
+```
+
+**Step 5: Copy README templates to subfolders**
+
+Copy from references/:
+- `component-readme.md` -> `<database>/projects/<project-name>/components/README.md`
+- `tech-readme.md` -> `<database>/projects/<project-name>/tech/README.md`
+- `features-readme.md` -> `<database>/projects/<project-name>/features/README.md`
+
+**Step 6: Generate project.md from template**
+
+Read `@skills/do/references/project-template.md`
+
+Replace placeholders using scan output:
+
+| Placeholder | Source |
+|-------------|--------|
+| `{{PROJECT_NAME}}` | `scan.project_name` |
+| `{{DESCRIPTION}}` | `"TODO: Add project description"` |
+| `{{REPO_PATH}}` | Current working directory (absolute path) |
+| `{{PROD_URL}}` | `"TODO: Add production URL"` |
+| `{{TEST_URL}}` | `"TODO: Add test URL"` |
+| `{{DATABASE_PATH}}` | `<database>/projects/<project-name>` |
+| `{{TECH_STACK}}` | Generate from `scan.detected` (see format below) |
+| `{{KEY_DIRECTORIES}}` | Generate from `scan.key_directories` |
+| `{{CONVENTIONS}}` | Generate from `scan.conventions` |
+
+**Tech Stack format:**
+```markdown
+- **Framework**: <frameworks joined with ", ">
+- **UI**: <ui_libraries joined with ", "> (if any)
+- **State**: <state_management joined with ", "> (if any)
+- **Routing**: <routing joined with ", "> (if any)
+- **Forms**: <forms joined with ", "> (if any)
+- **Testing**: <testing joined with ", "> (if any)
+- **Linting**: <linting joined with ", "> (if any)
+- **Data**: <data joined with ", "> (if any, Python projects)
+- **ORM**: <orm joined with ", "> (if any)
+```
+
+Only include lines where the array is non-empty.
+
+**Key Directories format:**
+```markdown
+- `<path>` - <description>
+```
+
+One line per entry in `scan.key_directories`.
+
+**Conventions format (per council advisory - no fabrication):**
+
+If `scan.conventions.commit_prefixes` is non-empty:
+```markdown
+- **Commit prefixes**: `<prefixes joined with "`, `">`
+- **Branch naming**: TODO: Document branch naming convention
+```
+
+If `scan.conventions.commit_prefixes` is empty:
+```markdown
+- **Commit prefixes**: TODO: Document commit message conventions
+- **Branch naming**: TODO: Document branch naming convention
+```
+
+**IMPORTANT:** Do NOT fabricate branch naming patterns like `<type>/<description>`. Only output patterns that were actually detected from git history. Use TODO placeholders for undetected conventions.
+
+Write generated content to `<database>/projects/<project-name>/project.md`
+
+**Step 7: Update __index__.md (per D-12, D-13)**
+
+Read `<database>/__index__.md`
+
+Check if entry already exists:
+```bash
+grep -q "projects/<project-name>" <database>/__index__.md
+```
+
+If not found, append under `# Projects` section:
+
+```markdown
+
+## <Project Name>
+
+- Project folder: <absolute-path-to-project>
+- Database folder: <database>/projects/<project-name>
+```
+
+**Step 8: Update config.json database_entry flag**
+
+Read `.do/config.json`
+Set `"database_entry": true`
+Write back to `.do/config.json`
+
+**Step 9: Display completion summary**
+
+```
+Database entry created!
+
+Created:
+- <database>/projects/<project-name>/project.md
+- <database>/projects/<project-name>/components/README.md
+- <database>/projects/<project-name>/tech/README.md
+- <database>/projects/<project-name>/features/README.md
+
+Updated:
+- <database>/__index__.md
+- .do/config.json (database_entry: true)
+
+Detected:
+- Project type: <javascript|python|unknown>
+- Framework: <frameworks>
+- UI: <ui_libraries>
+- Testing: <testing>
+- Conventions: <commit_pattern or "none detected">
+
+Next steps:
+- Edit project.md to add description, URLs, and refine detected info
+- Add component docs to components/ as needed
+- Add tech pattern docs to tech/ as needed
+```
+
+### Interview Mode
+
+**Step 1: Run scan-project.cjs** (same as auto-scan, including monorepo warning)
+
+**Step 2: Ask questions (per D-08: name, description, purpose, key URLs)**
+
+Ask these questions with inline prompts (wait for response after each):
+
+```
+Project name: <detected-name>
+Confirm or enter different name:
+```
+
+```
+Brief description of this project:
+(What does it do? Who uses it?)
+```
+
+```
+What is the main purpose of this project?
+(e.g., "Internal tool for managing X", "Customer-facing dashboard for Y")
+```
+
+```
+Production URL (or press Enter to skip):
+```
+
+```
+Test/staging URL (or press Enter to skip):
+```
+
+**Step 3: Merge user input with detected data**
+
+Use user-provided values for:
+- `{{PROJECT_NAME}}` - from question 1
+- `{{DESCRIPTION}}` - combine description + purpose from questions 2-3 (or "TODO" if both empty)
+- `{{PROD_URL}}` - from question 4 (or "TODO" if empty)
+- `{{TEST_URL}}` - from question 5 (or "TODO" if empty)
+
+**Steps 4-9: Same as auto-scan mode**
+
+### Files
+
+- **Detection script:**
+  - @skills/do/scripts/scan-project.cjs
+
+- **Template files:**
+  - @skills/do/references/project-template.md
+  - @skills/do/references/component-readme.md
+  - @skills/do/references/tech-readme.md
+  - @skills/do/references/features-readme.md
+
 ## Planned Commands
 
-- `/do:scan` - Scan project and create database entry
 - `/do:task` - Create and refine a task with AI assistance
 - `/do:continue` - Resume from last task state
 - `/do:debug` - Structured debugging workflow

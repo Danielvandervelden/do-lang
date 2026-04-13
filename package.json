@@ -4,7 +4,8 @@
   "description": "Token-efficient meta programming language for Claude Code and Codex",
   "files": [
     "skills",
-    "bin"
+    "bin",
+    "codex"
   ],
   "scripts": {
     "postinstall": "node bin/install.cjs"

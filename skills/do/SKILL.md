@@ -685,9 +685,15 @@ Use user-provided values for:
   - @skills/do/references/tech-readme.md
   - @skills/do/references/features-readme.md
 
-## /do:task (Planned - Phase 5)
+## /do:task
 
 Create and refine a task with AI assistance.
+
+### Usage
+
+```
+/do:task "description of what you want to accomplish"
+```
 
 ### Prerequisites
 
@@ -697,34 +703,203 @@ Before /do:task can run, it checks:
 2. **Project initialized** - `.do/config.json` exists in project
 3. **Database entry exists** - `<database>/projects/<project-name>/project.md` exists
 
-### Database Entry Gate
+### Refinement Process
 
-**Per D-14, D-15, D-16: Check before proceeding**
+**Step 1: Check prerequisites**
 
-Run the check script:
-
+Run database entry check:
 ```bash
 node <skill-path>/scripts/check-database-entry.cjs --message
 ```
 
-If database entry missing, display error and stop:
+If exit code is non-zero, display error and stop.
+
+**Step 2: Check for active task (per D-11)**
+
+Read `.do/config.json`. If `active_task` is not null:
+
+1. Check if task file exists: `.do/tasks/<active_task>`
+2. If exists, read YAML frontmatter to get stage
+3. Display blocking message:
 
 ```
-This project needs a database entry before running /do:task.
+Active task: <active_task> (stage: <stage>)
 
-Expected path: <database>/projects/<project-name>/project.md
+Options:
+- /do:continue - Resume this task
+- /do:abandon - Mark as abandoned and start fresh
+```
 
-Run /do:scan to create the database entry.
+Wait for user response. Do not proceed until resolved.
+
+**Step 3: Load context (per D-07, D-08, D-09, D-10)**
+
+Run context loading script:
+```bash
+node <skill-path>/scripts/load-task-context.cjs "<task-description>"
+```
+
+Parse JSON output for:
+- `project_md_path` - Path to project.md
+- `matched_docs` - Array of matched component/tech/feature docs
+- `keywords` - Extracted keywords for transparency
+- `database_path` - Path to project's database folder
+
+Read project.md and each matched doc to gather context.
+
+**Step 4: Analyze task**
+
+With loaded context, analyze the task description:
+- Identify what systems/components it touches
+- Identify potential implementation approach
+- Identify concerns or uncertainties
+- Check if similar patterns exist in codebase
+
+**Step 5: Calculate confidence (per D-04, D-05)**
+
+Starting from 1.0, apply deductions:
+
+| Factor | Deduction | Condition |
+|--------|-----------|-----------|
+| context | -0.1 to -0.2 | Missing component/tech docs that task likely needs |
+| scope | -0.05 to -0.15 | Task spans multiple files/systems |
+| complexity | -0.05 to -0.15 | Multiple integration points |
+| familiarity | -0.05 to -0.1 | No similar patterns found in codebase |
+
+Display breakdown transparently (per D-05):
+```
+Confidence: 0.72 (context: -0.10, scope: -0.10, complexity: -0.08, familiarity: 0.00)
+```
+
+**Step 5.5: Read grill threshold from config (per D-06)**
+
+Read `.do/config.json` and extract `auto_grill_threshold` (default 0.9 if not set).
+Store for use in Step 9 to determine if grill-me will trigger.
+
+**Step 6: Propose wave breakdown (per D-02, D-03)**
+
+**ALWAYS ask the user about wave breakdown** — per D-03, refine agent always asks, user decides:
+
+```
+This task {complexity assessment - e.g., "touches 3 systems" or "is focused on one component"}.
+
+Break into waves, or execute as single unit?
+
+1. Yes - Document waves before proceeding
+2. No - Execute as single unit
+
+Enter choice (default: 2):
+```
+
+Wait for user response.
+
+If user selects "1" (waves):
+```
+Enter wave names and descriptions (one per line, format: name: description)
+Enter a blank line when done:
+
+Example:
+api-types: Generate upload endpoint types
+upload-hook: Create useDocumentUpload hook
+ui-components: Build UploadDropzone and Preview
+```
+
+Collect wave definitions from user.
+
+**Step 7: Create task file**
+
+Generate filename: `YYMMDD-<slug>.md`
+- Extract first 5 words from description
+- Kebab-case, remove special characters
+- Example: "Fix login validation errors" -> `260413-fix-login-validation-errors.md`
+
+Read task-template.md:
+@skills/do/references/task-template.md
+
+Replace placeholders:
+- `{{TASK_ID}}` - filename without .md
+- `{{CREATED_AT}}` - ISO 8601 timestamp
+- `{{DESCRIPTION}}` - user's task description
+- `{{CONFIDENCE_SCORE}}` - calculated score
+- `{{CONTEXT_FACTOR}}` - context deduction
+- `{{SCOPE_FACTOR}}` - scope deduction
+- `{{COMPLEXITY_FACTOR}}` - complexity deduction
+- `{{FAMILIARITY_FACTOR}}` - familiarity deduction
+- `{{TITLE}}` - task description as title (first ~50 chars)
+- `{{PROBLEM_STATEMENT}}` - comprehensive problem statement (generate from analysis)
+- `{{CONTEXT_LOADED}}` - list of loaded docs
+- `{{APPROACH}}` - planned implementation approach
+- `{{CONCERNS}}` - identified concerns
+
+If user confirmed wave breakdown, add waves section to frontmatter:
+```yaml
+waves:
+  - name: <wave-name>
+    description: "<wave-description>"
+    status: pending
+```
+
+Write task file to `.do/tasks/<filename>`
+
+**Step 8: Update config.json**
+
+Read `.do/config.json`
+Set `active_task` to the task filename
+Write back to `.do/config.json`
+
+**Step 9: Display summary**
+
+```
+Task created: .do/tasks/<filename>
+
+Confidence: <score> (<factor breakdown>)
+{If below threshold:}
+-> Grill-me phase will ask clarifying questions
+
+Context loaded:
+- project.md
+{For each matched doc:}
+- <doc-name>
+
+Problem: <1-line summary>
+Approach: <1-line summary>
+{If waves:}
+Waves: <count> defined
+
+Next: {If confidence >= auto_grill_threshold: "Ready for implementation. Run /do:continue when ready (Phase 7)."}
+      {If confidence < auto_grill_threshold: "Grill-me will ask clarifying questions. Run /do:continue (Phase 6)."}
 ```
 
 ### Files
 
+- **Context loading script:**
+  - @skills/do/scripts/load-task-context.cjs
+
+- **Task template:**
+  - @skills/do/references/task-template.md
+
 - **Gate script:**
   - @skills/do/scripts/check-database-entry.cjs
 
-### Implementation
+## /do:abandon
 
-(Full implementation in Phase 5)
+Mark the active task as abandoned and allow starting a new task.
+
+### Usage
+
+```
+/do:abandon
+```
+
+### Process
+
+1. Read `.do/config.json` to get `active_task`
+2. If no active task, display: "No active task to abandon."
+3. Read task file at `.do/tasks/<active_task>`
+4. Update YAML frontmatter: `stage: abandoned`
+5. Write back to task file
+6. Update config.json: `active_task: null`
+7. Display: "Task abandoned: <filename>. You can now start a new task with /do:task."
 
 ## Planned Commands
 

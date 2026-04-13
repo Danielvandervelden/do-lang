@@ -172,6 +172,25 @@ After gathering all answers, create the workspace:
 5. **If user provided custom workflows:**
    Append to AGENTS.md under a new `## Custom Workflows` section.
 
+5.5. **Run AI tool detection (per D-53, D-58):**
+   ```bash
+   node <skill-path>/scripts/detect-tools.cjs
+   ```
+   
+   Parse JSON output for `availableTools` array.
+   
+   **IMPORTANT per council concern #4:** The script exits 1 when no tools detected.
+   This is a WARNING, not a failure. Handle exit code 1 gracefully:
+   
+   If exit code is 1 OR array is empty, display warning (per D-52):
+   ```
+   Warning: No AI CLI tools detected (codex, gemini, claude-cli).
+   Council reviews will not work until at least one tool is installed.
+   Continuing with setup...
+   ```
+   
+   Then continue with setup - do NOT abort on exit code 1.
+
 6. **Create .do-workspace.json config file:**
    ```json
    {
@@ -179,9 +198,17 @@ After gathering all answers, create the workspace:
      "workspace": "<absolute-workspace-path>",
      "database": "<absolute-database-path>",
      "githubProjects": "<absolute-github-projects-path>",
-     "initializedAt": "<ISO-8601-timestamp>"
+     "initializedAt": "<ISO-8601-timestamp>",
+     "availableTools": <from-detect-tools-output>,
+     "defaultReviewer": "random",
+     "council_reviews": {
+       "planning": true,
+       "execution": true
+     }
    }
    ```
+   
+   Note: `availableTools` contains canonical reviewer IDs (codex, gemini, claude) NOT CLI binary names.
 
 **Step 6: Confirm completion**
 
@@ -197,6 +224,9 @@ Created:
 - <database>/projects/ (project documentation)
 - <database>/shared/ (shared patterns)
 - <workspace>/.do-workspace.json (config)
+
+Detected AI tools: <availableTools joined with ", " or "none">
+Default reviewer: random
 
 Next steps:
 - Run /do:scan in a project to create its database entry
@@ -219,6 +249,18 @@ node <skill-path>/scripts/workspace-health.cjs <workspace-path>
 node <skill-path>/scripts/project-health.cjs .
 ```
 
+**Step 2.5: Re-run AI tool detection (per D-53)**
+
+```bash
+node <skill-path>/scripts/detect-tools.cjs
+```
+
+**Handle exit code 1 as warning, not failure** (per council concern #4).
+
+Compare detected tools with `availableTools` in existing .do-workspace.json:
+- If different: update .do-workspace.json with new tools
+- Display: "AI tools updated: <new-list>" (if changed)
+
 **Step 3: Display combined health report (per D-14)**
 
 Both health check scripts return JSON:
@@ -237,6 +279,7 @@ If both healthy:
 /do:init - Health Check
 
 Workspace: ~/workspace (healthy, v0.1.0)
+AI tools: codex, gemini
 Project: my-project/.do/ (healthy, v0.1.0)
 
 No issues found.
@@ -442,6 +485,9 @@ Next steps:
 - **Health check scripts:**
   - `skills/do/scripts/workspace-health.cjs` - Node.js workspace health check implementation
   - `skills/do/scripts/project-health.cjs` - Node.js project health check implementation
+
+- **Detection script:**
+  - `skills/do/scripts/detect-tools.cjs` - Node.js AI CLI detection
 
 ## /do:scan
 

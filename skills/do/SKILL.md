@@ -22,9 +22,10 @@ Token-efficient meta programming language for Claude Code and Codex. Execute tas
 |---------|---------|
 | `/do:init` | Initialize workspace or run health check |
 | `/do:scan` | Scan project and create database entry |
-| `/do:task` | Create and refine a task (requires /do:scan first) |
-| `/do:continue` | Resume from last task state |
-| `/do:debug` | Structured debugging workflow |
+| `/do:task` | Create and refine a task |
+| `/do:abandon` | Abandon active task |
+| `/do:continue` | Resume from last task state (Phase 9) |
+| `/do:debug` | Structured debugging workflow (Phase 10) |
 
 ---
 

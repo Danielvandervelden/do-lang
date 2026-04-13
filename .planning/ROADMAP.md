@@ -1,0 +1,291 @@
+# Roadmap
+
+## Progress
+
+| Phase | Name | Status | Requirements |
+|-------|------|--------|--------------|
+| 1 | Package Foundation | [ ] Pending | TS-01 |
+| 2 | Workspace Detection & Init | [ ] Pending | TS-02 |
+| 3 | Project Setup | [ ] Pending | TS-03 |
+| 4 | Database Scanning | [ ] Pending | TS-04, TS-05 |
+| 5 | Task Creation & Refine Agent | [ ] Pending | TS-06 |
+| 6 | Grill-Me Agent | [ ] Pending | TS-07 |
+| 7 | Context Decision & Implementation | [ ] Pending | TS-08, TS-09 |
+| 8 | Verification Agent | [ ] Pending | TS-10 |
+| 9 | Task Resume | [ ] Pending | TS-11 |
+| 10 | Debug Mode | [ ] Pending | TS-12 |
+| 11 | AI Council Integration | [ ] Pending | F-01, F-02 |
+| 12 | Codex Adapter | [ ] Pending | F-03, F-04 |
+
+---
+
+## Phase 1: Package Foundation
+
+**Goal:** Establish npm package structure with installation and local dev support.
+
+**Requirements:** TS-01
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 01-01-PLAN.md — Create package infrastructure, placeholder skill, and README with yalc verification
+
+**Deliverables:**
+- `package.json` with name, version, scripts, files
+- `bin/install.cjs` postinstall script
+- `skills/do/` directory structure
+- `.gitignore`, `README.md`
+- yalc workflow verified
+
+**Success Criteria:**
+- [ ] `npm pack` creates valid tarball
+- [ ] `yalc publish && yalc add do-lang` works locally
+- [ ] postinstall copies to `~/.claude/skills/do/`
+
+---
+
+## Phase 2: Workspace Detection & Init
+
+**Goal:** Detect missing workspace setup and create foundation (database, AGENTS.md).
+
+**Requirements:** TS-02
+
+**Deliverables:**
+- `/do:init` skill (workspace level)
+- Detection logic for CLAUDE.md marker
+- Database folder structure creation
+- AGENTS.md, CLAUDE.md, CURSOR.md, GEMINI.md generation
+
+**Success Criteria:**
+- [ ] Running `/do:init` in fresh workspace creates all files
+- [ ] Running any `/do:*` without setup triggers workspace init
+- [ ] CLAUDE.md contains "do init completed" marker
+
+---
+
+## Phase 3: Project Setup
+
+**Goal:** Detect project without `.do/` folder and initialize it.
+
+**Requirements:** TS-03
+
+**Deliverables:**
+- Project-level detection in `/do:init`
+- `.do/config.json` template and creation
+- `.do/tasks/` folder creation
+- Config options: council toggles, auto_grill_threshold
+
+**Success Criteria:**
+- [ ] Running `/do:*` in project without `.do/` triggers setup
+- [ ] `config.json` created with correct defaults
+- [ ] `tasks/` folder exists and is empty
+
+---
+
+## Phase 4: Database Scanning
+
+**Goal:** Analyze project and create database entry with tech stack, structure.
+
+**Requirements:** TS-04, TS-05
+
+**Deliverables:**
+- `/do:scan` skill
+- Codebase analysis logic (package.json, folder structure, etc.)
+- `project.md` template and generation
+- `components/`, `tech/` subfolder creation
+- `__index__.md` update
+
+**Success Criteria:**
+- [ ] `/do:scan` creates database entry at correct path
+- [ ] `project.md` contains detected tech stack
+- [ ] `__index__.md` updated with project reference
+- [ ] Running `/do:task` without database entry shows clear error
+
+---
+
+## Phase 5: Task Creation & Refine Agent
+
+**Goal:** Create task entry point and refinement agent that documents the task.
+
+**Requirements:** TS-06
+
+**Deliverables:**
+- `/do:task` skill entry point
+- Refine agent definition
+- Task markdown template (YAML frontmatter + body)
+- Active task tracking in `config.json`
+- One-task-per-project enforcement
+
+**Success Criteria:**
+- [ ] `/do:task "description"` creates task file in `.do/tasks/`
+- [ ] Task markdown has proper frontmatter (stages, confidence)
+- [ ] Refine agent documents problem, context, approach, concerns
+- [ ] Starting second task warns about existing active task
+
+---
+
+## Phase 6: Grill-Me Agent
+
+**Goal:** Create agent that forces clarification when confidence is low.
+
+**Requirements:** TS-07
+
+**Deliverables:**
+- Grill-me agent definition
+- Confidence threshold check (< 0.9)
+- Targeted questioning logic
+- Task markdown update with clarifications
+- Confidence recalculation
+
+**Success Criteria:**
+- [ ] Confidence < 0.9 automatically triggers grill-me
+- [ ] Agent asks specific questions about gray areas
+- [ ] Task markdown updated with answers
+- [ ] Loops until confidence >= threshold or user override
+
+---
+
+## Phase 7: Context Decision & Implementation
+
+**Goal:** Ask about context clear, then execute the task.
+
+**Requirements:** TS-08, TS-09
+
+**Deliverables:**
+- AskUserQuestion for clear decision
+- Implementation agent definition
+- Task execution logic
+- Execution log in task markdown
+- File change documentation
+
+**Success Criteria:**
+- [ ] User prompted about clearing context (never implicit)
+- [ ] `/do:continue` works after `/clear`
+- [ ] Implementation agent executes task following plan
+- [ ] Task markdown updated with files changed, decisions made
+
+---
+
+## Phase 8: Verification Agent
+
+**Goal:** Verify implementation matches the task requirements.
+
+**Requirements:** TS-10
+
+**Deliverables:**
+- Verify agent definition
+- Implementation vs plan comparison
+- Quality check integration (lint, types, tests)
+- Verification results in task markdown
+- Task completion marking
+
+**Success Criteria:**
+- [ ] Verify agent runs after implementation
+- [ ] Compares actual changes against planned approach
+- [ ] Runs applicable quality checks
+- [ ] Marks task complete or flags issues
+
+---
+
+## Phase 9: Task Resume
+
+**Goal:** Resume work from any task state via `/do:continue`.
+
+**Requirements:** TS-11
+
+**Deliverables:**
+- `/do:continue` skill
+- Active task detection from `config.json`
+- Stage routing from YAML frontmatter
+- Context reconstruction from task markdown
+
+**Success Criteria:**
+- [ ] `/do:continue` finds active task
+- [ ] Routes to correct stage (refinement/grilling/execution/verification)
+- [ ] Full context available from task markdown
+- [ ] Works after `/clear`
+
+---
+
+## Phase 10: Debug Mode
+
+**Goal:** Structured debugging workflow separate from task execution.
+
+**Requirements:** TS-12
+
+**Deliverables:**
+- `/do:debug` skill
+- Debug session tracking in `.do/debug/`
+- Scientific method workflow (hypothesis, test, confirm/reject)
+- Debug findings documentation
+
+**Success Criteria:**
+- [ ] `/do:debug` creates debug session
+- [ ] Follows hypothesis → test → confirm/reject flow
+- [ ] Documents steps and findings
+- [ ] Can run independently of task workflow
+
+---
+
+## Phase 11: AI Council Integration
+
+**Goal:** Bidirectional council reviews for plans and implementations.
+
+**Requirements:** F-01, F-02
+
+**Deliverables:**
+- Council review skill/logic
+- Briefing template system
+- Plan review integration (after refinement)
+- Implementation review integration (after execution)
+- Configurable per-project
+
+**Success Criteria:**
+- [ ] `config.json` `council_reviews.planning` enables plan review
+- [ ] `config.json` `council_reviews.execution` enables impl review
+- [ ] Claude reviews Codex executions
+- [ ] Codex reviews Claude executions
+- [ ] Feedback incorporated before proceeding
+
+---
+
+## Phase 12: Codex Adapter
+
+**Goal:** Full `/do:*` workflow support in Codex CLI.
+
+**Requirements:** F-03, F-04
+
+**Deliverables:**
+- Codex command structure (`~/.codex/commands/do/`)
+- Cross-runtime adapter pattern
+- AGENTS.md support
+- Task abandonment handling
+
+**Success Criteria:**
+- [ ] `/do:*` commands work in Codex CLI
+- [ ] Same workflow behavior in both runtimes
+- [ ] Task state portable between runtimes
+- [ ] Abandoned tasks can be restarted
+
+---
+
+## Dependencies Graph
+
+```
+Phase 1 (Package)
+    └── Phase 2 (Workspace Init)
+            └── Phase 3 (Project Setup)
+                    └── Phase 4 (Database Scan)
+                            └── Phase 5 (Task/Refine)
+                                    ├── Phase 6 (Grill-Me)
+                                    │       └── Phase 7 (Clear/Implement)
+                                    │               └── Phase 8 (Verify)
+                                    └── Phase 9 (Resume) [parallel with 6-8]
+                                    
+Phase 10 (Debug) — Independent after Phase 3
+Phase 11 (Council) — Requires Phase 5, 8
+Phase 12 (Codex) — Requires Phase 1, can parallelize with 2-11
+```
+
+---
+*Generated: 2026-04-13*

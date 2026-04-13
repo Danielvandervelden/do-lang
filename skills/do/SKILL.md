@@ -719,27 +719,45 @@ node <skill-path>/scripts/check-database-entry.cjs --message
 
 If exit code is non-zero, display error and stop.
 
-**Step 2: Check for active task (per D-11)**
+**Step 2: Check for active task (per D-11, D-55)**
 
-Read `.do/config.json`. If `active_task` is not null:
+Run active task check:
+```bash
+node <skill-path>/scripts/task-abandon.cjs check --config .do/config.json
+```
 
-1. Check if task file exists: `.do/tasks/<active_task>`
-2. **If file does NOT exist (stale pointer):**
-   - Display warning: "Warning: active_task points to missing file '<active_task>'. Clearing stale reference."
-   - Update config.json: set `active_task: null`
-   - Continue to Step 3 (no blocking needed)
-3. If file exists, read YAML frontmatter to get stage
-4. Display blocking message:
+Parse JSON output. Handle each case:
+
+**If `active: false` with no `stale` field:** No active task, proceed to Step 3.
+
+**If `active: false` with `stale` field:**
+- Display warning: "Warning: active_task points to missing file '<stale>'. Clearing stale reference."
+- Update config.json: set `active_task: null`
+- Proceed to Step 3.
+
+**If `active: true`:** Display blocking message with options (per D-55):
 
 ```
-Active task: <active_task> (stage: <stage>)
+Active task found: <file> (stage: <stage>)
 
 Options:
-- /do:continue - Resume this task
-- /do:abandon - Mark as abandoned and start fresh
+1. Continue existing task (/do:continue)
+2. Abandon and start new task
+3. Cancel
+
+What would you like to do?
 ```
 
-Wait for user response. Do not proceed until resolved.
+Wait for user response:
+- **Option 1 (Continue):** Display "Run /do:continue to resume." and stop.
+- **Option 2 (Abandon):** Run abandonment:
+  ```bash
+  node <skill-path>/scripts/task-abandon.cjs abandon <file> --config .do/config.json
+  ```
+  Display "Task abandoned: <file>. Previous stage (<pre_abandon_stage>) preserved for resume."
+  Display "To resume later: /do:continue --task <file>"
+  Continue to Step 3.
+- **Option 3 (Cancel):** Display "Cancelled." and stop.
 
 **Step 3: Load context (per D-07, D-08, D-09, D-10)**
 
@@ -892,7 +910,7 @@ Next: {If confidence >= auto_grill_threshold: "Ready for implementation. Run /do
 
 ## /do:abandon
 
-Mark the active task as abandoned and allow starting a new task.
+Mark the active task as abandoned. The task file remains in `.do/tasks/` with `stage: abandoned` and `pre_abandon_stage` preserved for resume capability.
 
 ### Usage
 
@@ -902,18 +920,37 @@ Mark the active task as abandoned and allow starting a new task.
 
 ### Process
 
-1. Read `.do/config.json` to get `active_task`
-2. If no active task, display: "No active task to abandon."
-3. Check if task file exists at `.do/tasks/<active_task>`
-   - If file does NOT exist: update config.json `active_task: null`, display: "Cleared stale reference to missing task file."
-4. Read task file at `.do/tasks/<active_task>`
-5. Update YAML frontmatter:
-   - Set `stage: abandoned`
-   - Set `stages.abandoned: true` (keeps stages map consistent)
-   - Set current stage in stages map to `abandoned` (e.g., if was `refinement: in_progress`, set to `refinement: abandoned`)
-6. Write back to task file
-7. Update config.json: `active_task: null`
-8. Display: "Task abandoned: <filename>. You can now start a new task with /do:task."
+**Step 1: Check for active task**
+
+```bash
+node <skill-path>/scripts/task-abandon.cjs check --config .do/config.json
+```
+
+If no active task (`active: false` without `stale`), display: "No active task to abandon."
+
+If stale reference (`active: false` with `stale`), display: "Cleared stale reference to missing task file."
+
+**Step 2: Confirm and abandon**
+
+Display current task info and confirm:
+```
+Active task: <file> (stage: <stage>)
+
+Abandon this task? (yes/no)
+```
+
+If confirmed:
+```bash
+node <skill-path>/scripts/task-abandon.cjs abandon <file> --config .do/config.json
+```
+
+**Step 3: Display confirmation**
+
+Display:
+- "Task abandoned: <file>"
+- "Previous stage (<pre_abandon_stage>) preserved."
+- "To resume later: /do:continue --task <file>"
+- "You can now start a new task with /do:task."
 
 ## /do:continue
 
@@ -936,6 +973,21 @@ Check if task file exists at `.do/tasks/<active_task>`:
 Read task file at `.do/tasks/<active_task>`.
 Parse YAML frontmatter for `stage`, `stages`, and `confidence`.
 
+**Optional: Resume abandoned task (per D-57, D-58)**
+
+If user runs `/do:continue --task <filename>`:
+1. Validate the file exists in `.do/tasks/<filename>`
+2. Parse frontmatter to confirm it's a task file
+3. If `stage: abandoned`:
+   - Read `pre_abandon_stage` field (if present) to get previous stage
+   - Update `stage` to `pre_abandon_stage` value (or `refinement` if not set)
+   - Set `stages.abandoned: false`
+   - Update the restored stage in stages map back to `in_progress`
+4. Set `active_task` in config to this filename
+5. Proceed with normal stage routing
+
+Default `/do:continue` (no flag) still uses `active_task` from config only.
+
 **Step 2: Route by stage**
 
 Read `auto_grill_threshold` from `.do/config.json` (default 0.9 if not set).
@@ -948,7 +1000,7 @@ Read `auto_grill_threshold` from `.do/config.json` (default 0.9 if not set).
 | execution | any | @skills/do/references/stage-execute.md |
 | verification | any | @skills/do/references/stage-verify.md |
 | verified | any | @skills/do/references/stage-verify.md |
-| abandoned | any | Display: "Task was abandoned. Run /do:task to create a new one." |
+| abandoned | any | Display: "Task was abandoned. Resume with /do:continue --task <filename> or start fresh with /do:task." |
 
 **NOTE:** `grilling` is NOT a valid top-level stage value. Grill status is tracked via `stages.grilling` field (pending/in_progress/complete). The routing checks `stages.grilling: complete` BEFORE checking confidence, ensuring user overrides via "Proceed anyway" are respected.
 

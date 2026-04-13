@@ -255,9 +255,15 @@ Plans:
 
 ## Phase 10: Debug Mode
 
-**Goal:** Structured debugging workflow separate from task execution.
+**Goal:** Structured debugging workflow separate from task execution using scientific method.
 
 **Requirements:** TS-12
+
+**Plans:** 2 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — Create debug-template.md reference file and debug-session.test.cjs tests
+- [ ] 10-02-PLAN.md — Implement debug-session.cjs, stage-debug.md, and add /do:debug to SKILL.md
 
 **Deliverables:**
 - `/do:debug` skill
@@ -267,7 +273,7 @@ Plans:
 
 **Success Criteria:**
 - [ ] `/do:debug` creates debug session
-- [ ] Follows hypothesis → test → confirm/reject flow
+- [ ] Follows hypothesis -> test -> confirm/reject flow
 - [ ] Documents steps and findings
 - [ ] Can run independently of task workflow
 

@@ -8,7 +8,7 @@
 | 2 | Workspace Detection & Init | [ ] Pending | TS-02 |
 | 3 | 1/1 | Complete   | 2026-04-13 |
 | 4 | 3/3 | Complete   | 2026-04-13 |
-| 5 | 1/2 | In Progress|  |
+| 5 | 2/2 | Complete   | 2026-04-13 |
 | 6 | Grill-Me Agent | [ ] Pending | TS-07 |
 | 7 | Context Decision & Implementation | [ ] Pending | TS-08, TS-09 |
 | 8 | Verification Agent | [ ] Pending | TS-10 |
@@ -127,11 +127,11 @@ Plans:
 
 **Requirements:** TS-06
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 05-01-PLAN.md — Create load-task-context.cjs script and task-template.md
-- [ ] 05-02-PLAN.md — Implement /do:task and /do:abandon in SKILL.md
+- [x] 05-02-PLAN.md — Implement /do:task and /do:abandon in SKILL.md
 
 **Deliverables:**
 - `/do:task` skill entry point

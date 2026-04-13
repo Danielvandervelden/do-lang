@@ -1,0 +1,27 @@
+{
+  "name": "do-lang",
+  "version": "0.1.0",
+  "description": "Token-efficient meta programming language for Claude Code and Codex",
+  "files": [
+    "skills",
+    "bin"
+  ],
+  "scripts": {
+    "postinstall": "node bin/install.cjs"
+  },
+  "keywords": [
+    "claude-code",
+    "skills",
+    "ai",
+    "codex",
+    "meta-programming"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.7.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/globalroo/do.git"
+  }
+}

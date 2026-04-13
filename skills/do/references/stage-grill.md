@@ -14,22 +14,39 @@ This reference file is loaded by /do:continue when the task needs confidence imp
 
 ---
 
+Before running grill-me logic, execute Step R0 from resume-preamble.md.
+
+@skills/do/references/resume-preamble.md
+
+---
+
 Run this flow when stage is `refinement` AND (confidence.score < auto_grill_threshold OR stages.grilling: in_progress).
 
-**Step G0: Enter grill-me flow (first time only)**
+### Step R0: Resume Check (per D-33, D-34, D-35)
+
+Follow @skills/do/references/resume-preamble.md Steps R0.1-R0.5.
+
+**For grill-me stage:**
+- Last action = last Q&A pair from Clarifications section (if any)
+- If no Clarifications, last action = "Grill-me not started"
+- Skip R0.6 (mid-execution progress) - not applicable to grill stage
+
+---
+
+**Step G1: Enter grill-me flow (first time only)**
 
 If `stages.grilling` is `pending`:
 - Update task frontmatter: `stages.grilling: in_progress`
 - Update `updated` timestamp
-- Continue to Step G1
+- Continue to Step G2
 
-**Step G1: Identify weakest factor (per D-13)**
+**Step G2: Identify weakest factor (per D-13)**
 
 Read `confidence.factors` from task frontmatter.
 Find factor with largest deduction (most negative value).
 If multiple tied, use priority order: context > scope > complexity > familiarity.
 
-**Step G2: Generate targeted question (per D-14)**
+**Step G3: Generate targeted question (per D-14)**
 
 Based on the weakest factor, generate a specific question. Use inline text prompt (NOT AskUserQuestion - documented bug).
 
@@ -50,7 +67,7 @@ Weakest factor: <factor> (<value>)
 Enter your answer, or type "Proceed anyway" to skip remaining questions:
 ```
 
-**Step G3: Process user response (per D-15)**
+**Step G4: Process user response (per D-15)**
 
 If user types "Proceed anyway" (case-insensitive):
 - Add to Clarifications section: `User override at confidence <score>`
@@ -63,7 +80,7 @@ If user types "Proceed anyway" (case-insensitive):
 
 Otherwise, process the answer.
 
-**Step G4: Update task markdown (per D-16)**
+**Step G5: Update task markdown (per D-16)**
 
 Add to Clarifications section:
 
@@ -84,7 +101,7 @@ Update confidence.factors.<factor> with new value (old + boost, capped at 0.00).
 Recalculate confidence.score = 1.0 + sum(all factors).
 Update `updated` timestamp to current ISO-8601.
 
-**Step G5: Check threshold or loop (per D-15)**
+**Step G6: Check threshold or loop (per D-15)**
 
 If confidence.score >= auto_grill_threshold:
 - Update task frontmatter:
@@ -105,7 +122,7 @@ Else:
   Confidence: <old_score> -> <new_score> (+<delta>)
   <factor> improved. Next weakest: <next_factor>
   ```
-- Return to Step G1 with the next weakest factor
+- Return to Step G2 with the next weakest factor
 
 ### Files
 

@@ -16,6 +16,22 @@ This reference file is loaded by /do:continue when the task is ready for impleme
 - If stage is `refinement`, first transition to `execution` stage
 - If stage is already `execution`, resume from current state
 
+Before running execution logic, execute Step R0 from resume-preamble.md.
+
+@skills/do/references/resume-preamble.md
+
+---
+
+### Step R0: Resume Check (per D-33, D-34, D-35)
+
+Follow @skills/do/references/resume-preamble.md Steps R0.1-R0.6.
+
+**For execution stage:**
+- Last action = summary of last Execution Log entry (Files and Status)
+- If no Execution Log entries, last action = "Execution not started"
+- Run R0.6 if Execution Log has entries but last Status is NOT "Execution complete"
+- If R0.6 shows progress checklist and user confirms, skip E0 and continue from E2
+
 ---
 
 ### Step E0: Context Clear Decision (per D-18)

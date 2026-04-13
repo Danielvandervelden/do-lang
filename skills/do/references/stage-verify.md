@@ -16,6 +16,21 @@ This reference file is loaded by /do:continue when the task is in verification s
 - If stage is `verification`, run full verification flow
 - If stage is `verified`, resume at UAT flow (Step V5)
 
+Before running verification logic, execute Step R0 from resume-preamble.md.
+
+@skills/do/references/resume-preamble.md
+
+---
+
+### Step R0: Resume Check (per D-33, D-34, D-35)
+
+Follow @skills/do/references/resume-preamble.md Steps R0.1-R0.5.
+
+**For verification stage:**
+- Last action = "Verification: " + stages.verification status (in_progress, awaiting UAT, etc.)
+- If Verification Results section exists, summarize: "Checklist X/Y, Quality X/Y"
+- Skip R0.6 (mid-execution progress) - not applicable to verify stage
+
 ---
 
 ### Step V0: Load Task Context (per D-23)

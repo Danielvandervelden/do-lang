@@ -20,13 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Minimize token usage while maintaining execution quality
-**Current focus:** Phase 09 — task-resume
+**Current focus:** Phase 10 — Debug Mode (next)
 
 ## Current Position
 
-Phase: 13
+Phase: 10
 Plan: Not started
-Status: Phase complete — ready for verification
+Status: Ready for discuss-phase
 Last activity: 2026-04-13
 
 ## Research Summary
@@ -76,9 +76,9 @@ Resume file: None
 
 ## Next Steps
 
-1. `/gsd:discuss-phase 8` — Gather context for Verification Agent
-2. `/gsd:plan-phase 8` — Plan the verification stage
-3. `/gsd:execute-phase 8` — Implement verification flow
+1. `/gsd:discuss-phase 10` — Gather context for Debug Mode
+2. `/gsd:plan-phase 10` — Plan the debug workflow
+3. `/gsd:execute-phase 10` — Implement /do:debug
 
 ## Accumulated Context
 
@@ -87,4 +87,4 @@ Resume file: None
 - Phase 13 added: Workspace Customization
 
 ---
-*Last updated: 2026-04-13 after Phase 7 complete*
+*Last updated: 2026-04-13 after Phase 9 complete*

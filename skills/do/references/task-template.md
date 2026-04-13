@@ -15,6 +15,11 @@ stages:
   verification: pending
   abandoned: false
 
+# Council review tracking (prevents re-running on resume)
+council_review_ran:
+  plan: false
+  code: false
+
 # Confidence calculation (per D-04, D-05)
 confidence:
   score: {{CONFIDENCE_SCORE}}
@@ -121,6 +126,33 @@ Final entry has summary:
 - Files modified: <count>
 - Decisions made: <count>
 - Deviations: <count or "none">
+-->
+
+## Council Review
+
+<!--
+Populated by council review stages (E-1 for plan review, V-1 for code review).
+
+### Plan Review
+- **Reviewer:** <advisor name>
+- **Verdict:** LOOKS_GOOD | CONCERNS | RETHINK
+- **Findings:**
+  - Finding with evidence citation
+- **Recommendations:**
+  - Actionable recommendation
+- **User Override:** (only if user proceeded despite CONCERNS/RETHINK)
+
+### Code Review
+- **Reviewer:** <advisor name>
+- **Verdict:** APPROVED | NITPICKS_ONLY | CHANGES_REQUESTED
+- **Files Reviewed:** <count>
+- **Findings:**
+  - Finding with file:line citation
+- **Recommendations:**
+  - Actionable recommendation
+- **User Override:** (only if user proceeded despite issues)
+
+If council reviews are disabled in config, this section remains empty.
 -->
 
 ## Verification Results

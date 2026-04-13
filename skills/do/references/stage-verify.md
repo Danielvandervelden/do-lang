@@ -33,7 +33,131 @@ Follow @skills/do/references/resume-preamble.md Steps R0.1-R0.5.
 
 ---
 
-### Step V0: Load Task Context (per D-23)
+### Step V-1: Code Review (per D-34, D-35)
+
+**First entry only (coming from execution stage, not resuming verification):**
+
+Check if code review already ran (prevents re-running on resume):
+
+```bash
+node -e "const fm=require('gray-matter'); const t=fm(require('fs').readFileSync('.do/tasks/<active_task>','utf8')); process.exit(t.data.council_review_ran?.code === true ? 1 : 0)"
+```
+
+**If already ran (exit 1):** Skip to Step V0.
+
+Check if code review is enabled:
+
+```bash
+node -e "const c=require('./.do/config.json'); process.exit(c.council_reviews?.execution === true ? 0 : 1)"
+```
+
+**If disabled (exit 1):** Mark as skipped in frontmatter (`council_review_ran.code: 'skipped'`), skip to Step V0.
+
+**If enabled (exit 0):** Run council code review.
+
+**Step V-1.1: Extract files modified from Execution Log**
+
+Parse the Execution Log section of the task markdown. Extract all file paths from `**Files:**` entries:
+
+```javascript
+const filesModified = [];
+const filePattern = /^\s*-\s*`([^`]+)`/gm;
+let match;
+while ((match = filePattern.exec(executionLogSection)) !== null) {
+  filesModified.push(match[1]);
+}
+```
+
+**Step V-1.2: Invoke council**
+
+```bash
+node <skill-path>/scripts/council-invoke.cjs \
+  --type code \
+  --task-file ".do/tasks/<active_task>" \
+  --reviewer "$(node -e "const c=require('./.do/config.json'); console.log(c.council_reviews?.reviewer || 'random')")" \
+  --workspace "$(pwd)" \
+  --files-modified "<comma-separated list>"
+```
+
+Parse JSON output for: `advisor`, `verdict`, `findings`, `recommendations`, `success`.
+
+**Step V-1.3: Handle verdict**
+
+| Verdict | Action |
+|---------|--------|
+| APPROVED | Log to Council Review section, mark `council_review_ran.code: true`, proceed to V0 |
+| NITPICKS_ONLY | Log to Council Review, display nitpicks, ask user if they want to fix or proceed |
+| CHANGES_REQUESTED | Log to Council Review, display changes, ask user to fix before proceeding |
+
+**If NITPICKS_ONLY:**
+```
+Code Review: NITPICKS_ONLY
+
+Advisor: <advisor>
+
+Nitpicks:
+<findings list>
+
+Options:
+1. Apply fixes (describe what to fix)
+2. Proceed to verification
+
+Enter 1 or 2:
+```
+
+Wait for user response.
+- If 1: Display "Describe the fixes:" Wait for description. Add to Execution Log. Return to execution briefly to apply, then continue V-1.
+- If 2: Log "User override: proceeding despite nitpicks" in Council Review section. Mark `council_review_ran.code: true`. Continue to V0.
+
+**If CHANGES_REQUESTED:**
+```
+Code Review: CHANGES_REQUESTED
+
+Advisor: <advisor>
+
+Issues Found:
+<findings list>
+
+Recommendations:
+<recommendations list>
+
+Material issues found. Options:
+1. Fix issues (returns to execution stage)
+2. Proceed anyway (not recommended)
+
+Enter 1 or 2:
+```
+
+Wait for user response.
+- If 1: Update frontmatter: `stage: execution`, `stages.verification: pending`, `council_review_ran.code: false`. Display "Fix the issues, then run /do:continue." Stop.
+- If 2: Log "User override: proceeding despite CHANGES_REQUESTED" in Council Review section. Mark `council_review_ran.code: true`. Continue to V0.
+
+**Step V-1.4: Log council results to task markdown**
+
+Update Council Review section (add Code Review subsection) **after Execution Log** (per D-46):
+
+```markdown
+### Code Review
+- **Reviewer:** <advisor>
+- **Verdict:** <verdict>
+- **Files Reviewed:** <count>
+- **Findings:**
+  - <finding 1>
+  - <finding 2>
+- **Recommendations:**
+  - <recommendation 1>
+{{#if USER_OVERRIDE}}
+- **User Override:** Proceeded despite <verdict>
+{{/if}}
+```
+
+Also update frontmatter: `council_review_ran.code: true`
+
+**If resuming verification (council_review_ran.code is true):** Skip V-1, continue to V0.
+
+---
+
+### Step V0: Load Task Context (per D-23, after code review completes if enabled)
 
 Read the active task markdown file and extract:
 - **Problem Statement** - What was to be solved

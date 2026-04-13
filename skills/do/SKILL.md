@@ -320,23 +320,27 @@ To detect project name:
 
 Wait for user response. Use detected name if they confirm or provide empty response.
 
-**Step 2: Ask council review preferences (per D-04, D-05)**
+**Step 2: Ask council review preferences (per D-04, D-05, D-39)**
 
 ```
 Configure AI council reviews:
 
 Planning reviews (review task plans before execution):
 - Enable planning reviews? (yes/no, default: yes)
-- Model for planning reviews? (default: codex-1)
 
 Execution reviews (review implementations after execution):
-- Enable execution reviews? (yes/no, default: no)
-- Model for execution reviews? (default: o3)
+- Enable execution reviews? (yes/no, default: yes)
 
-Enter responses (or press Enter for defaults):
+Reviewer selection:
+- random: Randomly select between available advisors (default)
+- codex: Always use Codex (if in Claude runtime)
+- gemini: Always use Gemini
+- both: Run both advisors in parallel
+
+Enter reviewer preference (random/codex/gemini/both, default: random):
 ```
 
-Wait for user response.
+Wait for user responses.
 
 **Step 3: Ask grill threshold (per D-09)**
 
@@ -382,10 +386,9 @@ After gathering all answers, create the project structure:
    - `{{PROJECT_NAME}}` with the confirmed project name
    
    Update values based on user responses:
-   - `council_reviews.planning.enabled` - user's planning review choice
-   - `council_reviews.planning.model` - user's planning model choice
-   - `council_reviews.execution.enabled` - user's execution review choice
-   - `council_reviews.execution.model` - user's execution model choice
+   - `council_reviews.planning` - true if user enabled planning reviews, false otherwise
+   - `council_reviews.execution` - true if user enabled execution reviews, false otherwise
+   - `council_reviews.reviewer` - user's reviewer preference (default: "random")
    - `auto_grill_threshold` - user's threshold choice
    - `database_entry` - user's database entry response
 
@@ -405,8 +408,9 @@ Created:
 
 Configuration:
 - Project name: <name>
-- Council planning reviews: <enabled/disabled> (model: <model>)
-- Council execution reviews: <enabled/disabled> (model: <model>)
+- Council planning reviews: <enabled/disabled>
+- Council execution reviews: <enabled/disabled>
+- Council reviewer: <reviewer preference>
 - Grill threshold: <threshold>
 - Database entry: <yes/no>
 

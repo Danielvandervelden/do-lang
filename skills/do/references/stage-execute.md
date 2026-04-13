@@ -34,7 +34,98 @@ Follow @skills/do/references/resume-preamble.md Steps R0.1-R0.6.
 
 ---
 
-### Step E0: Context Clear Decision (per D-18)
+### Step E-1: Plan Review (per D-33, D-35)
+
+**First entry only (stage was refinement, not resuming execution):**
+
+Check if plan review already ran (prevents re-running on resume):
+
+```bash
+node -e "const fm=require('gray-matter'); const t=fm(require('fs').readFileSync('.do/tasks/<active_task>','utf8')); process.exit(t.data.council_review_ran?.plan === true ? 1 : 0)"
+```
+
+**If already ran (exit 1):** Skip to Step E0.
+
+Check if plan review is enabled:
+
+```bash
+node -e "const c=require('./.do/config.json'); process.exit(c.council_reviews?.planning === true ? 0 : 1)"
+```
+
+**If disabled (exit 1):** Mark as skipped in frontmatter (`council_review_ran.plan: 'skipped'`), skip to Step E0.
+
+**If enabled (exit 0):** Run council plan review.
+
+**Step E-1.1: Invoke council**
+
+```bash
+node <skill-path>/scripts/council-invoke.cjs \
+  --type plan \
+  --task-file ".do/tasks/<active_task>" \
+  --reviewer "$(node -e "const c=require('./.do/config.json'); console.log(c.council_reviews?.reviewer || 'random')")" \
+  --workspace "$(pwd)"
+```
+
+Parse JSON output for: `advisor`, `verdict`, `findings`, `recommendations`, `success`.
+
+**Step E-1.2: Handle verdict**
+
+| Verdict | Action |
+|---------|--------|
+| LOOKS_GOOD | Log to Council Review section, mark `council_review_ran.plan: true`, proceed to E0 |
+| CONCERNS | Log to Council Review, display concerns to user, ask if they want to revise or proceed |
+| RETHINK | Log to Council Review, display RETHINK findings, recommend revision, ask user |
+
+**If CONCERNS or RETHINK:**
+```
+Plan Review: <verdict>
+
+Advisor: <advisor>
+
+Findings:
+<findings list>
+
+Recommendations:
+<recommendations list>
+
+Options:
+1. Revise plan (update Approach section, run /do:continue)
+2. Proceed anyway
+
+Enter 1 or 2:
+```
+
+Wait for user response.
+- If 1: Display "Update the Approach section in .do/tasks/<active_task>, then run /do:continue." Stop.
+- If 2: Log "User override: proceeding despite <verdict>" in Council Review section. Mark `council_review_ran.plan: true`. Continue to E0.
+
+**Step E-1.3: Log council results to task markdown**
+
+Add/update Council Review section **after Execution Log** (per D-46):
+
+```markdown
+## Council Review
+
+### Plan Review
+- **Reviewer:** <advisor>
+- **Verdict:** <verdict>
+- **Findings:**
+  - <finding 1>
+  - <finding 2>
+- **Recommendations:**
+  - <recommendation 1>
+{{#if USER_OVERRIDE}}
+- **User Override:** Proceeded despite <verdict>
+{{/if}}
+```
+
+Also update frontmatter: `council_review_ran.plan: true`
+
+**If resuming (stage was already execution):** Skip E-1, continue to E0.
+
+---
+
+### Step E0: Context Clear Decision (per D-18, after plan review completes if enabled)
 
 **First entry only (stage was refinement):**
 

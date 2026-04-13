@@ -117,20 +117,31 @@ function checkProjectHealth(projectPath) {
   } else if (typeof config.council_reviews !== 'object' || config.council_reviews === null) {
     issues.push({ type: 'invalidField', severity: 'error', details: `council_reviews must be an object, got ${typeof config.council_reviews}` });
   } else {
-    // Validate nested structure
+    // Validate planning and execution (accept both boolean and legacy object format)
     for (const reviewType of ['planning', 'execution']) {
       const review = config.council_reviews[reviewType];
       if (review !== undefined) {
-        if (typeof review !== 'object' || review === null) {
-          issues.push({ type: 'invalidField', severity: 'error', details: `council_reviews.${reviewType} must be an object` });
-        } else {
-          if (review.enabled !== undefined && typeof review.enabled !== 'boolean') {
-            issues.push({ type: 'invalidField', severity: 'warning', details: `council_reviews.${reviewType}.enabled must be a boolean` });
-          }
-          if (review.model !== undefined && typeof review.model !== 'string') {
-            issues.push({ type: 'invalidField', severity: 'warning', details: `council_reviews.${reviewType}.model must be a string` });
+        if (typeof review !== 'boolean') {
+          // Check for legacy object format { enabled: boolean, model: string }
+          if (typeof review === 'object' && review !== null) {
+            if (review.enabled !== undefined && typeof review.enabled !== 'boolean') {
+              issues.push({ type: 'invalidField', severity: 'warning', details: `council_reviews.${reviewType}.enabled must be a boolean` });
+            }
+            // Note: legacy 'model' field is deprecated but accepted for migration
+          } else {
+            issues.push({ type: 'invalidField', severity: 'error', details: `council_reviews.${reviewType} must be a boolean, got ${typeof review}` });
           }
         }
+      }
+    }
+
+    // Validate reviewer field
+    const validReviewers = ['claude', 'codex', 'gemini', 'random', 'both'];
+    if (config.council_reviews.reviewer !== undefined) {
+      if (typeof config.council_reviews.reviewer !== 'string') {
+        issues.push({ type: 'invalidField', severity: 'error', details: `council_reviews.reviewer must be a string, got ${typeof config.council_reviews.reviewer}` });
+      } else if (!validReviewers.includes(config.council_reviews.reviewer)) {
+        issues.push({ type: 'invalidField', severity: 'warning', details: `council_reviews.reviewer must be one of: ${validReviewers.join(', ')}. Got: ${config.council_reviews.reviewer}` });
       }
     }
   }

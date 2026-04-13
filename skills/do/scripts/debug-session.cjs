@@ -31,7 +31,7 @@ const path = require("path");
  */
 const STATUS_TRANSITIONS = {
   gathering: ["investigating"],
-  investigating: ["fixing", "verifying"],
+  investigating: ["fixing"],
   fixing: ["verifying"],
   verifying: ["investigating", "awaiting_human_verify"],
   awaiting_human_verify: ["resolved", "investigating"],

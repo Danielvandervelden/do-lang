@@ -63,15 +63,11 @@ describe("STATUS_TRANSITIONS", () => {
     );
   });
 
-  test("investigating can transition to fixing or verifying", () => {
+  test("investigating can transition to fixing", () => {
     const validTransitions = STATUS_TRANSITIONS["investigating"];
     assert.ok(
       validTransitions.includes("fixing"),
       "investigating should be able to transition to fixing"
-    );
-    assert.ok(
-      validTransitions.includes("verifying"),
-      "investigating should be able to transition to verifying"
     );
   });
 
@@ -160,6 +156,14 @@ describe("STATUS_TRANSITIONS", () => {
     assert.ok(
       !validTransitions.includes("gathering"),
       "fixing cannot go backwards to gathering"
+    );
+  });
+
+  test("cannot skip from investigating to verifying", () => {
+    const validTransitions = STATUS_TRANSITIONS["investigating"];
+    assert.ok(
+      !validTransitions.includes("verifying"),
+      "investigating cannot skip to verifying (must go through fixing first)"
     );
   });
 });

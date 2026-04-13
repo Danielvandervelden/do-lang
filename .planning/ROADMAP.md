@@ -6,7 +6,7 @@
 |-------|------|--------|--------------|
 | 1 | Package Foundation | [ ] Pending | TS-01 |
 | 2 | Workspace Detection & Init | [ ] Pending | TS-02 |
-| 3 | Project Setup | [ ] Pending | TS-03 |
+| 3 | 1/1 | Complete   | 2026-04-13 |
 | 4 | Database Scanning | [ ] Pending | TS-04, TS-05 |
 | 5 | Task Creation & Refine Agent | [ ] Pending | TS-06 |
 | 6 | Grill-Me Agent | [ ] Pending | TS-07 |
@@ -70,14 +70,20 @@ Plans:
 
 ## Phase 3: Project Setup
 
-**Goal:** Detect project without `.do/` folder and initialize it.
+**Goal:** Extend /do:init to handle project-level detection and initialization.
 
 **Requirements:** TS-03
+
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] 03-01-PLAN.md — Create config template, project health check script, and extend SKILL.md with project-level logic
 
 **Deliverables:**
 - Project-level detection in `/do:init`
 - `.do/config.json` template and creation
 - `.do/tasks/` folder creation
+- Project health check script
 - Config options: council toggles, auto_grill_threshold
 
 **Success Criteria:**
@@ -89,9 +95,16 @@ Plans:
 
 ## Phase 4: Database Scanning
 
-**Goal:** Analyze project and create database entry with tech stack, structure.
+**Goal:** Create /do:scan skill that analyzes projects and generates database entries.
 
 **Requirements:** TS-04, TS-05
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Create scan-project.cjs detection script and template files
+- [ ] 04-02-PLAN.md — Add /do:scan skill to SKILL.md with Auto-scan and Interview modes
+- [ ] 04-03-PLAN.md — Create database entry gate check for /do:task
 
 **Deliverables:**
 - `/do:scan` skill
@@ -291,6 +304,16 @@ Phase 10 (Debug) — Independent after Phase 3
 Phase 11 (Council) — Requires Phase 5, 8
 Phase 12 (Codex) — Requires Phase 1, can parallelize with 2-11
 ```
+
+### Phase 13: Workspace Customization
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 12
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 13 to break down)
 
 ---
 *Generated: 2026-04-13*

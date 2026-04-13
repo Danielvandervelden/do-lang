@@ -1,7 +1,7 @@
 ---
 phase: 4
 slug: database-scanning
-status: draft
+status: planned
 nyquist_compliant: false
 wave_0_complete: false
 created: 2026-04-13
@@ -38,14 +38,14 @@ created: 2026-04-13
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 04-01-01 | 01 | 1 | TS-05 | integration | `node scripts/scan-project.cjs . --pretty` | ❌ W0 | ⬜ pending |
-| 04-01-02 | 01 | 1 | TS-05 | integration | `test -f project-template.md` | ❌ W0 | ⬜ pending |
-| 04-01-03 | 01 | 1 | TS-05 | integration | `test -f component-readme.md` | ❌ W0 | ⬜ pending |
-| 04-02-01 | 02 | 2 | TS-05 | manual | Run /do:scan, verify output | ❌ W0 | ⬜ pending |
-| 04-02-02 | 02 | 2 | TS-05 | manual | Check __index__.md updated | ❌ W0 | ⬜ pending |
-| 04-03-01 | 03 | 3 | TS-04 | manual | Run /do:task without db entry | ❌ W0 | ⬜ pending |
+| 04-01-01 | 01 | 1 | TS-05 | integration | `node scripts/scan-project.cjs . --pretty` | W0 | pending |
+| 04-01-02 | 01 | 1 | TS-05 | integration | `test -f project-template.md` | W0 | pending |
+| 04-01-03 | 01 | 1 | TS-05 | integration | `test -f component-readme.md` | W0 | pending |
+| 04-02-01 | 02 | 2 | TS-05 | manual | Run /do:scan, verify output | W0 | pending |
+| 04-03-01 | 03 | 3 | TS-04 | integration | `node scripts/check-database-entry.cjs --help` | W0 | pending |
+| 04-03-02 | 03 | 3 | TS-04 | manual | Run /do:task without db entry | W0 | pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: pending / green / red / flaky*
 
 ---
 
@@ -56,6 +56,7 @@ created: 2026-04-13
 - [ ] `skills/do/references/component-readme.md` — README for components/ folder
 - [ ] `skills/do/references/tech-readme.md` — README for tech/ folder
 - [ ] `skills/do/references/features-readme.md` — README for features/ folder
+- [ ] `skills/do/scripts/check-database-entry.cjs` — database entry gate script
 
 *Infrastructure created during plan execution, not pre-existing.*
 

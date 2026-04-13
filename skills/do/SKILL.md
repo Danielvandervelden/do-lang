@@ -948,6 +948,38 @@ Read `auto_grill_threshold` from `.do/config.json` (default 0.9 if not set).
 
 **NOTE:** `grilling` is NOT a valid top-level stage value. Grill status is tracked via `stages.grilling` field (pending/in_progress/complete). The routing checks `stages.grilling: complete` BEFORE checking confidence, ensuring user overrides via "Proceed anyway" are respected.
 
+### Resume Behavior (per TS-11)
+
+Every `/do:continue` invocation runs Step R0 from the stage reference file before stage-specific logic.
+
+**Resume flow:**
+1. Load task markdown and parse state
+2. Reload context from Context Loaded section (re-read all referenced docs)
+3. Handle any missing docs (prompt user to continue or stop)
+4. Display resume summary with task name, stage, and last action
+5. Wait for user confirmation before proceeding
+6. (Execution stage only) Show progress checklist if mid-execution
+
+**Resume summary format:**
+```
+Resuming: <task-id> (stage: <stage>)
+Last action: <summary>
+
+Continue? (yes/no)
+```
+
+**Stale reference handling:**
+```
+Referenced doc(s) not found:
+- <missing-path>
+
+Options:
+1. Continue without them
+2. Stop and locate the docs
+```
+
+This ensures users always know their position before work continues, especially after `/clear`.
+
 ### Stage Reference Loading
 
 Based on the routing table above, load and follow the appropriate reference file:
@@ -962,6 +994,13 @@ Based on the routing table above, load and follow the appropriate reference file
 @skills/do/references/stage-verify.md
 
 Follow the instructions in the loaded reference file to complete the stage.
+
+**Note:** All stage reference files run Step R0 (Resume Check) first. See @skills/do/references/resume-preamble.md for the shared resume logic.
+
+### Files
+
+- **Resume preamble:**
+  - @skills/do/references/resume-preamble.md - Shared resume logic for context reload and summary display
 
 ## Planned Commands
 

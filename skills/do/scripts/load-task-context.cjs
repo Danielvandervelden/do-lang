@@ -19,8 +19,8 @@
  * @module load-task-context
  */
 
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
 /**
  * @typedef {Object} TaskContextResult
@@ -36,106 +36,106 @@ const path = require('path');
  * Per D-09: Keywords for targeted context loading
  */
 const TECH_TERMS = new Set([
-  'datagrid',
-  'table',
-  'form',
-  'input',
-  'select',
-  'autocomplete',
-  'authentication',
-  'auth',
-  'login',
-  'validation',
-  'api',
-  'endpoint',
-  'upload',
-  'download',
-  'modal',
-  'dialog',
-  'route',
-  'navigation',
-  'state',
-  'redux',
-  'store',
-  'hook',
-  'i18n',
-  'translation',
-  'error',
-  'errors',
-  'loading',
-  'skeleton',
-  'pagination',
-  'sorting',
-  'filtering',
-  'search',
-  'dropdown',
-  'button',
-  'card',
-  'layout',
-  'sidebar',
-  'header',
-  'footer',
-  'menu',
-  'toast',
-  'notification',
-  'theme',
-  'icon',
-  'image',
-  'chart',
-  'graph',
-  'date',
-  'time',
-  'calendar',
-  'picker',
-  'editor',
-  'textarea',
-  'checkbox',
-  'radio',
-  'switch',
-  'toggle',
-  'slider',
-  'progress',
-  'spinner',
-  'tabs',
-  'accordion',
-  'tooltip',
-  'popover',
-  'drawer',
-  'stepper',
-  'wizard',
-  'breadcrumb',
-  'badge',
-  'chip',
-  'avatar',
-  'list',
-  'grid',
-  'tree',
-  'context',
-  'provider',
-  'consumer',
-  'query',
-  'mutation',
-  'cache',
-  'fetch',
-  'request',
-  'response',
-  'middleware',
-  'interceptor',
-  'service',
-  'repository',
-  'controller',
-  'model',
-  'schema',
-  'migrate',
-  'migration',
-  'seed',
-  'seeder',
-  'test',
-  'spec',
-  'mock',
-  'stub',
-  'fixture',
-  'factory'
+  "datagrid",
+  "table",
+  "form",
+  "input",
+  "select",
+  "autocomplete",
+  "authentication",
+  "auth",
+  "login",
+  "validation",
+  "api",
+  "endpoint",
+  "upload",
+  "download",
+  "modal",
+  "dialog",
+  "route",
+  "navigation",
+  "state",
+  "redux",
+  "store",
+  "hook",
+  "i18n",
+  "translation",
+  "error",
+  "errors",
+  "loading",
+  "skeleton",
+  "pagination",
+  "sorting",
+  "filtering",
+  "search",
+  "dropdown",
+  "button",
+  "card",
+  "layout",
+  "sidebar",
+  "header",
+  "footer",
+  "menu",
+  "toast",
+  "notification",
+  "theme",
+  "icon",
+  "image",
+  "chart",
+  "graph",
+  "date",
+  "time",
+  "calendar",
+  "picker",
+  "editor",
+  "textarea",
+  "checkbox",
+  "radio",
+  "switch",
+  "toggle",
+  "slider",
+  "progress",
+  "spinner",
+  "tabs",
+  "accordion",
+  "tooltip",
+  "popover",
+  "drawer",
+  "stepper",
+  "wizard",
+  "breadcrumb",
+  "badge",
+  "chip",
+  "avatar",
+  "list",
+  "grid",
+  "tree",
+  "context",
+  "provider",
+  "consumer",
+  "query",
+  "mutation",
+  "cache",
+  "fetch",
+  "request",
+  "response",
+  "middleware",
+  "interceptor",
+  "service",
+  "repository",
+  "controller",
+  "model",
+  "schema",
+  "migrate",
+  "migration",
+  "seed",
+  "seeder",
+  "test",
+  "spec",
+  "mock",
+  "stub",
+  "fixture",
+  "factory",
 ]);
 
 /**
@@ -145,7 +145,7 @@ const TECH_TERMS = new Set([
  */
 function readFileSafe(filePath) {
   try {
-    return fs.readFileSync(filePath, 'utf-8');
+    return fs.readFileSync(filePath, "utf-8");
   } catch {
     return null;
   }
@@ -176,7 +176,7 @@ function findWorkspaceConfig(startPath) {
   const root = path.parse(current).root;
 
   while (current !== root) {
-    const configPath = path.join(current, '.do-workspace.json');
+    const configPath = path.join(current, ".do-workspace.json");
     if (fs.existsSync(configPath)) {
       return configPath;
     }
@@ -187,14 +187,93 @@ function findWorkspaceConfig(startPath) {
 }
 
 /**
+ * Find .do/config.json by traversing up from the given path
+ * @param {string} startPath - Starting directory path
+ * @returns {{configPath: string, projectRoot: string}|null} Config path and project root, or null if not found
+ */
+function findProjectConfig(startPath) {
+  let current = path.resolve(startPath);
+  const root = path.parse(current).root;
+
+  while (current !== root) {
+    const configPath = path.join(current, ".do", "config.json");
+    if (fs.existsSync(configPath)) {
+      return { configPath, projectRoot: current };
+    }
+    current = path.dirname(current);
+  }
+
+  return null;
+}
+
+/**
+ * Common generic words to exclude from keyword matching
+ * These are words that often appear in task descriptions but don't
+ * indicate specific technical context
+ */
+const GENERIC_WORDS = new Set([
+  "feature",
+  "features",
+  "implement",
+  "implementation",
+  "support",
+  "create",
+  "update",
+  "delete",
+  "remove",
+  "change",
+  "modify",
+  "screen",
+  "screens",
+  "button",
+  "buttons",
+  "component",
+  "components",
+  "should",
+  "would",
+  "could",
+  "please",
+  "thanks",
+  "working",
+  "broken",
+  "issues",
+  "problem",
+  "problems",
+  "system",
+  "systems",
+  "currently",
+  "existing",
+  "project",
+  "projects",
+  "application",
+  "function",
+  "functions",
+  "method",
+  "methods",
+  "display",
+  "showing",
+  "happens",
+  "happening",
+  "whenever",
+  "something",
+  "anything",
+  "everything",
+  "nothing",
+]);
+
+/**
  * Extract keywords from a task description
  * Per D-09: Keyword matching for targeted context loading
+ *
+ * Only includes words that are known tech terms (from TECH_TERMS set).
+ * Generic words like "feature", "implement", "support" are excluded
+ * to prevent noisy matching.
  *
  * @param {string} description - Task description from user
  * @returns {string[]} Array of lowercase, deduplicated keywords
  */
 function extractKeywords(description) {
-  if (!description || typeof description !== 'string') {
+  if (!description || typeof description !== "string") {
     return [];
   }
 
@@ -207,8 +286,8 @@ function extractKeywords(description) {
   const keywords = new Set();
 
   for (const word of words) {
-    // Include if it's a known tech term OR length > 5
-    if (TECH_TERMS.has(word) || word.length > 5) {
+    // Only include if it's a known tech term AND not a generic word
+    if (TECH_TERMS.has(word) && !GENERIC_WORDS.has(word)) {
       keywords.add(word);
     }
   }
@@ -255,7 +334,7 @@ function getMdFiles(dirPath) {
   try {
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
     return entries
-      .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
       .map((entry) => path.join(dirPath, entry.name));
   } catch {
     return [];
@@ -279,7 +358,7 @@ function findMatchingDocs(databasePath, keywords) {
     return [];
   }
 
-  const searchDirs = ['components', 'tech', 'features'];
+  const searchDirs = ["components", "tech", "features"];
   const matched = [];
 
   for (const dir of searchDirs) {
@@ -299,7 +378,7 @@ function findMatchingDocs(databasePath, keywords) {
 /**
  * Load task context by finding workspace config, project config, and matching docs
  *
- * @param {string} projectPath - Path to project root
+ * @param {string} projectPath - Path to start search from (can be nested within project)
  * @param {string} description - Task description for keyword extraction
  * @returns {TaskContextResult}
  */
@@ -315,7 +394,7 @@ function loadTaskContext(projectPath, description) {
       matched_docs: [],
       keywords,
       database_path: null,
-      error: 'Workspace not initialized'
+      error: "Workspace not initialized",
     };
   }
 
@@ -327,41 +406,41 @@ function loadTaskContext(projectPath, description) {
       matched_docs: [],
       keywords,
       database_path: null,
-      error: 'Invalid workspace config: missing database path'
+      error: "Invalid workspace config: missing database path",
     };
   }
 
   const baseDatabasePath = workspaceConfig.database;
 
-  // Step 3: Find project config
-  const projectConfigPath = path.join(resolvedPath, '.do', 'config.json');
-  if (!fs.existsSync(projectConfigPath)) {
+  // Step 3: Find project config by traversing up (supports nested directories)
+  const projectResult = findProjectConfig(resolvedPath);
+  if (!projectResult) {
     return {
       project_md_path: null,
       matched_docs: [],
       keywords,
       database_path: null,
-      error: 'Project not initialized'
+      error: "Project not initialized",
     };
   }
 
   // Step 4: Read project config
-  const projectConfig = readJsonSafe(projectConfigPath);
+  const projectConfig = readJsonSafe(projectResult.configPath);
   if (!projectConfig || !projectConfig.project_name) {
     return {
       project_md_path: null,
       matched_docs: [],
       keywords,
       database_path: null,
-      error: 'Invalid project config: missing project_name'
+      error: "Invalid project config: missing project_name",
     };
   }
 
   const projectName = projectConfig.project_name;
 
   // Step 5: Build database path for this project
-  const databasePath = path.join(baseDatabasePath, 'projects', projectName);
-  const projectMdPath = path.join(databasePath, 'project.md');
+  const databasePath = path.join(baseDatabasePath, "projects", projectName);
+  const projectMdPath = path.join(databasePath, "project.md");
 
   // Step 6: Find matching docs
   const matchedDocs = findMatchingDocs(databasePath, keywords);
@@ -371,7 +450,7 @@ function loadTaskContext(projectPath, description) {
     matched_docs: matchedDocs,
     keywords,
     database_path: databasePath,
-    error: null
+    error: null,
   };
 }
 
@@ -379,7 +458,7 @@ function loadTaskContext(projectPath, description) {
 if (require.main === module) {
   const args = process.argv.slice(2);
 
-  if (args.includes('--help') || args.includes('-h')) {
+  if (args.includes("--help") || args.includes("-h")) {
     console.log(`
 Task Context Loader
 
@@ -418,14 +497,20 @@ Output format (JSON):
     process.exit(0);
   }
 
-  const pretty = args.includes('--pretty');
-  const nonFlagArgs = args.filter((a) => !a.startsWith('-'));
+  const pretty = args.includes("--pretty");
+  const nonFlagArgs = args.filter((a) => !a.startsWith("-"));
 
   const description = nonFlagArgs[0];
-  const projectPath = nonFlagArgs[1] || '.';
+  const projectPath = nonFlagArgs[1] || ".";
 
   if (!description) {
-    console.error(JSON.stringify({ error: 'No task description provided' }, null, pretty ? 2 : 0));
+    console.error(
+      JSON.stringify(
+        { error: "No task description provided" },
+        null,
+        pretty ? 2 : 0,
+      ),
+    );
     process.exit(2);
   }
 

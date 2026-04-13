@@ -5,12 +5,14 @@ updated: {{CREATED_AT}}
 description: "{{DESCRIPTION}}"
 
 # Stage tracking (linear by default)
+# Valid stages: refinement, grilling, execution, verification, abandoned
 stage: refinement
 stages:
   refinement: in_progress
   grilling: pending
   execution: pending
   verification: pending
+  abandoned: false
 
 # Confidence calculation (per D-04, D-05)
 confidence:
@@ -48,8 +50,8 @@ fully understand the task without additional context.
 <!--
 List of documentation files loaded via keyword matching.
 Format:
-- `path/to/component.md` - reason matched
-- `path/to/tech-pattern.md` - reason matched
+- \`path/to/component.md\` - reason matched
+- \`path/to/tech-pattern.md\` - reason matched
 
 If no internal docs matched, note: "No internal docs matched task keywords."
 -->

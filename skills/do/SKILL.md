@@ -720,8 +720,12 @@ If exit code is non-zero, display error and stop.
 Read `.do/config.json`. If `active_task` is not null:
 
 1. Check if task file exists: `.do/tasks/<active_task>`
-2. If exists, read YAML frontmatter to get stage
-3. Display blocking message:
+2. **If file does NOT exist (stale pointer):**
+   - Display warning: "Warning: active_task points to missing file '<active_task>'. Clearing stale reference."
+   - Update config.json: set `active_task: null`
+   - Continue to Step 3 (no blocking needed)
+3. If file exists, read YAML frontmatter to get stage
+4. Display blocking message:
 
 ```
 Active task: <active_task> (stage: <stage>)
@@ -896,11 +900,16 @@ Mark the active task as abandoned and allow starting a new task.
 
 1. Read `.do/config.json` to get `active_task`
 2. If no active task, display: "No active task to abandon."
-3. Read task file at `.do/tasks/<active_task>`
-4. Update YAML frontmatter: `stage: abandoned`
-5. Write back to task file
-6. Update config.json: `active_task: null`
-7. Display: "Task abandoned: <filename>. You can now start a new task with /do:task."
+3. Check if task file exists at `.do/tasks/<active_task>`
+   - If file does NOT exist: update config.json `active_task: null`, display: "Cleared stale reference to missing task file."
+4. Read task file at `.do/tasks/<active_task>`
+5. Update YAML frontmatter:
+   - Set `stage: abandoned`
+   - Set `stages.abandoned: true` (keeps stages map consistent)
+   - Set current stage in stages map to `abandoned` (e.g., if was `refinement: in_progress`, set to `refinement: abandoned`)
+6. Write back to task file
+7. Update config.json: `active_task: null`
+8. Display: "Task abandoned: <filename>. You can now start a new task with /do:task."
 
 ## Planned Commands
 

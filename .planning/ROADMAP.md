@@ -13,7 +13,7 @@
 | 7 | Context Decision & Implementation | Complete | 2026-04-13 |
 | 8 | Verification Agent | Complete | 2026-04-13 |
 | 9 | Task Resume | Complete | 2026-04-13 |
-| 10 | Debug Mode | [ ] Pending | — |
+| 10 | Debug Mode | Complete | 2026-04-13 |
 | 11 | AI Council Integration | [ ] Pending | — |
 | 12 | Codex Adapter | [ ] Pending | — |
 
@@ -259,11 +259,11 @@ Plans:
 
 **Requirements:** TS-12
 
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 10-01-PLAN.md — Create debug-template.md reference file and debug-session.test.cjs tests
-- [ ] 10-02-PLAN.md — Implement debug-session.cjs, stage-debug.md, and add /do:debug to SKILL.md
+- [x] 10-01-PLAN.md — Create debug-template.md reference file and debug-session.test.cjs tests
+- [x] 10-02-PLAN.md — Implement debug-session.cjs, stage-debug.md, and add /do:debug to SKILL.md
 
 **Deliverables:**
 - `/do:debug` skill
@@ -341,10 +341,18 @@ Phase 12 (Codex) — Requires Phase 1, can parallelize with 2-11
 
 ### Phase 13: Workspace Customization
 
-**Goal:** [To be planned]
+**Goal:** Workspace-level configuration and AI tool detection
+
 **Requirements**: TBD
+
 **Depends on:** Phase 12
+
 **Plans:** 0 plans
+
+**Ideas from Phase 11 discussion:**
+- `do-workspace.json` — Workspace-level config file for cross-project settings
+- Available AI CLIs detection — During `/do:init`, ask user what AI CLIs they have installed (codex, gemini, claude-cli, etc.) so council can dynamically detect available advisors
+- Store detected tools in workspace config so council knows what's available without asking each time
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 13 to break down)

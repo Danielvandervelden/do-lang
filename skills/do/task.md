@@ -47,7 +47,7 @@ do-planner (cyan) → do-plan-reviewer (green) → do-griller (yellow, if needed
 ## Step 1: Check Prerequisites
 
 ```bash
-node <skill-path>/scripts/check-database-entry.cjs --message
+node ~/.claude/commands/do/scripts/check-database-entry.cjs --message
 ```
 
 If fails, stop and report what's missing.
@@ -55,7 +55,7 @@ If fails, stop and report what's missing.
 ## Step 2: Check for Active Task
 
 ```bash
-node <skill-path>/scripts/task-abandon.cjs check --config .do/config.json
+node ~/.claude/commands/do/scripts/task-abandon.cjs check --config .do/config.json
 ```
 
 If active task exists, offer options:

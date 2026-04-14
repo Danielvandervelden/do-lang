@@ -50,7 +50,7 @@ Since Claude cannot reliably introspect its context window, **always proceed to 
 Run `load-task-context.cjs` to get paths:
 
 ```bash
-node <skill-path>/scripts/load-task-context.cjs "<task-description>"
+node ~/.claude/commands/do/scripts/load-task-context.cjs "<task-description>"
 ```
 
 Parse JSON output for:

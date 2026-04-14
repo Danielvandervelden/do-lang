@@ -40,7 +40,7 @@ Run from the project root. Two modes available:
 **Step 1: Scan codebase**
 
 ```bash
-node <skill-path>/scripts/scan-project.cjs <project-path>
+node ~/.claude/commands/do/scripts/scan-project.cjs <project-path>
 ```
 
 Detects frameworks, libraries, testing tools, conventions, and directory structure.

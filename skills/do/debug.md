@@ -41,7 +41,7 @@ Ad-hoc debugging burns context and goes in circles. The do-debugger agent uses t
 ## Step 1: Check for Active Debug Session
 
 ```bash
-node <skill-path>/scripts/debug-session.cjs check
+node ~/.claude/commands/do/scripts/debug-session.cjs check
 ```
 
 If `active: true`, offer options:

@@ -77,7 +77,7 @@ Enter workflow descriptions or press Enter to skip:
 
 5. **Detect AI tools:**
    ```bash
-   node <skill-path>/scripts/detect-tools.cjs
+   node ~/.claude/commands/do/scripts/detect-tools.cjs
    ```
    Handle exit code 1 as warning (no tools detected), not failure.
 

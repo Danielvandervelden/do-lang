@@ -22,7 +22,7 @@ Sometimes priorities shift mid-task. Rather than losing context or leaving the w
 **Step 1: Check for active task**
 
 ```bash
-node <skill-path>/scripts/task-abandon.cjs check --config .do/config.json
+node ~/.claude/commands/do/scripts/task-abandon.cjs check --config .do/config.json
 ```
 
 - If no active task (`active: false` without `stale`): "No active task to abandon."
@@ -41,7 +41,7 @@ Abandon this task? (yes/no)
 If confirmed, run:
 
 ```bash
-node <skill-path>/scripts/task-abandon.cjs abandon <file> --config .do/config.json
+node ~/.claude/commands/do/scripts/task-abandon.cjs abandon <file> --config .do/config.json
 ```
 
 **Step 3: Confirm completion**

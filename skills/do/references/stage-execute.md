@@ -59,7 +59,7 @@ node -e "const c=require('./.do/config.json'); process.exit(c.council_reviews?.p
 **Step E-1.1: Invoke council**
 
 ```bash
-node <skill-path>/scripts/council-invoke.cjs \
+node ~/.claude/commands/do/scripts/council-invoke.cjs \
   --type plan \
   --task-file ".do/tasks/<active_task>" \
   --reviewer "$(node -e "const c=require('./.do/config.json'); console.log(c.council_reviews?.reviewer || 'random')")" \
@@ -280,7 +280,7 @@ node -e "const c=require('./.do/config.json'); process.exit(c.council_reviews?.e
 **Step E4.2: Invoke council for code review**
 
 ```bash
-node <skill-path>/scripts/council-invoke.cjs \
+node ~/.claude/commands/do/scripts/council-invoke.cjs \
   --type code \
   --task-file ".do/tasks/<active_task>" \
   --reviewer "$(node -e "const c=require('./.do/config.json'); console.log(c.council_reviews?.reviewer || 'random')")" \

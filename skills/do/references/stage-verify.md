@@ -71,7 +71,7 @@ while ((match = filePattern.exec(executionLogSection)) !== null) {
 **Step V-1.2: Invoke council**
 
 ```bash
-node <skill-path>/scripts/council-invoke.cjs \
+node ~/.claude/commands/do/scripts/council-invoke.cjs \
   --type code \
   --task-file ".do/tasks/<active_task>" \
   --reviewer "$(node -e "const c=require('./.do/config.json'); console.log(c.council_reviews?.reviewer || 'random')")" \

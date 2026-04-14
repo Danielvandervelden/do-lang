@@ -10,19 +10,19 @@ Run combined health checks when workspace and project are both initialized.
 ## Step 1: Run workspace health check
 
 ```bash
-node <skill-path>/scripts/workspace-health.cjs <workspace-path>
+node ~/.claude/commands/do/scripts/workspace-health.cjs <workspace-path>
 ```
 
 ## Step 2: Run project health check
 
 ```bash
-node <skill-path>/scripts/project-health.cjs .
+node ~/.claude/commands/do/scripts/project-health.cjs .
 ```
 
 ## Step 3: Re-run AI tool detection
 
 ```bash
-node <skill-path>/scripts/detect-tools.cjs
+node ~/.claude/commands/do/scripts/detect-tools.cjs
 ```
 
 Handle exit code 1 as warning (no tools detected), not failure.

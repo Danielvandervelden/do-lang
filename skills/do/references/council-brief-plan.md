@@ -10,16 +10,17 @@ description: Briefing template for plan reviews. Uses placeholders for task-spec
 - **You MUST cite evidence.** Reference specific file paths, line numbers, or code patterns.
 - **Focus on the delta.** Only evaluate what changed, not the entire codebase.
 
-## Project
-- **Name:** {{PROJECT_NAME}}
-- **Workspace:** {{WORKSPACE_PATH}}
-- **Project docs:** {{PROJECT_MD_PATH}}
+## Context
+- **Workspace:** {{WORKSPACE}}
 
 ## Task
 Read this task file for full context:
 ```
-{{TASK_FILE_PATH}}
+{{TASK_FILE}}
 ```
+
+**Task content:**
+{{TASK_CONTENT}}
 
 The task file contains:
 - Problem Statement — what is being solved

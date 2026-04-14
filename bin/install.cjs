@@ -6,7 +6,7 @@ const os = require('os');
 const packageRoot = path.join(__dirname, '..');
 const source = path.join(packageRoot, 'skills', 'do');
 const claudeDir = path.join(os.homedir(), '.claude');
-const target = path.join(claudeDir, 'skills', 'do');
+const target = path.join(claudeDir, 'commands', 'do');
 const codexDir = path.join(os.homedir(), '.codex');
 const codexTarget = path.join(codexDir, 'commands', 'do');
 
@@ -16,11 +16,18 @@ if (!fs.existsSync(source)) {
   process.exit(0);
 }
 
-// Install to Claude skills
+// Install to Claude commands (sub-commands like /do:init, /do:scan)
 if (fs.existsSync(claudeDir)) {
-  fs.mkdirSync(path.join(claudeDir, 'skills'), { recursive: true });
+  // Migrate from old install location (skills/do -> commands/do)
+  const oldTarget = path.join(claudeDir, 'skills', 'do');
+  if (fs.existsSync(oldTarget)) {
+    fs.rmSync(oldTarget, { recursive: true });
+    console.log(`Migrated: removed old ${oldTarget}`);
+  }
+
+  fs.mkdirSync(path.join(claudeDir, 'commands'), { recursive: true });
   fs.cpSync(source, target, { recursive: true });
-  console.log(`do skills installed to ${target}`);
+  console.log(`do commands installed to ${target}`);
 } else {
   console.log('~/.claude not found, skipping Claude installation');
 }

@@ -47,7 +47,7 @@ Parse JSON output for detected tech stack, directories, conventions.
 
 ## Step 4: Create database entry
 
-Follow SKILL.md /do:scan workflow:
+Follow ~/.codex/commands/do/scan.md workflow:
 - Create database folder structure
 - Generate project.md from template
 - Update __index__.md

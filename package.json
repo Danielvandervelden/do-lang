@@ -1,6 +1,6 @@
 {
   "name": "do-lang",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "description": "Token-efficient meta programming language for Claude Code and Codex",
   "files": [
     "skills",
@@ -24,5 +24,8 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/globalroo/do.git"
+  },
+  "dependencies": {
+    "do-lang": "file:.yalc/do-lang"
   }
 }

@@ -25,7 +25,7 @@ Check for "do init completed" marker:
 grep -q "do init completed" ~/workspace/CLAUDE.md 2>/dev/null
 ```
 
-If marker missing, follow workspace setup flow from SKILL.md.
+If marker missing, follow workspace setup flow from ~/.codex/commands/do/init.md.
 
 ## Step 2: Check project initialization (if in project)
 

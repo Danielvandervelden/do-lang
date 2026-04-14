@@ -57,7 +57,7 @@ Parse JSON output for project_md_path, matched_docs, keywords.
 
 ## Step 4: Analyze and refine task
 
-Follow refinement process from SKILL.md:
+Follow refinement process from ~/.codex/commands/do/task.md:
 - Calculate confidence with factor breakdown
 - Propose wave breakdown (always ask user)
 - Create task file in .do/tasks/
@@ -68,7 +68,7 @@ Set active_task in config.json and show next steps.
 
 ## Reference
 
-For full workflow, see SKILL.md /do:task section.
+For full workflow, see ~/.codex/commands/do/task.md.
 Templates: ~/.codex/commands/do/references/task-template.md
 
 </process>

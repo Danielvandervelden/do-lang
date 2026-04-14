@@ -1,6 +1,6 @@
 ---
 name: do:continue
-description: "Resume work from where you left off. Use when returning to a task after a break, after /clear, after switching branches, or when the user says 'continue', 'pick up where we left off', 'what was I working on', 'resume'. Reloads context and shows current progress before proceeding."
+description: "Resume work from where you left off. Detects current stage and spawns the appropriate agent to continue."
 argument-hint: "[--task <filename>]"
 allowed-tools:
   - Read
@@ -9,16 +9,17 @@ allowed-tools:
   - Bash
   - Glob
   - Grep
+  - Agent
   - AskUserQuestion
 ---
 
 # /do:continue
 
-Resume the active task from its current state. Reloads context, shows where you left off, and picks up the workflow.
+Resume the active task by spawning the appropriate agent for its current stage.
 
 ## Why this exists
 
-Tasks span multiple sessions. After a break, context switch, or `/clear`, you need to know where things stand before diving back in. This skill reloads the task state, summarizes progress, and routes to the right stage — so you're never guessing what was done or what's next.
+Tasks span multiple sessions. After a break, context switch, or `/clear`, this skill reloads the task state, shows progress, and spawns the right agent to continue — planner, reviewer, executioner, etc.
 
 ## Usage
 
@@ -27,54 +28,187 @@ Tasks span multiple sessions. After a break, context switch, or `/clear`, you ne
 /do:continue --task <filename>  # Resume a specific (possibly abandoned) task
 ```
 
-## What it does
+---
 
-1. **Finds the active task** — Reads from `.do/config.json`
-2. **Reloads context** — Re-reads any docs referenced in the task file
-3. **Shows progress** — Displays stage, last action, and any mid-execution state
-4. **Routes to the right stage** — Grill, execute, or verify based on current state
-
-## Stage Detection
-
-**Step 1: Load active task**
+## Step 1: Find Active Task
 
 Read `.do/config.json` to get `active_task`.
-- No active task: "No active task. Run /do:task to create one."
-- Stale pointer (file missing): Clear reference, show same message
 
-**Step 2: Resume abandoned task** (with `--task` flag)
+```bash
+node -e "const c=require('./.do/config.json'); console.log(c.active_task || 'none')"
+```
 
-If the specified task has `stage: abandoned`:
+- **No active task**: "No active task. Run /do:task to create one."
+- **File missing**: Clear stale reference, show same message
+
+If `--task <filename>` provided, use that instead.
+
+## Step 2: Load Task State
+
+Read the task file and extract:
+- `stage`: Current workflow stage
+- `stages`: Sub-stage completion status
+- `confidence`: Score and factors
+- Execution Log: Last action
+
+```bash
+node -e "
+const fm = require('gray-matter');
+const t = fm(require('fs').readFileSync('.do/tasks/<active_task>', 'utf8'));
+console.log(JSON.stringify({
+  stage: t.data.stage,
+  stages: t.data.stages,
+  confidence: t.data.confidence,
+  council_review_ran: t.data.council_review_ran
+}));
+"
+```
+
+## Step 3: Handle Abandoned Tasks
+
+If `stage: abandoned`:
 1. Restore to `pre_abandon_stage`
-2. Set as active task
-3. Proceed with normal routing
+2. Update frontmatter
+3. Set as active task
+4. Continue with normal routing
 
-**Step 3: Route by stage**
-
-| Stage | Condition | Goes to |
-|-------|-----------|---------|
-| refinement | grilling in_progress or pending + low confidence | @references/stage-grill.md |
-| refinement | grilling complete or high confidence | @references/stage-execute.md |
-| execution | any | @references/stage-execute.md |
-| verification | any | @references/stage-verify.md |
-| abandoned | any | Prompt to use `--task` flag |
-
-## Resume Behavior
-
-Every `/do:continue` shows a summary before proceeding:
+## Step 4: Show Resume Summary
 
 ```
-Resuming: <task-id> (stage: <stage>)
-Last action: <summary>
+## Resuming Task
 
-Continue? (yes/no)
+**File:** .do/tasks/<filename>
+**Stage:** <stage>
+**Confidence:** <score>
+
+### Last Action
+<summary from Execution Log or stage status>
+
+### Next
+<what will happen when you continue>
+
+Continue? [Y/n]
 ```
 
-If referenced docs are missing, you can continue without them or stop to locate them.
+If user declines, stop.
 
-For mid-execution resume, shows a progress checklist of completed vs remaining steps.
+## Step 5: Read Model Config
+
+```bash
+node -e "
+const c = require('./.do/config.json');
+const models = c.models || { default: 'sonnet', overrides: {} };
+console.log(JSON.stringify(models));
+"
+```
+
+## Step 6: Route by Stage
+
+| Stage | Sub-condition | Action |
+|-------|---------------|--------|
+| `refinement` | stages.refinement: in_progress | Spawn do-planner to finish planning |
+| `refinement` | stages.refinement: complete, plan review not ran | Spawn do-plan-reviewer |
+| `refinement` | plan review complete, confidence < threshold | Spawn do-griller |
+| `refinement` | all complete | Show approval checkpoint, then spawn do-executioner |
+| `execution` | stages.execution: in_progress | Spawn do-executioner to continue |
+| `execution` | stages.execution: complete | Spawn do-code-reviewer |
+| `verification` | any | Spawn do-code-reviewer |
+| `verified` | - | Task complete, show UAT checklist |
+
+### Spawn do-planner (resume planning)
+
+```javascript
+Agent({
+  description: "Continue planning",
+  subagent_type: "do-planner",
+  model: "<models.overrides.planner || models.default>",
+  prompt: `
+Continue planning this task.
+
+Task file: .do/tasks/<active_task>
+
+The task file already exists. Read it, complete any missing sections.
+Return structured summary when done.
+`
+})
+```
+
+### Spawn do-plan-reviewer
+
+```javascript
+Agent({
+  description: "Review plan",
+  subagent_type: "do-plan-reviewer",
+  model: "<models.overrides.plan_reviewer || models.default>",
+  prompt: `
+Review the plan in this task file.
+
+Task file: .do/tasks/<active_task>
+Config: .do/config.json
+
+Spawn parallel self-review and council review (if enabled).
+Auto-iterate up to 3 times if issues found.
+`
+})
+```
+
+### Spawn do-griller
+
+```javascript
+Agent({
+  description: "Grill for clarity",
+  subagent_type: "do-griller",
+  model: "<models.overrides.griller || models.default>",
+  prompt: `
+Task confidence is below threshold. Ask clarifying questions.
+
+Task file: .do/tasks/<active_task>
+`
+})
+```
+
+### Spawn do-executioner (new or resume)
+
+```javascript
+Agent({
+  description: "Execute task",
+  subagent_type: "do-executioner",
+  model: "<models.overrides.executioner || models.default>",
+  prompt: `
+Execute (or continue executing) this task.
+
+Task file: .do/tasks/<active_task>
+
+Check Execution Log for prior progress.
+Continue from where it left off.
+`
+})
+```
+
+### Spawn do-code-reviewer
+
+```javascript
+Agent({
+  description: "Review code",
+  subagent_type: "do-code-reviewer",
+  model: "<models.overrides.code_reviewer || models.default>",
+  prompt: `
+Review the code changes from this task.
+
+Task file: .do/tasks/<active_task>
+`
+})
+```
+
+## Step 7: Handle Agent Result
+
+After agent returns, check the result and either:
+- Continue to next stage (loop back to Step 6)
+- Show completion summary
+- Report blocker/failure to user
+
+---
 
 ## Files
 
-- **Resume logic:** @references/resume-preamble.md
-- **Stage workflows:** @references/stage-grill.md, @references/stage-execute.md, @references/stage-verify.md
+- **Task template:** @references/task-template.md

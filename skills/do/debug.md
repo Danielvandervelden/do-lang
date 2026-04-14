@@ -1,24 +1,24 @@
 ---
 name: do:debug
-description: "Systematic bug investigation using scientific method. Use when something isn't working, behaving unexpectedly, or producing wrong output. Triggers on 'this is broken', 'not working', 'why is this failing', 'debug this', 'figure out why...', error messages, or unexpected behavior. Creates a persistent debug session with hypothesis tracking."
+description: "Systematic bug investigation using do-debugger agent. Scientific method with hypothesis tracking, ctx7 research, and persistent sessions."
 argument-hint: "\"description of the bug or unexpected behavior\""
 allowed-tools:
   - Read
   - Write
-  - Edit
   - Bash
   - Glob
   - Grep
+  - Agent
   - AskUserQuestion
 ---
 
 # /do:debug
 
-Systematic bug investigation — form hypotheses, test them, confirm or reject, repeat until the root cause is found.
+Spawn the do-debugger agent for systematic bug investigation.
 
 ## Why this exists
 
-Ad-hoc debugging burns context and goes in circles. By treating bugs like experiments — forming hypotheses, designing tests, and recording results — you build a trail of what's been tried and what's been ruled out. This prevents retrying the same things and makes it possible to resume debugging sessions across conversations.
+Ad-hoc debugging burns context and goes in circles. The do-debugger agent uses the scientific method — observe, hypothesize, test, conclude — with persistent session files that track everything tried. If ctx7 is enabled, it researches errors using up-to-date library docs.
 
 ## Usage
 
@@ -31,56 +31,132 @@ Ad-hoc debugging burns context and goes in circles. By treating bugs like experi
 - `/do:debug "login works locally but fails in staging"`
 - `/do:debug "component re-renders infinitely"`
 
-## How it works
-
-1. **Create session** — A debug file tracks the trigger, hypotheses, tests, and findings
-2. **Gather context** — Understand the symptom and where it occurs
-3. **Form hypothesis** — State what you think is wrong and why
-4. **Design test** — How would you prove or disprove this hypothesis?
-5. **Execute test** — Run it and record the result
-6. **Evaluate** — Did it confirm, reject, or refine your hypothesis?
-7. **Repeat** — Continue until root cause is found and fixed
-
 ## Prerequisites
 
-- Project must be initialized (`.do/config.json` exists)
+- Project initialized (`.do/config.json` exists)
 - `.do/debug/` directory will be created if needed
 
-## Active Session Detection
+---
 
-**Step 1: Check for active debug session**
+## Step 1: Check for Active Debug Session
 
 ```bash
 node <skill-path>/scripts/debug-session.cjs check
 ```
 
-If `active: true`, show options:
-- **Continue** — Resume this session
+If `active: true`, offer options:
+- **Continue** — Resume this session (pass session file to agent)
 - **Close** — Mark as abandoned, start fresh
-- **Force new** — Keep this session, start another
+- **Force new** — Keep existing, start another
 
-If `stale: true`, clear the stale reference and proceed.
-
-**Step 2: Create new debug session**
+## Step 2: Read Model Config
 
 ```bash
-node <skill-path>/scripts/debug-session.cjs create "<trigger>"
+node -e "
+const c = require('./.do/config.json');
+const models = c.models || { default: 'sonnet', overrides: {} };
+console.log(JSON.stringify(models));
+"
 ```
 
-If there's an active task, offer to link this debug session to it for context.
+## Step 3: Spawn do-debugger Agent
 
-Update config.json: `active_debug: <filename>`
+**For new session:**
 
-**Step 3: Load debug workflow**
+```javascript
+Agent({
+  description: "Debug: <short description>",
+  subagent_type: "do-debugger",
+  model: "<models.overrides.debugger || models.default>",
+  prompt: `
+Investigate this bug using the scientific method.
 
-@references/stage-debug.md
+Bug description: <user's description>
+Config: .do/config.json
+Mode: investigate-and-fix
 
-Follow the steps in stage-debug.md:
-- New session: Start at Step D1 (Gathering)
-- Resuming: Start at Step D0 (Resume Check)
+Create a new debug session file in .do/debug/.
+Gather symptoms, form hypotheses, test them.
+When root cause is found, apply fix and verify.
+Return structured summary.
+`
+})
+```
+
+**For resuming session:**
+
+```javascript
+Agent({
+  description: "Resume debug: <session-id>",
+  subagent_type: "do-debugger",
+  model: "<models.overrides.debugger || models.default>",
+  prompt: `
+Resume this debug session.
+
+Session file: .do/debug/<session-file>
+Config: .do/config.json
+Mode: investigate-and-fix
+
+Read the session file for prior investigation.
+Continue from where it left off.
+Return structured summary.
+`
+})
+```
+
+## Step 4: Handle Result
+
+Parse the agent's return:
+
+**ROOT_CAUSE_FOUND:**
+```
+## Debug Complete
+
+**Session:** .do/debug/<filename>
+**Root Cause:** <summary>
+**Location:** <file:line>
+
+### Fix Applied
+<what was changed>
+
+### Verification
+<how it was verified>
+```
+
+**STUCK:**
+```
+## Debug Paused
+
+**Session:** .do/debug/<filename>
+**Hypotheses Tested:** <count>
+
+### What We Know
+<confirmed facts>
+
+### What We Ruled Out
+<disproven hypotheses>
+
+### Suggested Next Steps
+<recommendations>
+
+Run /do:debug to continue investigation.
+```
+
+**BLOCKED:**
+```
+## Debug Blocked
+
+**Session:** .do/debug/<filename>
+**Blocked By:** <what's needed>
+
+<agent's explanation of what it needs>
+
+Provide the requested information and run /do:debug again.
+```
+
+---
 
 ## Files
 
 - **Session script:** @scripts/debug-session.cjs
-- **Workflow:** @references/stage-debug.md
 - **Template:** @references/debug-template.md

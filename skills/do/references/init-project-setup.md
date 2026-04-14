@@ -24,8 +24,10 @@ This creates:
 - .do/tasks/ (task storage)
 
 Detected project name: <name>
-Confirm this name or enter a different one:
+[Enter = use detected name, or type a different one]:
 ```
+
+**Handle empty input:** If user presses Enter without typing, use the detected name.
 
 ## Step 2: Ask council review preferences
 
@@ -33,19 +35,21 @@ Confirm this name or enter a different one:
 Configure AI council reviews:
 
 Planning reviews (review task plans before execution):
-- Enable planning reviews? (yes/no, default: yes)
+- Enable planning reviews? (yes/no) [Enter = yes]:
 
 Execution reviews (review implementations after execution):
-- Enable execution reviews? (yes/no, default: yes)
+- Enable execution reviews? (yes/no) [Enter = yes]:
 
 Reviewer selection:
-- random: Randomly select between available advisors (default)
+- random: Randomly select between available advisors
 - codex: Always use Codex (if in Claude runtime)
 - gemini: Always use Gemini
 - both: Run both advisors in parallel
 
-Enter reviewer preference (random/codex/gemini/both, default: random):
+Enter reviewer preference (random/codex/gemini/both) [Enter = random]:
 ```
+
+**Handle empty input:** If user presses Enter without typing, use the default shown in brackets.
 
 ## Step 3: Ask grill threshold
 
@@ -53,12 +57,45 @@ Enter reviewer preference (random/codex/gemini/both, default: random):
 Grill threshold: When task confidence is below this value, 
 the grill-me agent asks clarifying questions.
 
-Suggested default: 0.9 (triggers grilling if confidence < 90%)
-
-Enter threshold (0.0-1.0) or press Enter for 0.9:
+Enter threshold (0.0-1.0) [Enter = 0.9]:
 ```
 
-## Step 4: Check database entry
+**Handle empty input:** If user presses Enter without typing, use 0.9.
+
+## Step 4: Configure agent models
+
+```
+Agent model configuration:
+
+Available models:
+- sonnet: Fast, cost-effective (recommended)
+- opus: Most capable, slower, higher cost
+- haiku: Fastest, cheapest, less capable
+
+Default model for all agents (sonnet/opus/haiku) [Enter = sonnet]:
+```
+
+**Handle empty input:** If user presses Enter without typing, use sonnet.
+
+Then ask about per-agent overrides:
+```
+Configure per-agent overrides?
+
+Available agents:
+- planner: Creates task plans
+- plan_reviewer: Reviews plans
+- executioner: Implements code
+- code_reviewer: Reviews code
+- griller: Asks clarifying questions
+- debugger: Investigates bugs
+
+Enter overrides as agent:model pairs (e.g., "planner:opus,debugger:opus")
+[Enter = no overrides]:
+```
+
+**Handle empty input:** If user presses Enter without typing, set `overrides: {}`.
+
+## Step 5: Check database entry
 
 ```
 Database entry check:
@@ -66,11 +103,12 @@ Database entry check:
 Does this project have a database entry at:
 ~/workspace/database/projects/<project-name>/project.md?
 
-If not, you can run /do:scan to create one.
-Do you want to mark this project as having a database entry? (yes/no)
+Mark as having database entry? (yes/no) [Enter = no]:
 ```
 
-## Step 5: Create project structure
+**Handle empty input:** If user presses Enter without typing, use no (can run /do:scan later).
+
+## Step 6: Create project structure
 
 1. **Create .do folder:**
    ```bash
@@ -82,10 +120,13 @@ Do you want to mark this project as having a database entry? (yes/no)
    - `council_reviews.planning` → user's choice
    - `council_reviews.execution` → user's choice
    - `council_reviews.reviewer` → user's choice
+   - `models.default` → user's choice (sonnet/opus/haiku)
+   - `models.overrides` → user's per-agent overrides (if any)
+   - `web_search.context7` → true (default)
    - `auto_grill_threshold` → user's choice
    - `database_entry` → user's response
 
-## Step 6: Confirm completion
+## Step 7: Confirm completion
 
 ```
 Project initialized successfully!
@@ -102,6 +143,9 @@ Configuration:
 - Council planning reviews: <enabled/disabled>
 - Council execution reviews: <enabled/disabled>
 - Council reviewer: <preference>
+- Default model: <sonnet/opus/haiku>
+- Model overrides: <list or "none">
+- Context7 enabled: yes
 - Grill threshold: <threshold>
 - Database entry: <yes/no>
 

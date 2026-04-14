@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0",
+  "version": "0.3.0",
   "project_name": "{{PROJECT_NAME}}",
   "database_entry": false,
   "active_task": null,
@@ -9,5 +9,12 @@
     "planning": true,
     "execution": true,
     "reviewer": "random"
+  },
+  "web_search": {
+    "context7": true
+  },
+  "models": {
+    "default": "sonnet",
+    "overrides": {}
   }
 }

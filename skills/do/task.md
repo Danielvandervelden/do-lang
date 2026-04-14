@@ -1,6 +1,6 @@
 ---
 name: do:task
-description: "Start a new piece of work with structured refinement. Use when the user wants to build something, fix something, add a feature, or accomplish a coding task. Triggers on 'I need to...', 'let's build...', 'add a feature for...', 'implement...', or any clear task description. Creates a task file with confidence scoring and context loading."
+description: "Start a new piece of work with agent-based workflow. Orchestrates do-planner, do-plan-reviewer, do-griller (if needed), do-executioner, and do-code-reviewer agents. Creates task file, runs reviews, executes with quality gates."
 argument-hint: "\"description of what you want to accomplish\""
 allowed-tools:
   - Read
@@ -9,16 +9,17 @@ allowed-tools:
   - Bash
   - Glob
   - Grep
+  - Agent
   - AskUserQuestion
 ---
 
 # /do:task
 
-Create a new task with structured refinement — loads context, calculates confidence, and prepares for execution.
+Orchestrate a complete task workflow using specialized agents.
 
 ## Why this exists
 
-Jumping straight into code without understanding the task leads to rework. This skill front-loads the thinking: What context do we need? How confident are we? What's the approach? If confidence is low, it asks clarifying questions before execution starts. The result is a task file that captures everything needed to execute — and resume — the work.
+Skills are markdown prompts that get skipped when context is long. Agents can't skip steps — they own their full loop. This skill orchestrates 5 agents to ensure every task gets proper planning, review, execution, and verification.
 
 ## Usage
 
@@ -26,101 +27,275 @@ Jumping straight into code without understanding the task leads to rework. This 
 /do:task "description of what you want to accomplish"
 ```
 
-**Examples:**
-- `/do:task "add user authentication with JWT"`
-- `/do:task "fix the 500 error on POST /orders"`
-- `/do:task "refactor the payment module to use the new API"`
-
 ## Prerequisites
 
-1. **Workspace initialized** — `.do-workspace.json` exists
-2. **Project initialized** — `.do/config.json` exists
-3. **Database entry exists** — `project.md` exists for this project
+1. **Project initialized** — `.do/config.json` exists
+2. **Database entry exists** — `project.md` exists for this project
 
-## Refinement Process
+## Workflow
 
-**Step 1: Check prerequisites**
+```
+do-planner (cyan) → do-plan-reviewer (green) → do-griller (yellow, if needed)
+                                                         ↓
+                                              USER APPROVAL
+                                                         ↓
+                    do-code-reviewer (magenta) ← do-executioner (red)
+```
+
+---
+
+## Step 1: Check Prerequisites
 
 ```bash
 node <skill-path>/scripts/check-database-entry.cjs --message
 ```
 
-**Step 2: Check for active task**
+If fails, stop and report what's missing.
+
+## Step 2: Check for Active Task
 
 ```bash
 node <skill-path>/scripts/task-abandon.cjs check --config .do/config.json
 ```
 
-If active task exists, offer options: continue it, abandon it, or cancel.
+If active task exists, offer options:
+- Continue it (`/do:continue`)
+- Abandon it and start new
+- Cancel
 
-**Step 3: Load context**
+## Step 3: Read Model Config
 
 ```bash
-node <skill-path>/scripts/load-task-context.cjs "<task-description>"
+node -e "
+const c = require('./.do/config.json');
+const models = c.models || { default: 'sonnet', overrides: {} };
+console.log(JSON.stringify(models));
+"
 ```
 
-Reads project.md and any matched component/tech/feature docs.
+Store result for agent spawning. Default to sonnet if not configured.
 
-**Step 4: Analyze task**
+## Step 4: Create Task File
 
-With loaded context, identify:
-- What systems/components it touches
-- Potential implementation approach
-- Concerns or uncertainties
-- Similar patterns in codebase
+Generate task filename and create initial file:
 
-**Step 5: Calculate confidence**
-
-Starting from 1.0, apply deductions:
-
-| Factor | Deduction | When |
-|--------|-----------|------|
-| context | -0.1 to -0.2 | Missing docs the task needs |
-| scope | -0.05 to -0.15 | Spans multiple files/systems |
-| complexity | -0.05 to -0.15 | Multiple integration points |
-| familiarity | -0.05 to -0.1 | No similar patterns found |
-
-Display transparently:
-```
-Confidence: 0.72 (context: -0.10, scope: -0.10, complexity: -0.08, familiarity: 0.00)
+```bash
+# Generate filename: YYMMDD-<slug>.md
+TASK_DATE=$(date +%y%m%d)
+TASK_SLUG=$(echo "<description>" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | cut -c1-30)
+TASK_FILE="${TASK_DATE}-${TASK_SLUG}.md"
 ```
 
-**Step 6: Wave breakdown**
+Create task file from template using the Write tool:
+- Read `@references/task-template.md`
+- Replace `{{TASK_ID}}` with filename (without .md)
+- Replace `{{CREATED_AT}}` with ISO timestamp
+- Replace `{{DESCRIPTION}}` with user's task description
+- Write to `.do/tasks/${TASK_FILE}`
 
-Ask if task should be split into waves (for complex multi-part work) or executed as single unit.
+Update config:
+```bash
+node -e "
+const fs = require('fs');
+const c = JSON.parse(fs.readFileSync('.do/config.json', 'utf8'));
+c.active_task = '${TASK_FILE}';
+fs.writeFileSync('.do/config.json', JSON.stringify(c, null, 2));
+"
+```
 
-**Step 7: Create task file**
+## Step 5: Spawn do-planner
 
-Generate `YYMMDD-<slug>.md` using @references/task-template.md with:
-- Problem statement
-- Approach
-- Concerns
-- Confidence breakdown
-- Wave definitions (if any)
+Spawn planner to fill in the task file:
 
-Write to `.do/tasks/`
+```javascript
+Agent({
+  description: "Plan task: <description>",
+  subagent_type: "do-planner",
+  model: "<models.overrides.planner || models.default>",
+  prompt: `
+Complete the plan for this task.
 
-**Step 8: Update config**
+Task description: <user's description>
+Task file: .do/tasks/<active_task>
+Config: .do/config.json
 
-Set `active_task` in `.do/config.json`
+The task file already exists with basic metadata. Load context, analyze the task, 
+calculate confidence, and fill in the Problem Statement, Approach, and Concerns sections.
+Return a structured summary when complete.
+`
+})
+```
 
-**Step 9: Display summary**
+Parse the returned summary for:
+- Confidence score and factors
+- Approach summary
+- Concerns count
+
+## Step 6: Spawn do-plan-reviewer
+
+```javascript
+Agent({
+  description: "Review plan",
+  subagent_type: "do-plan-reviewer",
+  model: "<models.overrides.plan_reviewer || models.default>",
+  prompt: `
+Review the plan in this task file.
+
+Task file: .do/tasks/<active_task>
+Config: .do/config.json
+
+Spawn parallel self-review and council review (if enabled).
+Auto-iterate up to 3 times if issues found.
+Return APPROVED, ITERATE status, or ESCALATE with details.
+`
+})
+```
+
+Handle result:
+- **APPROVED**: Continue to Step 6
+- **MAX_ITERATIONS**: Show user the outstanding issues, ask to proceed or revise
+- **ESCALATE**: Show critical issues, require user decision
+
+## Step 7: Check Confidence & Grill (if needed)
+
+Read confidence from task file:
+
+```bash
+node -e "
+const fm = require('gray-matter');
+const t = fm(require('fs').readFileSync('.do/tasks/<active_task>', 'utf8'));
+const threshold = require('./.do/config.json').auto_grill_threshold || 0.9;
+console.log(JSON.stringify({ score: t.data.confidence.score, threshold }));
+"
+```
+
+If `score < threshold`:
+
+```javascript
+Agent({
+  description: "Grill user for clarity",
+  subagent_type: "do-griller",
+  model: "<models.overrides.griller || models.default>",
+  prompt: `
+The task confidence is below threshold. Ask clarifying questions.
+
+Task file: .do/tasks/<active_task>
+Current confidence: <score>
+Threshold: <threshold>
+
+Ask targeted questions for lowest-scoring factors.
+Update confidence after each answer.
+Stop when threshold reached or user overrides.
+`
+})
+```
+
+## Step 8: User Approval Checkpoint
+
+Display summary and ask for execution approval:
 
 ```
-Task created: .do/tasks/<filename>
+## Ready to Execute
 
-Confidence: <score> (<breakdown>)
-{If below threshold:} -> Grill-me will ask clarifying questions
+**Task:** <task file>
+**Confidence:** <score> (<factors>)
+**Plan:** <approach summary>
+**Reviews:** <plan review status>
 
-Context loaded: project.md, <matched docs>
-Problem: <1-line summary>
-Approach: <1-line summary>
-
-Next: Run /do:continue to proceed
+Proceed with execution? [Y/n]
 ```
+
+If user says no, stop. Task file is saved for later `/do:continue`.
+
+## Step 9: Spawn do-executioner
+
+```javascript
+Agent({
+  description: "Execute task",
+  subagent_type: "do-executioner",
+  model: "<models.overrides.executioner || models.default>",
+  prompt: `
+Execute the plan in this task file.
+
+Task file: .do/tasks/<active_task>
+
+Follow the Approach section step by step.
+Log each action to Execution Log.
+Handle deviations appropriately.
+Return summary when complete.
+`
+})
+```
+
+Handle result:
+- **COMPLETE**: Continue to Step 9
+- **BLOCKED**: Show blocker, ask user for resolution
+- **FAILED**: Show error, offer recovery options
+
+## Step 10: Spawn do-code-reviewer
+
+```javascript
+Agent({
+  description: "Review code changes",
+  subagent_type: "do-code-reviewer",
+  model: "<models.overrides.code_reviewer || models.default>",
+  prompt: `
+Review the code changes from this task execution.
+
+Task file: .do/tasks/<active_task>
+
+Spawn parallel self-review and council review (if enabled).
+Auto-iterate up to 3 times if issues found.
+Generate UAT checklist when approved.
+`
+})
+```
+
+Handle result:
+- **VERIFIED**: Continue to completion
+- **MAX_ITERATIONS**: Show issues, ask user to fix manually or ship anyway
+- **Changes applied**: Re-run quality checks, confirm
+
+## Step 11: Complete
+
+Display final summary:
+
+```
+## Task Complete
+
+**Task:** .do/tasks/<filename>
+**Status:** Verified
+
+### Summary
+- Files modified: <count>
+- Commits: <count>
+- Review iterations: <plan> plan, <code> code
+
+### UAT Checklist
+<generated checklist from code reviewer>
+
+Run the application and verify the checklist items.
+When verified, the task is complete.
+```
+
+Update task file stage to `verified`.
+
+---
+
+## Failure Handling
+
+Any agent failure returns immediately to user with:
+- Which agent failed
+- What it was trying to do
+- Last known good state
+- Task file path (for `/do:continue` resume)
+
+No automatic retries. User decides next step.
+
+---
 
 ## Files
 
-- **Context loading:** @scripts/load-task-context.cjs
 - **Task template:** @references/task-template.md
 - **Gate script:** @scripts/check-database-entry.cjs
+- **Abandon script:** @scripts/task-abandon.cjs

@@ -5,8 +5,10 @@ const os = require('os');
 
 const packageRoot = path.join(__dirname, '..');
 const source = path.join(packageRoot, 'skills', 'do');
+const agentsSource = path.join(packageRoot, 'agents');
 const claudeDir = path.join(os.homedir(), '.claude');
 const target = path.join(claudeDir, 'commands', 'do');
+const agentsTarget = path.join(claudeDir, 'agents');
 const codexDir = path.join(os.homedir(), '.codex');
 const codexTarget = path.join(codexDir, 'commands', 'do');
 
@@ -28,6 +30,20 @@ if (fs.existsSync(claudeDir)) {
   fs.mkdirSync(path.join(claudeDir, 'commands'), { recursive: true });
   fs.cpSync(source, target, { recursive: true });
   console.log(`do commands installed to ${target}`);
+
+  // Install agents to ~/.claude/agents/
+  if (fs.existsSync(agentsSource)) {
+    fs.mkdirSync(agentsTarget, { recursive: true });
+    for (const file of fs.readdirSync(agentsSource)) {
+      if (file.startsWith('do-') && file.endsWith('.md')) {
+        fs.copyFileSync(
+          path.join(agentsSource, file),
+          path.join(agentsTarget, file)
+        );
+      }
+    }
+    console.log(`do agents installed to ${agentsTarget}`);
+  }
 } else {
   console.log('~/.claude not found, skipping Claude installation');
 }

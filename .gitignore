@@ -4,3 +4,5 @@ node_modules/
 yalc.lock
 .DS_Store
 .planning/
+.do/
+.npmrc

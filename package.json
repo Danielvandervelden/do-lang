@@ -1,5 +1,5 @@
 {
-  "name": "do-lang",
+  "name": "@danielvandervelden/do-lang",
   "version": "1.1.0",
   "description": "Token-efficient meta programming language for Claude Code and Codex",
   "files": [
@@ -23,9 +23,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/globalroo/do.git"
+    "url": "git+https://github.com/Danielvandervelden/do-lang.git"
   },
-  "dependencies": {
-    "do-lang": "file:.yalc/do-lang"
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   }
 }

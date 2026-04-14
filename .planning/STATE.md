@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-milestone_name: milestone
-status: verifying
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-04-13T17:44:24.985Z"
+milestone_name: MVP
+status: shipped
+stopped_at: Milestone v1.0 shipped
+last_updated: "2026-04-13T21:30:00.000Z"
 last_activity: 2026-04-13
 progress:
   total_phases: 13
-  completed_phases: 11
-  total_plans: 17
-  completed_plans: 17
+  completed_phases: 13
+  total_plans: 21
+  completed_plans: 21
 ---
 
 # State
@@ -20,14 +20,33 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Minimize token usage while maintaining execution quality
-**Current focus:** Phase 11 — ai-council-integration
+**Current focus:** v1.0 shipped — planning next milestone
 
 ## Current Position
 
-Phase: 11 (ai-council-integration) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
+Milestone: v1.0 MVP — SHIPPED
+Status: Ready for npm publish and next milestone planning
 Last activity: 2026-04-13
+
+## Milestone Summary
+
+All 13 phases of Milestone v1.0 are complete:
+
+| Phase | Name | Status |
+|-------|------|--------|
+| 1 | Package Foundation | Complete |
+| 2 | Workspace Detection & Init | Complete |
+| 3 | Project Setup | Complete |
+| 4 | Database Scanning | Complete |
+| 5 | Task Creation & Refine Agent | Complete |
+| 6 | Grill-Me Agent | Complete |
+| 7 | Context Decision & Implementation | Complete |
+| 8 | Verification Agent | Complete |
+| 9 | Task Resume | Complete |
+| 10 | Debug Mode | Complete |
+| 11 | AI Council Integration | Complete |
+| 12 | Codex Adapter | Complete |
+| 13 | Workspace Customization | Complete |
 
 ## Research Summary
 
@@ -40,9 +59,9 @@ Research completed on 2026-04-13. Key findings:
 
 ## Session Continuity
 
-Last session: 2026-04-13T18:00:00Z
-Stopped at: Completed 11-02-PLAN.md (Phase 11 complete)
-Resume file: N/A - Phase 11 complete, ready for verification
+Last session: 2026-04-13T21:00:00.000Z
+Stopped at: Phase 13 complete, all milestone phases done
+Resume file: None — milestone ready for verification
 
 ## Key Decisions
 
@@ -81,18 +100,27 @@ Resume file: N/A - Phase 11 complete, ready for verification
 | Code review before verification (D-34) | 11 | Step V-1 in stage-verify.md |
 | Explicit council_review_ran tracking | 11 | Prevents re-running on resume |
 | Council Review section after Execution Log | 11 | Per D-46 placement requirement |
+| pre_abandon_stage preservation | 12 | Resume abandoned tasks via /do:continue --task |
+| Path traversal validation | 12 | Security: reject ".." and absolute paths in task-abandon.cjs |
+| D-47 Config at workspace root | 13 | .do-workspace.json at ~/workspace/ |
+| D-48 Flat config structure | 13 | database, githubProjects, availableTools, defaultReviewer |
+| D-50-53 AI CLI detection | 13 | Auto-detect codex, gemini, claude-cli via which |
+| D-54-56 Config cascade | 13 | Project overrides workspace overrides defaults |
+| Empty reviewer returns null | 13-fix | Per council review: no hardcoded fallback |
 
 ## Next Steps
 
-1. Run phase verification for Phase 11
-2. `/gsd:discuss-phase 12` — Gather context for Codex Compatibility Layer
-3. `/gsd:plan-phase 12` — Plan Codex runtime support
+1. Publish to npm: `npm publish`
+2. `/gsd:new-milestone` — Start next milestone planning
 
 ## Accumulated Context
 
 ### Roadmap Evolution
 
-- Phase 13 added: Workspace Customization
+- Phase 13 complete: Workspace Customization (D-47 through D-58)
+- Phase 12 complete: Codex Adapter (F-03, F-04)
+- Phase 11 complete: AI Council Integration (F-01, F-02)
+- Phases 3-10: Core task workflow complete
 
 ---
-*Last updated: 2026-04-13 after Phase 9 complete*
+*Last updated: 2026-04-13 after Phase 13 complete*

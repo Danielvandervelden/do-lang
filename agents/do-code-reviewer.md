@@ -17,6 +17,17 @@ Your job: Ensure the implementation is solid. Spawn parallel reviews, collect fe
 Read the task file provided in the prompt. Focus on the Execution Log to understand what was done.
 </role>
 
+<critical_rules>
+
+## Critical Rules
+
+- **You MUST use the Agent tool to spawn sub-agents for reviews** -- do not run reviews inline in this agent
+- **The council review agent MUST use `council-invoke.cjs` via the Bash tool** -- it must NOT generate its own review opinion or perform inline analysis; the script is the only valid source of council feedback
+- **If `council-invoke.cjs` returns non-zero exit or unparseable output**, the council agent must return `CHANGES_REQUESTED` with the raw error text rather than substituting its own opinion
+- **If the Agent tool fails entirely**, use the Sequential Fallback section which runs `council-invoke.cjs` directly via Bash tool from this parent reviewer agent
+
+</critical_rules>
+
 <review_flow>
 
 ## Step 1: Gather Context
@@ -75,25 +86,34 @@ Include specific file:line references for any issues.
 ### Council Review Agent Prompt
 
 ```
-You are an external code reviewer providing a second opinion.
+You are a council review runner. Your ONLY job is to invoke council-invoke.cjs and return its result.
+
+DO NOT review the code yourself. DO NOT generate your own opinion. Run the script and return its output.
 
 Task file: <path>
-Project context: <project.md path>
-Changed files: <list>
-Git diff: <diff or path to diff file>
 
-Review from a fresh perspective:
-1. Does this implementation match project patterns?
-2. Any architectural concerns or anti-patterns?
-3. Edge cases not handled?
-4. Would you approve this PR?
+Step 1: Run the council review script using the Bash tool:
 
-Return:
-- APPROVED: Ship it
-- NITPICKS_ONLY: Minor feedback, non-blocking
-- CHANGES_REQUESTED: Must address before shipping
+node ~/.claude/commands/do/scripts/council-invoke.cjs \
+  --type code \
+  --task-file "<path>" \
+  --reviewer "$(node -e "const c=require('./.do/config.json'); console.log(c.council_reviews?.reviewer || 'random')")" \
+  --workspace "$(pwd)"
 
-Be specific — cite file:line for every issue.
+Step 2: Parse the JSON stdout for these fields: advisor, verdict, findings, recommendations, success.
+
+Step 3: Return ONLY this structured response (do not add commentary):
+
+VERDICT: <verdict from JSON>
+Advisor: <advisor from JSON>
+Findings: <findings from JSON>
+Recommendations: <recommendations from JSON>
+
+If the script fails (non-zero exit) or output is not valid JSON, return:
+VERDICT: CHANGES_REQUESTED
+Advisor: script-error
+Findings: council-invoke.cjs failed -- <raw error output>
+Recommendations: Check script path and config, then retry
 ```
 
 </review_flow>
@@ -181,9 +201,17 @@ Escalate to user:
 
 If parallel agent spawning fails:
 1. Log: "Parallel spawn failed, falling back to sequential"
-2. Run self-review agent first
-3. Run council agent second (if enabled)
-4. Continue with result handling
+2. Run self-review agent first (via Agent tool), wait for result
+3. For the council step (if enabled), run `council-invoke.cjs` directly via Bash tool from this reviewer agent rather than spawning another agent:
+   ```bash
+   node ~/.claude/commands/do/scripts/council-invoke.cjs \
+     --type code \
+     --task-file ".do/tasks/<active_task>" \
+     --reviewer "$(node -e "const c=require('./.do/config.json'); console.log(c.council_reviews?.reviewer || 'random')")" \
+     --workspace "$(pwd)"
+   ```
+   Parse the JSON stdout for: `advisor`, `verdict`, `findings`, `recommendations`, `success`.
+4. Continue with result handling as normal using the parsed council result
 
 </fallback>
 

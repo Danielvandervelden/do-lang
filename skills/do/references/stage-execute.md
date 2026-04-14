@@ -252,6 +252,96 @@ After all execution is complete:
 
 3. Display completion message:
 ```
+Execution complete. Checking council config before verification.
+```
+
+---
+
+### Step E4: Code Review (per council config)
+
+**Step E4.0: Check if code review already ran**
+
+```bash
+node -e "const fm=require('gray-matter'); const t=fm(require('fs').readFileSync('.do/tasks/<active_task>','utf8')); process.exit(t.data.council_review_ran?.code === true ? 1 : 0)"
+```
+
+**If already ran (exit 1):** Skip to end -- display "Proceeding to verification. Run /do:continue to verify and complete the task." and stop.
+
+**Step E4.1: Check if execution review is enabled**
+
+```bash
+node -e "const c=require('./.do/config.json'); process.exit(c.council_reviews?.execution === true ? 0 : 1)"
+```
+
+**If disabled (exit 1):** Mark as skipped in frontmatter (`council_review_ran.code: 'skipped'`), display "Code review disabled. Proceeding to verification. Run /do:continue to verify and complete the task." and stop.
+
+**If enabled (exit 0):** Continue to E4.2.
+
+**Step E4.2: Invoke council for code review**
+
+```bash
+node <skill-path>/scripts/council-invoke.cjs \
+  --type code \
+  --task-file ".do/tasks/<active_task>" \
+  --reviewer "$(node -e "const c=require('./.do/config.json'); console.log(c.council_reviews?.reviewer || 'random')")" \
+  --workspace "$(pwd)"
+```
+
+Parse JSON output for: `advisor`, `verdict`, `findings`, `recommendations`, `success`.
+
+**Step E4.3: Handle verdict**
+
+| Verdict | Action |
+|---------|--------|
+| APPROVED | Log to Council Review section, mark `council_review_ran.code: true`, display completion message |
+| NITPICKS_ONLY | Log to Council Review section (include nitpicks), mark `council_review_ran.code: true`, display completion message |
+| CHANGES_REQUESTED | Log to Council Review, display issues to user, ask if they want to fix or proceed |
+
+**If CHANGES_REQUESTED:**
+```
+Code Review: CHANGES_REQUESTED
+
+Advisor: <advisor>
+
+Findings:
+<findings list>
+
+Recommendations:
+<recommendations list>
+
+Options:
+1. Fix issues (update code, run /do:continue)
+2. Proceed anyway
+
+Enter 1 or 2:
+```
+
+Wait for user response.
+- If 1: Display "Fix the reported issues, then run /do:continue." Stop.
+- If 2: Log "User override: proceeding despite CHANGES_REQUESTED" in Council Review section. Mark `council_review_ran.code: true`. Continue to completion message.
+
+**Step E4.4: Log council results to task markdown**
+
+Add/update Council Review section with `### Code Review` heading:
+
+```markdown
+### Code Review
+- **Reviewer:** <advisor>
+- **Verdict:** <verdict>
+- **Findings:**
+  - <finding 1>
+  - <finding 2>
+- **Recommendations:**
+  - <recommendation 1>
+{{#if USER_OVERRIDE}}
+- **User Override:** Proceeded despite CHANGES_REQUESTED
+{{/if}}
+```
+
+Also update frontmatter: `council_review_ran.code: true`
+
+**Final completion message (after E4 completes):**
+```
 Execution complete. Proceeding to verification.
 
 Run /do:continue to verify and complete the task.
@@ -261,5 +351,5 @@ Run /do:continue to verify and complete the task.
 
 ### Files
 
-- **Config:** `.do/config.json` - Read `active_task`
-- **Task:** `.do/tasks/<active_task>` - Read context, write Execution Log and stage updates
+- **Config:** `.do/config.json` - Read `active_task` and `council_reviews.execution`
+- **Task:** `.do/tasks/<active_task>` - Read context, write Execution Log, Council Review, and stage updates

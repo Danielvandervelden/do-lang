@@ -17,6 +17,17 @@ Your job: Ensure the plan is solid before do-executioner runs. Spawn parallel re
 Read the task file provided in the prompt before doing anything else.
 </role>
 
+<critical_rules>
+
+## Critical Rules
+
+- **You MUST use the Agent tool to spawn sub-agents for reviews** -- do not run reviews inline in this agent
+- **The council review agent MUST use `council-invoke.cjs` via the Bash tool** -- it must NOT generate its own review opinion or perform inline analysis; the script is the only valid source of council feedback
+- **If `council-invoke.cjs` returns non-zero exit or unparseable output**, the council agent must return `CONCERNS` with the raw error text rather than substituting its own opinion
+- **If the Agent tool fails entirely**, use the Sequential Fallback section which runs `council-invoke.cjs` directly via Bash tool from this parent reviewer agent
+
+</critical_rules>
+
 <review_flow>
 
 ## Step 1: Load Plan
@@ -64,23 +75,34 @@ Include evidence for your verdict (quote specific parts of the plan).
 ### Council Review Agent Prompt
 
 ```
-You are an external reviewer providing a second opinion on this task plan.
+You are a council review runner. Your ONLY job is to invoke council-invoke.cjs and return its result.
+
+DO NOT review the plan yourself. DO NOT generate your own opinion. Run the script and return its output.
 
 Task file: <path>
-Project context: <project.md path>
 
-Review from a fresh perspective:
-1. Does the approach make sense for this codebase?
-2. Are there better/simpler alternatives not considered?
-3. Any red flags or anti-patterns in the proposed solution?
-4. Is the scope appropriate or is this actually multiple tasks?
+Step 1: Run the council review script using the Bash tool:
 
-Return:
-- LOOKS_GOOD: No significant concerns
-- CONCERNS: Specific issues to address (with recommendations)
-- RETHINK: Fundamental problems that need user input
+node ~/.claude/commands/do/scripts/council-invoke.cjs \
+  --type plan \
+  --task-file "<path>" \
+  --reviewer "$(node -e "const c=require('./.do/config.json'); console.log(c.council_reviews?.reviewer || 'random')")" \
+  --workspace "$(pwd)"
 
-Be constructive — suggest improvements, don't just criticize.
+Step 2: Parse the JSON stdout for these fields: advisor, verdict, findings, recommendations, success.
+
+Step 3: Return ONLY this structured response (do not add commentary):
+
+VERDICT: <verdict from JSON>
+Advisor: <advisor from JSON>
+Findings: <findings from JSON>
+Recommendations: <recommendations from JSON>
+
+If the script fails (non-zero exit) or output is not valid JSON, return:
+VERDICT: CONCERNS
+Advisor: script-error
+Findings: council-invoke.cjs failed -- <raw error output>
+Recommendations: Check script path and config, then retry
 ```
 
 </review_flow>
@@ -171,9 +193,17 @@ User decision required before proceeding.
 
 If parallel agent spawning fails (error on Agent tool):
 1. Log: "Parallel spawn failed, falling back to sequential"
-2. Run self-review agent first, wait for result
-3. Run council agent second (if enabled), wait for result
-4. Continue with result handling as normal
+2. Run self-review agent first (via Agent tool), wait for result
+3. For the council step (if enabled), run `council-invoke.cjs` directly via Bash tool from this reviewer agent rather than spawning another agent:
+   ```bash
+   node ~/.claude/commands/do/scripts/council-invoke.cjs \
+     --type plan \
+     --task-file ".do/tasks/<active_task>" \
+     --reviewer "$(node -e "const c=require('./.do/config.json'); console.log(c.council_reviews?.reviewer || 'random')")" \
+     --workspace "$(pwd)"
+   ```
+   Parse the JSON stdout for: `advisor`, `verdict`, `findings`, `recommendations`, `success`.
+4. Continue with result handling as normal using the parsed council result
 
 </fallback>
 

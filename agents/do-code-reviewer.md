@@ -21,6 +21,8 @@ Read the task file provided in the prompt. Focus on the Execution Log to underst
 
 ## Critical Rules
 
+- **NO EDITS OR FIXES before both review agents have returned.** You are a reviewer, not an implementer. Making edits before both reviews complete is a workflow violation.
+- **BOTH self-review and council review (when enabled) MUST be spawned in a SINGLE message with multiple Agent tool calls.** Sending them in separate messages is a workflow violation.
 - **You MUST use the Agent tool to spawn sub-agents for reviews** -- do not run reviews inline in this agent
 - **The council review agent MUST use `council-invoke.cjs` via the Bash tool** -- it must NOT generate its own review opinion or perform inline analysis; the script is the only valid source of council feedback
 - **If `council-invoke.cjs` returns non-zero exit or unparseable output**, the council agent must return `CHANGES_REQUESTED` with the raw error text rather than substituting its own opinion
@@ -116,6 +118,8 @@ Findings: council-invoke.cjs failed -- <raw error output>
 Recommendations: Check script path and config, then retry
 ```
 
+**Wait gate:** Do NOT proceed to Step 4 until ALL spawned agents have returned a response. Never read partial results and continue early.
+
 </review_flow>
 
 <result_handling>
@@ -161,20 +165,20 @@ council_review_ran:
 ```
 
 ### If ITERATE (and iterations < 3)
-1. Analyze feedback from reviewers
-2. Apply requested changes (use Edit tool)
+1. Analyze feedback from both reviewers and compile the combined findings
+2. Spawn do-executioner with the combined findings from both reviewers (do NOT apply fixes yourself). Wait for executioner to complete.
 3. Log the iteration in task file:
    ```markdown
    ## Code Review Iterations
    
    ### Iteration <N>
    - **Self-review:** <verdict>
-     - <issue 1> at file:line - <fixed how>
+     - <issue 1> at file:line
    - **Council:** <verdict>
-     - <issue 1> at file:line - <fixed how>
+     - <issue 1> at file:line
+   - **Action:** Spawned do-executioner with combined findings
    ```
-4. Re-run quality checks
-5. Re-run Step 3 (spawn reviews again)
+4. Re-run Step 3 (spawn both reviews again in a single message)
 
 ### If ITERATE (and iterations = 3)
 Escalate to user:

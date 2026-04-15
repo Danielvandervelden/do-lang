@@ -25,6 +25,7 @@ Most coding tasks follow predictable patterns: initialize a project, scan for co
 | `/do:continue` | Resuming work from a previous session |
 | `/do:abandon` | Stopping current work to start something else |
 | `/do:debug` | Investigating why something isn't working |
+| `/do:update` | Check for and install newer versions |
 
 ## Routing
 
@@ -37,5 +38,7 @@ When the user invokes `/do` without specifying a sub-command, infer from context
 - "set up this repo for the do workflow" → `/do:init`
 - "document what this codebase does" → `/do:scan`
 - "never mind, let's work on something else" → `/do:abandon`
+- "is there a newer version of do?" → `/do:update`
+- "update do-lang" → `/do:update`
 
 If intent is genuinely ambiguous, show the table above and ask which sub-command they want.

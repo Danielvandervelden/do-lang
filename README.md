@@ -139,14 +139,20 @@ Project configuration lives in `.do/config.json`:
 
 ```json
 {
-  "council": {
-    "reviewer": "codex",
-    "enabled": true
-  }
+  "council_reviews": {
+    "planning": true,
+    "execution": true,
+    "reviewer": "random"
+  },
+  "models": {
+    "default": "sonnet",
+    "overrides": {}
+  },
+  "auto_grill_threshold": 0.9
 }
 ```
 
-**`council.reviewer`** — which external AI to use for council reviews: `"codex"`, `"gemini"`, `"both"`, or `"random"`. Omit to disable council reviews.
+**`council_reviews.reviewer`** — which external AI to use for council reviews: `"codex"`, `"gemini"`, `"both"`, or `"random"`. Set `planning` and `execution` to `false` to disable council reviews for those stages.
 
 ## Development
 
@@ -179,7 +185,7 @@ yalc remove @danielvandervelden/do-lang
 ### Running tests
 
 ```bash
-node --test skills/do/scripts/__tests__/
+node --test skills/do/scripts/__tests__/*.test.cjs
 ```
 
 ## License

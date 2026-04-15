@@ -136,7 +136,7 @@ function checkProjectHealth(projectPath) {
     }
 
     // Validate reviewer field
-    const validReviewers = ['claude', 'codex', 'gemini', 'random', 'both'];
+    const validReviewers = ['codex', 'gemini', 'random', 'both'];
     if (config.council_reviews.reviewer !== undefined) {
       if (typeof config.council_reviews.reviewer !== 'string') {
         issues.push({ type: 'invalidField', severity: 'error', details: `council_reviews.reviewer must be a string, got ${typeof config.council_reviews.reviewer}` });

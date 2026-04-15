@@ -98,11 +98,19 @@ Enter overrides as agent:model pairs (e.g., "planner:opus,debugger:opus")
 
 ## Step 5: Check database entry
 
+Read the database path from the workspace config:
+
+```bash
+node -e "console.log(require('./.do-workspace.json').database)"
+```
+
+Then display:
+
 ```
 Database entry check:
 
 Does this project have a database entry at:
-~/workspace/database/projects/<project-name>/project.md?
+<database>/projects/<project-name>/project.md?
 
 Mark as having database entry? (yes/no) [Enter = no]:
 ```
@@ -126,13 +134,20 @@ Mark as having database entry? (yes/no) [Enter = no]:
    - `web_search.context7` → true (default)
    - `auto_grill_threshold` → user's choice
    - `database_entry` → user's response
+   - `version`, `active_task`, `active_debug` → leave as template defaults (`"0.3.0"`, `null`, `null`)
 
 ## Step 7: Confirm completion
+
+Read the workspace path for display:
+
+```bash
+node -e "console.log(require('./.do-workspace.json').workspace)"
+```
 
 ```
 Project initialized successfully!
 
-Workspace: ~/workspace (healthy)
+Workspace: <workspace-path> (healthy)
 Project: <project-name>/.do/ (initialized)
 
 Created:

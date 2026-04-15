@@ -7,19 +7,38 @@ description: Health check procedures for workspace and project. Loaded by /do:in
 
 Run combined health checks when workspace and project are both initialized.
 
-## Step 1: Run workspace health check
+## Step 1: Resolve workspace path
+
+Traverse up from CWD to find `.do-workspace.json` (it lives at the workspace root, not necessarily in the project directory):
+
+```bash
+node -e "
+const fs = require('fs'), path = require('path');
+let d = process.cwd();
+while (d !== path.dirname(d)) {
+  const f = path.join(d, '.do-workspace.json');
+  if (fs.existsSync(f)) { console.log(JSON.parse(fs.readFileSync(f, 'utf8')).workspace); process.exit(0); }
+  d = path.dirname(d);
+}
+console.error('Could not find .do-workspace.json'); process.exit(1);
+"
+```
+
+Store the result as `<workspace-path>` for use in Steps 2 and 4.
+
+## Step 2: Run workspace health check
 
 ```bash
 node ~/.claude/commands/do/scripts/workspace-health.cjs <workspace-path>
 ```
 
-## Step 2: Run project health check
+## Step 3: Run project health check
 
 ```bash
 node ~/.claude/commands/do/scripts/project-health.cjs .
 ```
 
-## Step 3: Re-run AI tool detection
+## Step 4: Re-run AI tool detection
 
 ```bash
 node ~/.claude/commands/do/scripts/detect-tools.cjs
@@ -27,10 +46,31 @@ node ~/.claude/commands/do/scripts/detect-tools.cjs
 
 Handle exit code 1 as warning (no tools detected), not failure.
 
-Compare with `availableTools` in `.do-workspace.json`:
-- If different: update config and display "AI tools updated: <new-list>"
+Read the current value from `.do-workspace.json` and compare (use the `<workspace-path>` resolved in Step 1):
 
-## Step 4: Display combined health report
+```bash
+node -e "
+const fs = require('fs'), path = require('path');
+const f = path.join('<workspace-path>', '.do-workspace.json');
+console.log(JSON.stringify(JSON.parse(fs.readFileSync(f, 'utf8')).availableTools));
+"
+```
+
+If the detected tools differ from the stored value, update the config:
+
+```bash
+node -e "
+const fs = require('fs'), path = require('path');
+const f = path.join('<workspace-path>', '.do-workspace.json');
+const cfg = JSON.parse(fs.readFileSync(f, 'utf8'));
+cfg.availableTools = <new-tools-array>;
+fs.writeFileSync(f, JSON.stringify(cfg, null, 2));
+"
+```
+
+Display "AI tools updated: <new-list>" when changed.
+
+## Step 5: Display combined health report
 
 Both scripts return JSON:
 ```json
@@ -45,8 +85,8 @@ Both scripts return JSON:
 ```
 /do:init - Health Check
 
-Workspace: ~/workspace (healthy, v0.1.0)
-AI tools: codex, gemini
+Workspace: <workspace-path> (healthy, v0.1.0)
+AI tools: <availableTools or "none">
 Project: my-project/.do/ (healthy, v0.1.0)
 
 No issues found.
@@ -56,7 +96,7 @@ No issues found.
 ```
 /do:init - Health Check
 
-Workspace: ~/workspace (healthy, v0.1.0)
+Workspace: <workspace-path> (healthy, v0.1.0)
 Project: my-project/.do/ (ISSUES FOUND)
 
 Project Issues:

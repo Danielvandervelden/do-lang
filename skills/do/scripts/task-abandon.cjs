@@ -229,7 +229,10 @@ function abandonTask(configPath, taskFilename) {
 
   // Update task frontmatter
   const content = fs.readFileSync(taskPath, "utf-8");
-  const { data, content: body } = parseFrontmatter(content);
+  const { data: rawData, content: body } = parseFrontmatter(content);
+  // Deep-clone to avoid mutating gray-matter's internal cache (same content string
+  // across tests/calls would return the same cached object reference otherwise)
+  const data = JSON.parse(JSON.stringify(rawData));
 
   // Store current stage for resume capability (council requirement)
   const previousStage = data.stage || "refinement";

@@ -8,7 +8,6 @@ allowed-tools:
   - Bash
   - Glob
   - Grep
-  - AskUserQuestion
 ---
 
 # /do:init
@@ -47,14 +46,14 @@ grep -q "do init completed" ~/workspace/CLAUDE.md 2>/dev/null
 - Marker missing → Load @references/init-workspace-setup.md
 - Marker exists → Continue to Step 2
 
-**Step 2: Check if in a project**
+**Step 2: Check if at workspace root**
 
 ```bash
-test -d .git || test -f package.json
+test -f .do-workspace.json
 ```
 
-- Not a project → Workspace health check only
-- Is a project → Continue to Step 3
+- Workspace marker present → Workspace health check only (we're at the root, not inside a project)
+- Workspace marker absent → Continue to Step 3
 
 **Step 3: Check project initialization**
 

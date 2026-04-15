@@ -112,8 +112,9 @@ console.log(JSON.stringify(models));
 | `refinement` | all complete | Show approval checkpoint, then spawn do-executioner |
 | `execution` | stages.execution: in_progress | Spawn do-executioner to continue |
 | `execution` | stages.execution: complete | Spawn do-code-reviewer |
-| `verification` | any | Spawn do-code-reviewer |
-| `verified` | - | Task complete, show UAT checklist |
+| `verification` | any | Spawn do-verifier |
+| `verified` | - | Spawn do-verifier (resumes at V5 UAT flow) |
+| `complete` | - | Show "Task already complete. No action needed." and stop |
 
 ### Spawn do-planner (resume planning)
 
@@ -193,9 +194,30 @@ Agent({
   subagent_type: "do-code-reviewer",
   model: "<models.overrides.code_reviewer || models.default>",
   prompt: `
-Review the code changes from this task.
+Review the code changes from this task execution.
 
 Task file: .do/tasks/<active_task>
+
+Spawn parallel self-review and council review (if enabled).
+Auto-iterate up to 3 times if issues found.
+`
+})
+```
+
+### Spawn do-verifier
+
+```javascript
+Agent({
+  description: "Verify implementation",
+  subagent_type: "do-verifier",
+  model: "<models.overrides.verifier || models.overrides.code_reviewer || models.default>",
+  prompt: `
+Run verification for this task.
+
+Task file: .do/tasks/<active_task>
+
+Run verification: approach checklist, quality checks, UAT.
+If stage is verified, resume at UAT flow (Step V5).
 `
 })
 ```

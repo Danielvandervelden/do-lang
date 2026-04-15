@@ -1,6 +1,6 @@
 ---
 name: do:task
-description: "Start a new piece of work with agent-based workflow. Orchestrates do-planner, do-plan-reviewer, do-griller (if needed), do-executioner, and do-code-reviewer agents. Creates task file, runs reviews, executes with quality gates."
+description: "Start a new piece of work with agent-based workflow. Orchestrates do-planner, do-plan-reviewer, do-griller (if needed), do-executioner, do-code-reviewer, and do-verifier agents. Creates task file, runs reviews, executes, reviews code, and verifies."
 argument-hint: "\"description of what you want to accomplish\""
 allowed-tools:
   - Read
@@ -39,7 +39,11 @@ do-planner (cyan) → do-plan-reviewer (green) → do-griller (yellow, if needed
                                                          ↓
                                               USER APPROVAL
                                                          ↓
-                    do-code-reviewer (magenta) ← do-executioner (red)
+                                             do-executioner (red)
+                                                         ↓
+                                           do-code-reviewer (blue)
+                                                         ↓
+                                              do-verifier (silver)
 ```
 
 ---
@@ -152,7 +156,7 @@ Return APPROVED, ITERATE status, or ESCALATE with details.
 ```
 
 Handle result:
-- **APPROVED**: Continue to Step 6
+- **APPROVED**: Continue to Step 7
 - **MAX_ITERATIONS**: Show user the outstanding issues, ask to proceed or revise
 - **ESCALATE**: Show critical issues, require user decision
 
@@ -228,7 +232,7 @@ Return summary when complete.
 ```
 
 Handle result:
-- **COMPLETE**: Continue to Step 9
+- **COMPLETE**: Continue to Step 10
 - **BLOCKED**: Show blocker, ask user for resolution
 - **FAILED**: Show error, offer recovery options
 
@@ -236,7 +240,7 @@ Handle result:
 
 ```javascript
 Agent({
-  description: "Review code changes",
+  description: "Review code",
   subagent_type: "do-code-reviewer",
   model: "<models.overrides.code_reviewer || models.default>",
   prompt: `
@@ -246,39 +250,51 @@ Task file: .do/tasks/<active_task>
 
 Spawn parallel self-review and council review (if enabled).
 Auto-iterate up to 3 times if issues found.
-Generate UAT checklist when approved.
 `
 })
 ```
 
 Handle result:
-- **VERIFIED**: Continue to completion
-- **MAX_ITERATIONS**: Show issues, ask user to fix manually or ship anyway
-- **Changes applied**: Re-run quality checks, confirm
+- **VERIFIED**: Code review passed; continue to Step 11
+- **MAX_ITERATIONS**: Show outstanding issues to user, ask to proceed or fix manually
+- **Changes applied**: Code reviewer applied fixes, continue to Step 11
 
-## Step 11: Complete
+## Step 11: Spawn do-verifier
 
-Display final summary:
+```javascript
+Agent({
+  description: "Verify implementation",
+  subagent_type: "do-verifier",
+  model: "<models.overrides.verifier || models.overrides.code_reviewer || models.default>",
+  prompt: `
+Run verification flow for this task.
 
-```
-## Task Complete
+Task file: .do/tasks/<active_task>
 
-**Task:** .do/tasks/<filename>
-**Status:** Verified
-
-### Summary
-- Files modified: <count>
-- Commits: <count>
-- Review iterations: <plan> plan, <code> code
-
-### UAT Checklist
-<generated checklist from code reviewer>
-
-Run the application and verify the checklist items.
-When verified, the task is complete.
+Run verification: approach checklist, quality checks, UAT.
+`
+})
 ```
 
-Update task file stage to `verified`.
+Handle result:
+- **PASS**: Task marked complete by do-verifier; continue to Step 12
+- **FAIL**: Show failure details and options to user
+- **UAT_FAILED**: Show do-verifier's handoff prompt or loop-back options as-is
+
+## Step 12: Completion
+
+Read the task file to check final stage:
+
+```bash
+node -e "const fm=require('gray-matter'); const t=fm(require('fs').readFileSync('.do/tasks/<active_task>','utf8')); console.log(t.data.stage)"
+```
+
+- **If stage is `complete`**: Display brief confirmation:
+  ```
+  Task complete.
+  Task file: .do/tasks/<filename>
+  ```
+- **If stage is not `complete`** (UAT failed, verification failed, user chose to loop back): Display do-verifier's output as-is — it already contains the user's next steps.
 
 ---
 

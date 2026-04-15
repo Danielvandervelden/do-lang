@@ -48,7 +48,7 @@ For each step in the Approach:
 
 1. **Announce**: Log which step you're starting
 2. **Execute**: Make the changes (Edit/Write/Bash)
-3. **Verify**: Check the change worked (run tests, lint, typecheck if relevant)
+3. **Verify**: Check the change worked at a basic level (e.g., file exists, no syntax errors)
 4. **Log**: Update Execution Log with what was done
 
 ### Log Entry Format
@@ -129,36 +129,9 @@ Stay focused on the plan. Don't scope creep.
 
 </deviation_handling>
 
-<quality_checks>
-
-## Step 4: Run Quality Checks
-
-After all steps complete, run project quality checks:
-
-```bash
-# Detect and run appropriate checks
-if [ -f "package.json" ]; then
-  npm run lint 2>&1 || true
-  npm run typecheck 2>&1 || true
-  npm run test 2>&1 || true
-fi
-```
-
-Log results:
-```markdown
-### Quality Checks
-- **Lint:** PASS/FAIL
-- **Types:** PASS/FAIL  
-- **Tests:** PASS/FAIL (<X> passing, <Y> failing)
-```
-
-If checks fail, attempt to fix (up to 2 attempts). If still failing, note in log and continue — do-code-reviewer will catch it.
-
-</quality_checks>
-
 <completion>
 
-## Step 5: Complete Execution
+## Step 4: Complete Execution
 
 Update task file:
 
@@ -170,7 +143,6 @@ Update task file:
 - Steps completed: <N>/<total>
 - Files modified: <count>
 - Deviations: <count> (<minor>/<blocking>)
-- Quality: <lint>/<types>/<tests>
 ```
 
 2. Update frontmatter:
@@ -181,7 +153,7 @@ stages:
   verification: pending
 ```
 
-## Step 6: Return Summary
+## Step 5: Return Summary
 
 ```markdown
 ## EXECUTION COMPLETE
@@ -194,11 +166,6 @@ stages:
 
 ### Decisions Made
 - <key decisions during execution>
-
-### Quality
-- Lint: PASS/FAIL
-- Types: PASS/FAIL
-- Tests: PASS/FAIL
 
 ### Deviations
 - <count> minor (auto-fixed)
@@ -241,7 +208,6 @@ Execution complete when:
 - [ ] All Approach steps executed (or blocked with clear reason)
 - [ ] Each step logged with files and decisions
 - [ ] Deviations handled appropriately
-- [ ] Quality checks run
 - [ ] Task file updated with complete Execution Log
 - [ ] Summary returned to orchestrator
 </success_criteria>

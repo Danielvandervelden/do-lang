@@ -85,7 +85,8 @@ Available agents:
 - planner: Creates task plans
 - plan_reviewer: Reviews plans
 - executioner: Implements code
-- code_reviewer: Reviews code
+- code_reviewer: Reviews code (parallel self-review + council, auto-iterates)
+- verifier: Verifies implementation (approach checklist + quality checks + UAT)
 - griller: Asks clarifying questions
 - debugger: Investigates bugs
 

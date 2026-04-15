@@ -4,7 +4,7 @@ Token-efficient meta programming language for Claude Code and Codex.
 
 ## Skill Creation
 
-**Always use `/skill-creator` when creating or modifying skill files.** Never hand-write skills directly.
+When you create a new skill file or make heavy edits to an existing one, at the end of the entire implementation flow remind the user to invoke `/skill-creator` to review and polish the skill. Do not invoke it yourself.
 
 ## Git Workflow
 

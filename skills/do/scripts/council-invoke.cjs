@@ -46,7 +46,7 @@ try {
 }
 const PLUGIN_ROOT = path.join(versionDir, codexVersion);
 const CODEX_COMPANION = path.join(PLUGIN_ROOT, "scripts/codex-companion.mjs");
-const DEFAULT_TIMEOUT = 90000; // 90 seconds per RESEARCH.md
+const DEFAULT_TIMEOUT = 240000; // 240 seconds
 const GEMINI_MAX_RETRIES = 2;
 
 // Valid verdicts for each review type
@@ -830,7 +830,7 @@ Options:
                            Values: claude, codex, gemini, random, both
   --workspace <path>       Workspace path for Gemini (default: cwd)
   --files-modified <list>  Comma-separated list of modified files (for code reviews)
-  --timeout <ms>           Timeout in milliseconds (default: 90000)
+  --timeout <ms>           Timeout in milliseconds (default: 240000)
   --help, -h               Show this help message
 
 Examples:

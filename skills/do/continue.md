@@ -104,6 +104,36 @@ console.log(JSON.stringify(models));
 
 ## Step 6: Route by Stage
 
+**Fast-path guard:** Before using the routing table below, check if `fast_path: true` is present in the task frontmatter:
+
+```bash
+node -e "
+const fm = require('gray-matter');
+const t = fm(require('fs').readFileSync('.do/tasks/<active_task>', 'utf8'));
+console.log(t.data.fast_path === true ? 'fast' : 'normal');
+"
+```
+
+### Fast-path routing (fast_path: true)
+
+| Stage | Sub-condition | Action |
+|-------|---------------|--------|
+| `execution` | `stages.execution: pending` | Spawn do-executioner (task was created but execution never started) |
+| `execution` | `stages.execution: in_progress` | Spawn do-executioner to continue (same as normal) |
+| `execution` | `stages.execution: review_pending` | Run the single fast code review round (see below) |
+| `complete` | - | Show "Task already complete. No action needed." and stop |
+
+**Fast code review round** (for `review_pending` state):
+
+Spawn do-code-reviewer only (no council, no parallel spawning). Follow Step 9 logic from `@skills/do/fast.md`:
+- APPROVED or NITPICKS_ONLY → mark `council_review_ran.code: true`, update `stage: complete`, done
+- CHANGES_REQUESTED (first time) → spawn do-executioner with fix instructions, override stage back to `execution: review_pending`, re-spawn do-code-reviewer once
+- CHANGES_REQUESTED (second time) → abandon task: set `abandoned: true`, `pre_abandon_stage: execution`, `fast_path: false`. Print: "Fast-path review failed twice. The task has been abandoned and preserved at `.do/tasks/<filename>` for reference. Please run `/do:task "description"` to start fresh with the full workflow." Stop.
+
+**Note on abandoned fast-path tasks:** When a fast-path task was abandoned via escalation, `fast_path` is set to `false`. The normal abandoned-task flow in Step 3 applies: restore `pre_abandon_stage`, resume. The task resumes as a normal `/do:task` pipeline from that point.
+
+### Normal routing (fast_path: false or absent)
+
 | Stage | Sub-condition | Action |
 |-------|---------------|--------|
 | `refinement` | stages.refinement: in_progress | Spawn do-planner to finish planning |

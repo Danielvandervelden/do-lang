@@ -22,6 +22,7 @@ Most coding tasks follow predictable patterns: initialize a project, scan for co
 | `/do:init` | Setting up a new project or checking workspace health |
 | `/do:scan` | Creating documentation for an existing codebase |
 | `/do:task` | Starting a new piece of work (feature, fix, refactor) |
+| `/do:fast` | Quick, low-risk changes (1-3 files, no shared abstractions) |
 | `/do:continue` | Resuming work from a previous session |
 | `/do:abandon` | Stopping current work to start something else |
 | `/do:debug` | Investigating why something isn't working |
@@ -34,6 +35,9 @@ When the user invokes `/do` without specifying a sub-command, infer from context
 
 **Examples:**
 - "I want to add user authentication" → `/do:task "add user authentication"`
+- "quick fix for the typo in the header" → `/do:fast "fix the typo in the header"`
+- "small tweak to the button color" → `/do:fast "update the button color in the theme config"`
+- "fast path — add a null check in UserService" → `/do:fast "add null check in UserService.parseToken"`
 - "let's pick up where we left off" → `/do:continue`
 - "this endpoint is returning 500 errors" → `/do:debug`
 - "set up this repo for the do workflow" → `/do:init`
@@ -47,5 +51,7 @@ When the user invokes `/do` without specifying a sub-command, infer from context
 - "are there improvements for this skill?" → `/do:optimise skills/do/task.md`
 - "deep audit of this project" → `/do:optimise --effort high`
 - "quick check this file" → `/do:optimise path/to/file --effort low`
+
+**Routing note for `/do:fast`:** Only route to `/do:fast` when the user explicitly says "fast" or the description is clearly trivial (fix a typo, update a color, add a single null check). Keep `/do:task` as the default for anything ambiguous or multi-file.
 
 If intent is genuinely ambiguous, show the table above and ask which sub-command they want.

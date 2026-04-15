@@ -13,7 +13,7 @@ Check whether a newer version of `@danielvandervelden/do-lang` is available and 
 
 ## Why this exists
 
-Updating via `npm install -g` (not `npm update -g`) is required because `npm update -g` does not trigger the postinstall script. The postinstall script is what copies skill files to `~/.claude/commands/do/` and `~/.codex/commands/do/`. Skipping postinstall means the running skills stay on the old version even though the package itself was updated.
+Updating via `npm install -g` (not `npm update -g`) is required because `npm update -g` does not trigger the postinstall script. The postinstall script is what copies skill files to `~/.claude/commands/do/`. Skipping postinstall means the running skills stay on the old version even though the package itself was updated.
 
 The `--registry https://npm.pkg.github.com` flag is also required on every install. `publishConfig.registry` in `package.json` only affects publishing — it does not influence what registry clients use when installing.
 
@@ -130,20 +130,12 @@ test -f ~/.claude/commands/do/update.md && echo "claude_ok" || echo "claude_miss
 ls ~/.claude/agents/do-*.md 2>/dev/null | head -1 | grep -q . && echo "agents_ok" || echo "agents_missing"
 ```
 
-If `~/.codex/` exists, also check:
-```bash
-test -f ~/.codex/commands/do/update.md && echo "codex_ok" || echo "codex_missing"
-```
-
-If `~/.codex` does not exist, skip Codex verification entirely — do not report `codex_missing`.
-
 For agents: if `agents_missing`, downgrade to a warning — the commands directory check is the primary success indicator.
 
 Report results. If any check fails even though install exited 0, warn:
 ```
 Warning: postinstall may not have completed. Check manually:
   ls ~/.claude/commands/do/
-  ls ~/.codex/commands/do/   (if Codex is installed)
 ```
 
 ## Step 7: Report result
@@ -158,7 +150,6 @@ Updated @danielvandervelden/do-lang
 Files installed:
   [ok] ~/.claude/commands/do/update.md
   [ok] ~/.claude/agents/do-*.md
-  [ok] ~/.codex/commands/do/update.md   (if Codex present)
 ```
 
 If any verification file was missing, replace the corresponding line with a warning.

@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/do-lang.svg)](https://www.npmjs.com/package/do-lang)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Token-efficient meta programming language for Claude Code and Codex.
+Token-efficient meta programming language for Claude Code.
 
 ## What is do?
 

@@ -1,6 +1,6 @@
 # do
 
-Token-efficient meta programming language for Claude Code and Codex.
+Token-efficient meta programming language for Claude Code.
 
 ## Skill Creation
 

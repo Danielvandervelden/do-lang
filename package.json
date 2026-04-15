@@ -1,12 +1,11 @@
 {
   "name": "@danielvandervelden/do-lang",
   "version": "1.8.1",
-  "description": "Token-efficient meta programming language for Claude Code and Codex",
+  "description": "Token-efficient meta programming language for Claude Code",
   "files": [
     "skills",
     "agents",
-    "bin",
-    "codex"
+    "bin"
   ],
   "scripts": {
     "postinstall": "node bin/install.cjs"
@@ -18,7 +17,6 @@
     "claude-code",
     "skills",
     "ai",
-    "codex",
     "meta-programming"
   ],
   "license": "MIT",

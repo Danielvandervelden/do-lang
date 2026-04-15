@@ -1,224 +1,176 @@
 # do-lang
 
-[![npm version](https://img.shields.io/npm/v/do-lang.svg)](https://www.npmjs.com/package/do-lang)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Token-efficient meta programming language for Claude Code.
 
 ## What is do?
 
-**do** solves the context bloat problem in AI-assisted development.
+**do** brings structured, repeatable task execution to Claude Code. It wraps complex AI workflows — plan, review, implement, verify — in a flat agent hierarchy that keeps token usage low and quality gates intact.
 
-Modern AI coding assistants often spawn nested subagents that burn through tokens rapidly. A task that should cost $0.50 can spiral to $5+ when agents spawn agents spawn agents. **do** provides structured workflows with a flat agent hierarchy:
-
-- **Flat hierarchy**: Orchestrator coordinates single agents per phase (no nesting)
-- **Token efficiency**: Every architectural decision minimizes token usage
-- **State persistence**: Progress saved in project `.do/` folder
-- **Quality gates**: Planning, verification, and debugging without the overhead
+- **Structured workflows**: Every task follows the same pipeline — no ad-hoc conversations
+- **Quality gates**: Parallel plan review + council review before execution; code review + verification after
+- **State persistence**: Progress saved in `.do/` so sessions can resume at any stage
+- **Claude Code only**: Installs to `~/.claude/` — no other runtime required
 
 ## Installation
 
-Install globally via npm:
+This package is published to **GitHub Packages** under the `@danielvandervelden` scope. You need a GitHub personal access token with `read:packages` permission.
 
-```bash
-npm i -g do-lang
+**Step 1 — Configure `~/.npmrc`:**
+
+```
+@danielvandervelden:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
 ```
 
-This copies the do skills to `~/.claude/skills/do/`.
-
-### Verify Installation
-
-Check that the skills were installed:
+**Step 2 — Install globally:**
 
 ```bash
-ls ~/.claude/skills/do/
+npm install -g @danielvandervelden/do-lang
 ```
 
-You should see `SKILL.md` and any additional skill files.
+The postinstall script copies files to:
+- `~/.claude/commands/do/` — skill files (`/do:*` commands)
+- `~/.claude/agents/` — agent definitions
 
 ## Quick Start
 
-### First Time Setup
+### Initialize your workspace
 
-Initialize your workspace:
+Run once at the workspace root:
 
 ```
 /do:init
 ```
 
-This sets up the database structure and configuration files.
+This sets up the database structure and `.do/config.json`.
 
-### In a Project
+### Scan a project
 
-Scan the project to create a database entry:
+Inside a project, create a database entry:
 
 ```
 /do:scan
 ```
 
-This analyzes your project and creates documentation in the database.
-
-### Start Working
-
-Create and execute a task:
+### Run a task
 
 ```
-/do:task "add user authentication with JWT"
+/do:task "add pagination to the user list"
 ```
 
-The do system will:
-1. Refine your task description
-2. Challenge unclear requirements (if confidence < 0.9)
-3. Ask before clearing context
-4. Execute with a single agent
-5. Verify the implementation
+The orchestrator runs the full pipeline: plan → review → grill (if unclear) → user approval → execute → code review → verify.
+
+### Resume an interrupted session
+
+```
+/do:continue
+```
+
+Reads the task file's YAML frontmatter and picks up at the last completed stage.
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `/do:init` | Initialize workspace and project configuration |
-| `/do:scan` | Scan project and create database entry |
-| `/do:task` | Create and refine a task with AI assistance |
-| `/do:continue` | Resume from last task state |
-| `/do:debug` | Structured debugging workflow |
+| `/do:init` | Initialize workspace or project (database structure, config) |
+| `/do:scan` | Scan a project and create a database entry |
+| `/do:task` | Full task workflow — plan, review, execute, verify |
+| `/do:continue` | Resume a task from its last completed stage |
+| `/do:abandon` | Pause a task and preserve its state for later |
+| `/do:debug` | Scientific method debugging with persistent session state |
+| `/do:update` | Check for a newer version and self-update |
+| `/do:optimise` | Audit any target (agent, skill, script, project) against best practices |
 
-### /do:init
+## Agent Pipeline
 
-Context-aware setup that detects workspace vs project level:
-- **Workspace level**: Creates database structure, canonical AGENTS.md
-- **Project level**: Creates `.do/` folder with `config.json` and `tasks/`
+`/do:task` coordinates eight specialized agents:
 
-### /do:scan
+| Agent | Role |
+|-------|------|
+| `do-planner` | Creates the task plan, loads context, calculates confidence |
+| `do-plan-reviewer` | Self-review of the plan — returns PASS / CONCERNS / RETHINK |
+| `do-council-reviewer` | External AI council review via `council-invoke.cjs` |
+| `do-griller` | Asks clarifying questions when confidence falls below threshold |
+| `do-executioner` | Implements the plan step by step with deviation handling |
+| `do-code-reviewer` | Self-review of the diff — returns APPROVED / NITPICKS_ONLY / CHANGES_REQUESTED |
+| `do-verifier` | Approach checklist, quality checks, UAT sign-off |
+| `do-debugger` | Scientific method debugging (hypothesis → test → confirm/reject) |
 
-Analyzes your project and creates documentation:
-- Detects tech stack from package.json, requirements.txt, etc.
-- Maps directory structure
-- Identifies key components and patterns
-- Creates `project.md` in your database
+### Full task flow
 
-### /do:task
+```
+do-planner → orchestrator spawns in parallel:
+               ├── do-plan-reviewer  (PASS / CONCERNS / RETHINK)
+               └── do-council-reviewer  (LOOKS_GOOD / CONCERNS / RETHINK)
+             Combined verdict → APPROVED / ITERATE / ESCALATE
+             (ITERATE: re-plan + re-review, up to 3×)
+                     ↓
+             do-griller  (if confidence < threshold)
+                     ↓
+             USER APPROVAL
+                     ↓
+             do-executioner
+                     ↓
+             orchestrator spawns in parallel:
+               ├── do-code-reviewer  (APPROVED / NITPICKS_ONLY / CHANGES_REQUESTED)
+               └── do-council-reviewer  (APPROVED / NITPICKS_ONLY / CHANGES_REQUESTED)
+             Combined verdict → VERIFIED / ITERATE
+             (ITERATE: fix → re-review, up to 3×)
+                     ↓
+             do-verifier
+                     ↓
+                  complete
+```
 
-Full task workflow with flat agent hierarchy:
-- Refines task description with AI assistance
-- Challenges unclear requirements
-- Executes with single implementation agent
-- Verifies against plan
+## Configuration
 
-### /do:continue
+Project configuration lives in `.do/config.json`:
 
-Resumes from last task state by reading YAML frontmatter status.
+```json
+{
+  "council": {
+    "reviewer": "codex",
+    "enabled": true
+  }
+}
+```
 
-### /do:debug
-
-Structured debugging workflow using the scientific method:
-- Form hypothesis
-- Test hypothesis
-- Confirm or reject
-- Iterate until resolved
+**`council.reviewer`** — which external AI to use for council reviews: `"codex"`, `"gemini"`, `"both"`, or `"random"`. Omit to disable council reviews.
 
 ## Development
 
-### Local Testing with yalc
-
-Clone the repository:
+### Local testing with yalc
 
 ```bash
-git clone https://github.com/globalroo/do.git
-cd do
-```
-
-Publish to local yalc store:
-
-```bash
+git clone https://github.com/Danielvandervelden/do-lang.git
+cd do-lang
 yalc publish
 ```
 
-In a test location, add the package:
+In a test project:
 
 ```bash
-yalc add do-lang
+yalc add @danielvandervelden/do-lang
 ```
 
-After making changes, push updates to all linked locations:
+After making changes:
 
 ```bash
 yalc push
 ```
 
-### Cleanup
-
-Remove the yalc link when done:
+Clean up when done:
 
 ```bash
-yalc remove do-lang
+yalc remove @danielvandervelden/do-lang
 ```
 
-## Architecture
+### Running tests
 
-### Flat Agent Hierarchy
-
-The core architectural principle is **no nested subagents**:
-
-```
-Orchestrator
-    |
-    +-- Refine Agent (one at a time)
-    +-- Implementation Agent (one at a time)
-    +-- Verify Agent (one at a time)
-```
-
-Each phase has exactly one agent. Agents never spawn other agents.
-
-### State Management
-
-All state lives in the project's `.do/` folder:
-
-```
-.do/
-  config.json    # Project-specific settings
-  tasks/
-    current.md   # Active task with YAML frontmatter
-    completed/   # Archived completed tasks
-```
-
-Task files use YAML frontmatter for machine-parseable status:
-
-```yaml
----
-id: task-001
-status: in-progress
-stage: implementation
-confidence: 0.95
----
-
-# Task: Add user authentication
-
-## Description
-...
-```
-
-### Token Efficiency Patterns
-
-1. **Load only what's needed**: Each command reads its own file, no router overhead
-2. **Explicit state**: YAML frontmatter instead of inference
-3. **Single agent per phase**: No context multiplication from nesting
-4. **Progressive disclosure**: SKILL.md body < 500 lines, references as needed
-
-## Configuration
-
-Project configuration in `.do/config.json`:
-
-```json
-{
-  "council": {
-    "enabled": true,
-    "threshold": 0.9
-  },
-  "debug": {
-    "verbose": false
-  }
-}
+```bash
+node --test skills/do/scripts/__tests__/
 ```
 
 ## License

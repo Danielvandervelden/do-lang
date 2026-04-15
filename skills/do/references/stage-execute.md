@@ -259,7 +259,7 @@ Execution complete. Checking council config before verification.
 
 ### Step E4: Code Review (per council config)
 
-> **Note:** This step is used by the Codex inline execution path (`codex/continue.md`). In the Claude Code agent path, code review is handled by `do-code-reviewer` instead (which spawns parallel self-review and council review, and auto-iterates up to 3 times). `do-verifier` handles the subsequent verification step (approach checklist, quality checks, UAT). Do not remove E4 — it is live code for Codex users.
+> **Note:** This step is used by the Codex inline execution path (`codex/continue.md`). In the Claude Code agent path, code review is handled by the orchestrator via `stage-code-review.md` instead (which spawns `do-code-reviewer` + `do-council-reviewer` in parallel and auto-iterates up to 3 times). `do-verifier` handles the subsequent verification step (approach checklist, quality checks, UAT). Do not remove E4 — it is live code for Codex users.
 
 **Step E4.0: Check if code review already ran**
 

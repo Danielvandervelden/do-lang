@@ -107,11 +107,11 @@ console.log(JSON.stringify(models));
 | Stage | Sub-condition | Action |
 |-------|---------------|--------|
 | `refinement` | stages.refinement: in_progress | Spawn do-planner to finish planning |
-| `refinement` | stages.refinement: complete, plan review not ran | Spawn do-plan-reviewer |
+| `refinement` | stages.refinement: complete, plan review not ran | Run stage-plan-review (parallel reviewers if council enabled) |
 | `refinement` | plan review complete, confidence < threshold | Spawn do-griller |
 | `refinement` | all complete | Show approval checkpoint, then spawn do-executioner |
 | `execution` | stages.execution: in_progress | Spawn do-executioner to continue |
-| `execution` | stages.execution: complete | Spawn do-code-reviewer |
+| `execution` | stages.execution: complete | Run stage-code-review (parallel reviewers if council enabled) |
 | `verification` | any | Spawn do-verifier |
 | `verified` | - | Spawn do-verifier (resumes at V5 UAT flow) |
 | `complete` | - | Show "Task already complete. No action needed." and stop |
@@ -134,24 +134,13 @@ Return structured summary when done.
 })
 ```
 
-### Spawn do-plan-reviewer
+### Plan Review
 
-```javascript
-Agent({
-  description: "Review plan",
-  subagent_type: "do-plan-reviewer",
-  model: "<models.overrides.plan_reviewer || models.default>",
-  prompt: `
-Review the plan in this task file.
+@references/stage-plan-review.md
 
-Task file: .do/tasks/<active_task>
-Config: .do/config.json
-
-Spawn parallel self-review and council review (if enabled).
-Auto-iterate up to 3 times if issues found.
-`
-})
-```
+The resume guard (PR-0) handles the `council_review_ran.plan` skip-entirely check. If already ran, stage-plan-review returns immediately. Result handling:
+- **APPROVED**: Continue to griller check / approval checkpoint
+- **MAX_ITERATIONS** or **ESCALATE**: Show to user, stop
 
 ### Spawn do-griller
 
@@ -186,23 +175,13 @@ Continue from where it left off.
 })
 ```
 
-### Spawn do-code-reviewer
+### Code Review
 
-```javascript
-Agent({
-  description: "Review code",
-  subagent_type: "do-code-reviewer",
-  model: "<models.overrides.code_reviewer || models.default>",
-  prompt: `
-Review the code changes from this task execution.
+@references/stage-code-review.md
 
-Task file: .do/tasks/<active_task>
-
-Spawn parallel self-review and council review (if enabled).
-Auto-iterate up to 3 times if issues found.
-`
-})
-```
+The resume guard (CR-0) handles the `council_review_ran.code` skip-entirely check. If already ran, stage-code-review returns immediately (proceed to do-verifier). Result handling:
+- **VERIFIED**: Task file updated with stage:verification — spawn do-verifier
+- **MAX_ITERATIONS**: Show to user, stop
 
 ### Spawn do-verifier
 

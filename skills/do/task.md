@@ -1,6 +1,6 @@
 ---
 name: do:task
-description: "Start a new piece of work with agent-based workflow. Orchestrates do-planner, do-plan-reviewer, do-griller (if needed), do-executioner, do-code-reviewer, and do-verifier agents. Creates task file, runs reviews, executes, reviews code, and verifies."
+description: "Start a new piece of work with agent-based workflow. Orchestrates do-planner, do-plan-reviewer + do-council-reviewer (parallel, at plan review), do-griller (if needed), do-executioner, do-code-reviewer + do-council-reviewer (parallel, at code review), and do-verifier agents. Creates task file, runs reviews, executes, reviews code, and verifies."
 argument-hint: "\"description of what you want to accomplish\""
 allowed-tools:
   - Read
@@ -35,15 +35,16 @@ Skills are markdown prompts that get skipped when context is long. Agents can't 
 ## Workflow
 
 ```
-do-planner (cyan) → do-plan-reviewer (green) → do-griller (yellow, if needed)
-                                                         ↓
-                                              USER APPROVAL
-                                                         ↓
-                                             do-executioner (red)
-                                                         ↓
-                                           do-code-reviewer (blue)
-                                                         ↓
-                                              do-verifier (silver)
+do-planner (cyan) → do-plan-reviewer (green)  ┐ (parallel) → do-griller (yellow, if needed)
+                    do-council-reviewer (purple)┘                        ↓
+                                                              USER APPROVAL
+                                                                         ↓
+                                                            do-executioner (red)
+                                                                         ↓
+                                                 do-code-reviewer (blue)  ┐ (parallel)
+                                                 do-council-reviewer (purple)┘
+                                                                         ↓
+                                                            do-verifier (silver)
 ```
 
 ---
@@ -135,28 +136,12 @@ Parse the returned summary for:
 - Approach summary
 - Concerns count
 
-## Step 6: Spawn do-plan-reviewer
+## Step 6: Plan Review
 
-```javascript
-Agent({
-  description: "Review plan",
-  subagent_type: "do-plan-reviewer",
-  model: "<models.overrides.plan_reviewer || models.default>",
-  prompt: `
-Review the plan in this task file.
-
-Task file: .do/tasks/<active_task>
-Config: .do/config.json
-
-Spawn parallel self-review and council review (if enabled).
-Auto-iterate up to 3 times if issues found.
-Return APPROVED, ITERATE status, or ESCALATE with details.
-`
-})
-```
+@references/stage-plan-review.md
 
 Handle result:
-- **APPROVED**: Continue to Step 7
+- **APPROVED** (council_review_ran.plan set to true by reference file): Continue to Step 7
 - **MAX_ITERATIONS**: Show user the outstanding issues, ask to proceed or revise
 - **ESCALATE**: Show critical issues, require user decision
 
@@ -236,28 +221,13 @@ Handle result:
 - **BLOCKED**: Show blocker, ask user for resolution
 - **FAILED**: Show error, offer recovery options
 
-## Step 10: Spawn do-code-reviewer
+## Step 10: Code Review
 
-```javascript
-Agent({
-  description: "Review code",
-  subagent_type: "do-code-reviewer",
-  model: "<models.overrides.code_reviewer || models.default>",
-  prompt: `
-Review the code changes from this task execution.
-
-Task file: .do/tasks/<active_task>
-
-Spawn parallel self-review and council review (if enabled).
-Auto-iterate up to 3 times if issues found.
-`
-})
-```
+@references/stage-code-review.md
 
 Handle result:
-- **VERIFIED**: Code review passed; continue to Step 11
+- **VERIFIED** (stage:verification + council_review_ran.code set by reference file): Continue to Step 11
 - **MAX_ITERATIONS**: Show outstanding issues to user, ask to proceed or fix manually
-- **Changes applied**: Code reviewer applied fixes, continue to Step 11
 
 ## Step 11: Spawn do-verifier
 

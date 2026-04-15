@@ -511,9 +511,14 @@ async function runGeminiOnce(
     proc.stdout.on("data", (d) => (stdout += d));
     proc.stderr.on("data", (d) => (stderr += d));
 
-    // Write brief to stdin
-    proc.stdin.write(briefContent);
-    proc.stdin.end();
+    // Write brief to stdin (EPIPE guard: child may exit before consuming all input)
+    proc.stdin.on("error", () => {}); // suppress uncaught EPIPE
+    try {
+      proc.stdin.write(briefContent);
+      proc.stdin.end();
+    } catch (err) {
+      settle({ success: false, error: "EPIPE", output: "" });
+    }
 
     proc.on("close", (code) => {
       clearTimeout(timer);
@@ -776,38 +781,40 @@ async function invokeCouncil(options) {
 
   // Invoke selected advisor(s)
   let result;
-  switch (selectedReviewer) {
-    case "codex":
-      result = await invokeCodex(briefPath, timeout, type);
-      result.advisor = "codex";
-      break;
-    case "gemini":
-      result = await invokeGemini(briefPath, workspace, timeout, type);
-      result.advisor = "gemini";
-      break;
-    case "claude":
-      // Claude-as-reviewer only valid in Codex runtime (Phase 12)
-      // For now, fall back to gemini
-      process.stderr.write(
-        "council: claude reviewer not available, falling back to gemini\n",
-      );
-      result = await invokeGemini(briefPath, workspace, timeout, type);
-      result.advisor = "gemini";
-      break;
-    case "both":
-      result = await invokeBoth(briefPath, workspace, timeout, type);
-      break;
-    default:
-      return {
-        success: false,
-        error: `Unknown reviewer: ${selectedReviewer}`,
-        advisor: null,
-      };
-  }
-
-  // Clean up temp brief file if we created one
-  if (briefPath !== taskFile && fs.existsSync(briefPath)) {
-    fs.unlinkSync(briefPath);
+  try {
+    switch (selectedReviewer) {
+      case "codex":
+        result = await invokeCodex(briefPath, timeout, type);
+        result.advisor = "codex";
+        break;
+      case "gemini":
+        result = await invokeGemini(briefPath, workspace, timeout, type);
+        result.advisor = "gemini";
+        break;
+      case "claude":
+        // Claude-as-reviewer only valid in Codex runtime (Phase 12)
+        // For now, fall back to gemini
+        process.stderr.write(
+          "council: claude reviewer not available, falling back to gemini\n",
+        );
+        result = await invokeGemini(briefPath, workspace, timeout, type);
+        result.advisor = "gemini";
+        break;
+      case "both":
+        result = await invokeBoth(briefPath, workspace, timeout, type);
+        break;
+      default:
+        return {
+          success: false,
+          error: `Unknown reviewer: ${selectedReviewer}`,
+          advisor: null,
+        };
+    }
+  } finally {
+    // Clean up temp brief file if we created one
+    if (briefPath !== taskFile && fs.existsSync(briefPath)) {
+      fs.unlinkSync(briefPath);
+    }
   }
 
   return result;
@@ -854,7 +861,7 @@ Examples:
   const reviewer = getArg("--reviewer") || "random";
   const workspace = getArg("--workspace") || process.cwd();
   const filesModified = getArg("--files-modified");
-  const timeout = parseInt(getArg("--timeout") || DEFAULT_TIMEOUT, 10);
+  const timeout = getArg("--timeout") ? parseInt(getArg("--timeout"), 10) : DEFAULT_TIMEOUT;
 
   if (!type || !taskFile) {
     console.error(

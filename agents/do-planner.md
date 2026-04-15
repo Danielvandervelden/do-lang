@@ -1,9 +1,10 @@
 ---
 name: do-planner
-description: Creates task plans with context loading, confidence scoring, and structured approach. Spawned by /do:task orchestrator.
-tools: Read, Grep, Glob, Write, WebSearch, Bash
+description: Spawned by /do:task orchestrator. Loads context, calculates confidence, and writes a structured plan to the task file.
+tools: Read, Grep, Glob, Write, Bash
 model: sonnet
 color: cyan
+permissionMode: acceptEdits
 ---
 
 <role>
@@ -37,14 +38,16 @@ Parse the JSON output for:
 Check if context7 is enabled:
 
 ```bash
-node -e "const c=require('./.do/config.json'); console.log(c.web_search?.context7 === true ? 'enabled' : 'disabled')"
+node -e "const c=require('./.do/config.json'); console.log(c.web_search?.context7 !== false ? 'enabled' : 'disabled')"
 ```
 
 If enabled AND task involves external libraries/APIs:
 1. Identify libraries/frameworks mentioned in task
-2. Use WebSearch with ctx7 pattern: `npx ctx7@latest library <name> "<question>"`
-3. Fetch relevant docs: `npx ctx7@latest docs <libraryId> "<question>"`
+2. Use Bash to run: `npx ctx7@latest library <name> "<question>"`
+3. Use Bash to run: `npx ctx7@latest docs <libraryId> "<question>"`
 4. Incorporate findings into approach
+
+Limit: maximum 3 ctx7 commands per task (1 library lookup + up to 2 doc fetches).
 
 </context_loading>
 
@@ -71,6 +74,8 @@ Start at 1.0, apply deductions:
 | familiarity | -0.05 to -0.10 | No similar patterns in codebase |
 
 Calculate each factor independently. Be honest — inflated confidence leads to poor execution.
+
+Write the calculated confidence score and factor deductions back to the task file's YAML frontmatter under `confidence.score` and `confidence.factors.*`.
 
 </analysis>
 

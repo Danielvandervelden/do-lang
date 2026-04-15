@@ -17,16 +17,34 @@
  * @module council-invoke
  */
 
-const { spawn, execSync } = require("child_process");
+const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
 // Constants
-const PLUGIN_ROOT = path.join(
-  process.env.HOME,
-  ".claude/plugins/cache/openai-codex/codex/1.0.1",
+const versionDir = path.join(
+  os.homedir(),
+  ".claude/plugins/cache/openai-codex/codex/",
 );
+let codexVersion = "1.0.1"; // fallback
+try {
+  const versions = fs
+    .readdirSync(versionDir)
+    .filter((d) => /^\d+\.\d+\.\d+$/.test(d))
+    .sort((a, b) => {
+      const pa = a.split(".").map(Number);
+      const pb = b.split(".").map(Number);
+      for (let i = 0; i < 3; i++) {
+        if (pa[i] !== pb[i]) return pa[i] - pb[i];
+      }
+      return 0;
+    });
+  if (versions.length) codexVersion = versions[versions.length - 1];
+} catch {
+  /* directory doesn't exist, use fallback */
+}
+const PLUGIN_ROOT = path.join(versionDir, codexVersion);
 const CODEX_COMPANION = path.join(PLUGIN_ROOT, "scripts/codex-companion.mjs");
 const DEFAULT_TIMEOUT = 90000; // 90 seconds per RESEARCH.md
 const GEMINI_MAX_RETRIES = 2;
@@ -88,7 +106,7 @@ function loadWorkspaceConfig(startPath = process.cwd()) {
  * Per D-56: resolution order is project -> workspace -> hardcoded
  * @param {string|null} projectConfigPath - Path to project .do/config.json
  * @param {string} workspaceStartPath - Starting path for workspace search
- * @returns {Object} Resolved config
+ * @returns {Object} Resolved config with availableTools, defaultReviewer, council_reviews
  */
 function resolveConfig(
   projectConfigPath = null,
@@ -187,7 +205,7 @@ function getAvailableReviewers(currentRuntime, resolvedConfig = null) {
 }
 
 /**
- * Select a random reviewer using Python (per D-41)
+ * Select a random reviewer from available options.
  * @param {string[]} available - Available reviewer options
  * @returns {string|null} Selected reviewer, or null if none available
  */
@@ -199,20 +217,7 @@ function selectRandomReviewer(available) {
     return available[0];
   }
 
-  try {
-    // Per D-41: use Python for random selection
-    // Format as Python list with single quotes
-    const pyList = "[" + available.map((s) => `'${s}'`).join(",") + "]";
-    const pythonCmd = `python3 -c "import random; print(random.choice(${pyList}))"`;
-    const result = execSync(pythonCmd, { encoding: "utf-8" }).trim();
-    if (available.includes(result)) {
-      return result;
-    }
-  } catch {
-    // Python fallback failed, use JS random
-  }
-
-  // JavaScript fallback
+  // Use JS random selection
   const idx = Math.floor(Math.random() * available.length);
   return available[idx];
 }
@@ -388,10 +393,24 @@ async function invokeCodex(
       return;
     }
 
+    let settled = false;
+    const settle = (value) => {
+      if (!settled) {
+        settled = true;
+        resolve(value);
+      }
+    };
+
+    const ac = new AbortController();
+    const timer = setTimeout(() => {
+      ac.abort();
+      settle({ success: false, error: "Timeout", output: "" });
+    }, timeout);
+
     const proc = spawn(
       "node",
       [CODEX_COMPANION, "task", "--wait", "--prompt-file", briefPath],
-      { stdio: ["inherit", "pipe", "pipe"] },
+      { stdio: ["ignore", "pipe", "pipe"], signal: ac.signal },
     );
 
     let stdout = "";
@@ -399,15 +418,10 @@ async function invokeCodex(
     proc.stdout.on("data", (d) => (stdout += d));
     proc.stderr.on("data", (d) => (stderr += d));
 
-    const timer = setTimeout(() => {
-      proc.kill();
-      resolve({ success: false, error: "Timeout", output: "" });
-    }, timeout);
-
     proc.on("close", (code) => {
       clearTimeout(timer);
       if (code === 0 && stdout.trim()) {
-        resolve({
+        settle({
           success: true,
           output: stdout,
           verdict: parseVerdict(stdout, reviewType),
@@ -415,7 +429,7 @@ async function invokeCodex(
           recommendations: parseRecommendations(stdout),
         });
       } else {
-        resolve({
+        settle({
           success: false,
           error: stderr || "Empty output",
           output: stdout,
@@ -425,7 +439,10 @@ async function invokeCodex(
 
     proc.on("error", (err) => {
       clearTimeout(timer);
-      resolve({ success: false, error: err.message, output: "" });
+      // AbortError is expected on timeout -- already settled via timer callback
+      if (err.name !== "AbortError") {
+        settle({ success: false, error: err.message, output: "" });
+      }
     });
   });
 }
@@ -458,6 +475,20 @@ async function runGeminiOnce(
       return;
     }
 
+    let settled = false;
+    const settle = (value) => {
+      if (!settled) {
+        settled = true;
+        resolve(value);
+      }
+    };
+
+    const ac = new AbortController();
+    const timer = setTimeout(() => {
+      ac.abort();
+      settle({ success: false, error: "Timeout", output: "" });
+    }, timeout);
+
     // Spawn gemini with stdin pipe
     const proc = spawn(
       "gemini",
@@ -467,11 +498,12 @@ async function runGeminiOnce(
         "--include-directories",
         workspace,
         "--approval-mode",
+        // "plan" mode is intentional for all review types -- Gemini should analyze/propose, never auto-execute
         "plan",
         "-o",
         "text",
       ],
-      { stdio: ["pipe", "pipe", "pipe"] },
+      { stdio: ["pipe", "pipe", "pipe"], signal: ac.signal },
     );
 
     let stdout = "";
@@ -483,15 +515,10 @@ async function runGeminiOnce(
     proc.stdin.write(briefContent);
     proc.stdin.end();
 
-    const timer = setTimeout(() => {
-      proc.kill();
-      resolve({ success: false, error: "Timeout", output: "" });
-    }, timeout);
-
     proc.on("close", (code) => {
       clearTimeout(timer);
       if (code === 0 && stdout.trim()) {
-        resolve({
+        settle({
           success: true,
           output: stdout,
           verdict: parseVerdict(stdout, reviewType),
@@ -499,7 +526,7 @@ async function runGeminiOnce(
           recommendations: parseRecommendations(stdout),
         });
       } else {
-        resolve({
+        settle({
           success: false,
           error: stderr || "Empty output",
           output: stdout,
@@ -509,7 +536,10 @@ async function runGeminiOnce(
 
     proc.on("error", (err) => {
       clearTimeout(timer);
-      resolve({ success: false, error: err.message, output: "" });
+      // AbortError is expected on timeout -- already settled via timer callback
+      if (err.name !== "AbortError") {
+        settle({ success: false, error: err.message, output: "" });
+      }
     });
   });
 }
@@ -632,14 +662,14 @@ async function invokeBoth(
   }
 
   // Combine findings and recommendations
-  const allFindings = [...(codex.findings || []), ...(gemini.findings || [])];
+  const allFindings = [...(codex?.findings || []), ...(gemini.findings || [])];
   const allRecs = [
-    ...(codex.recommendations || []),
+    ...(codex?.recommendations || []),
     ...(gemini.recommendations || []),
   ];
 
   return {
-    success: codex.success || gemini.success,
+    success: codex?.success || gemini.success,
     advisor: "both",
     verdict: combinedVerdict,
     findings: allFindings,
@@ -758,6 +788,9 @@ async function invokeCouncil(options) {
     case "claude":
       // Claude-as-reviewer only valid in Codex runtime (Phase 12)
       // For now, fall back to gemini
+      process.stderr.write(
+        "council: claude reviewer not available, falling back to gemini\n",
+      );
       result = await invokeGemini(briefPath, workspace, timeout, type);
       result.advisor = "gemini";
       break;
@@ -811,7 +844,9 @@ Examples:
   // Parse arguments
   const getArg = (name) => {
     const idx = args.indexOf(name);
-    return idx !== -1 && args[idx + 1] ? args[idx + 1] : null;
+    return idx !== -1 && args[idx + 1] && !args[idx + 1].startsWith("--")
+      ? args[idx + 1]
+      : null;
   };
 
   const type = getArg("--type");

@@ -26,6 +26,7 @@ Most coding tasks follow predictable patterns: initialize a project, scan for co
 | `/do:abandon` | Stopping current work to start something else |
 | `/do:debug` | Investigating why something isn't working |
 | `/do:update` | Check for and install newer versions |
+| `/do:optimise` | Checking best practices for a project, file, agent, skill, or script |
 
 ## Routing
 
@@ -40,5 +41,11 @@ When the user invokes `/do` without specifying a sub-command, infer from context
 - "never mind, let's work on something else" → `/do:abandon`
 - "is there a newer version of do?" → `/do:update`
 - "update do-lang" → `/do:update`
+- "check best practices for this agent" → `/do:optimise agents/do-verifier.md`
+- "optimise this project" → `/do:optimise`
+- "audit this script" → `/do:optimise skills/do/scripts/council-invoke.cjs`
+- "are there improvements for this skill?" → `/do:optimise skills/do/task.md`
+- "deep audit of this project" → `/do:optimise --effort high`
+- "quick check this file" → `/do:optimise path/to/file --effort low`
 
 If intent is genuinely ambiguous, show the table above and ask which sub-command they want.

@@ -104,7 +104,7 @@ Log symptoms to debug file.
 
 Check config:
 ```bash
-node -e "const c=require('./.do/config.json'); console.log(c.web_search?.context7 === true ? 'enabled' : 'disabled')"
+node -e "const c=require('./.do/config.json'); console.log(c.web_search?.context7 !== false ? 'enabled' : 'disabled')"
 ```
 
 If enabled and error involves external library:

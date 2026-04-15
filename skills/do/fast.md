@@ -162,6 +162,8 @@ Update the Context Loaded section in the task file with the files reviewed.
 
 ## Step 6: Spawn do-executioner
 
+**CRITICAL: You MUST use the Agent tool to spawn do-executioner. Do NOT make changes to files yourself — not even a single-line edit, not even a typo fix. The point of spawning a sub-agent is independent execution with its own context and tool access. Skipping the Agent call and editing inline defeats the workflow and breaks session continuity.**
+
 Read model config:
 
 ```bash
@@ -239,6 +241,8 @@ Run each available script via `npm run <key>`. For missing scripts, log "Skipped
 Log validation results in the task file's Execution Log.
 
 ## Step 9: Single Code Review Round
+
+**CRITICAL: You MUST use the Agent tool to spawn do-code-reviewer. Do NOT review the changes yourself inline — not even a quick read-through. An independent agent with fresh context is required. Inline review defeats the purpose and misses things the orchestrator already knows about.**
 
 Spawn do-code-reviewer **only** — no council reviewer, no parallel spawning:
 

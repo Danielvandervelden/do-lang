@@ -15,7 +15,7 @@ Check whether a newer version of `@danielvandervelden/do-lang` is available and 
 
 Updating via `npm install -g` (not `npm update -g`) is required because `npm update -g` does not trigger the postinstall script. The postinstall script is what copies skill files to `~/.claude/commands/do/`. Skipping postinstall means the running skills stay on the old version even though the package itself was updated.
 
-The `--registry https://npm.pkg.github.com` flag is also required on every install. `publishConfig.registry` in `package.json` only affects publishing — it does not influence what registry clients use when installing.
+The `@danielvandervelden:registry=https://npm.pkg.github.com` entry in `~/.npmrc` handles registry routing for this scoped package — no `--registry` flag is needed on the install command.
 
 ## Step 1: Get installed version
 
@@ -26,6 +26,7 @@ npm ls -g @danielvandervelden/do-lang --json 2>/dev/null
 ```
 
 Expected output shape:
+
 ```json
 {
   "dependencies": {
@@ -40,7 +41,7 @@ Extract the version string. If the key is absent (package not installed at all),
 
 ```
 @danielvandervelden/do-lang is not installed globally.
-Run: npm install -g @danielvandervelden/do-lang --registry https://npm.pkg.github.com
+Run: npm install -g @danielvandervelden/do-lang
 ```
 
 Then stop.
@@ -65,13 +66,16 @@ grep -q '@danielvandervelden:registry=https://npm.pkg.github.com' ~/.npmrc 2>/de
 If either check fails, report specifically which entry is missing and provide remediation:
 
 **Missing auth token:**
+
 ```
 Add to ~/.npmrc:
 //npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT
 ```
+
 The PAT needs `read:packages` scope.
 
 **Missing scoped registry:**
+
 ```
 Add to ~/.npmrc:
 @danielvandervelden:registry=https://npm.pkg.github.com
@@ -88,6 +92,7 @@ npm view @danielvandervelden/do-lang version --registry https://npm.pkg.github.c
 This returns the latest published version as a plain string (e.g. `1.7.0`).
 
 If the command fails:
+
 - Auth error (401/403) → "Registry auth failed. Check that your GitHub PAT in ~/.npmrc has `read:packages` scope and is not expired."
 - Network error → "Could not reach https://npm.pkg.github.com. Check your network connection."
 - Other → Show raw error output and stop.
@@ -102,14 +107,15 @@ Use simple string equality for the "already on latest" check. npm resolves actua
 ## Step 5: Run the install
 
 ```bash
-npm install -g @danielvandervelden/do-lang --registry https://npm.pkg.github.com
+npm install -g @danielvandervelden/do-lang
 ```
 
 Capture the full output. Check exit code:
+
 - Non-zero exit → Show error output. If output contains `EACCES`, suggest:
   ```
   Permission error. Try:
-    sudo npm install -g @danielvandervelden/do-lang --registry https://npm.pkg.github.com
+    sudo npm install -g @danielvandervelden/do-lang
   Or fix npm permissions: https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally
   ```
 - Exit 0 → Continue to Step 6.
@@ -133,6 +139,7 @@ ls ~/.claude/agents/do-*.md 2>/dev/null | head -1 | grep -q . && echo "agents_ok
 For agents: if `agents_missing`, downgrade to a warning — the commands directory check is the primary success indicator.
 
 Report results. If any check fails even though install exited 0, warn:
+
 ```
 Warning: postinstall may not have completed. Check manually:
   ls ~/.claude/commands/do/

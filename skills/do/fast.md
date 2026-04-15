@@ -1,7 +1,7 @@
 ---
 name: do:fast
 description: "Lightweight fast path for low-risk, small-surface tasks (1-3 files, no shared abstractions, no schema/auth/API changes). Skips planning ceremony and full verification. Single code review round at the end. Use when the user explicitly says 'fast' or the task is clearly trivial. Triggers on phrases like 'quick fix', 'small tweak', 'fast path', 'minor change', 'just update this'."
-argument-hint: "\"description of the small change to make\""
+argument-hint: '"brief description"'
 allowed-tools:
   - Read
   - Write
@@ -28,6 +28,7 @@ The full `/do:task` workflow is optimized for correctness — 5-7 agent spawns p
 ```
 
 **Examples:**
+
 - `/do:fast "fix the typo in the header component"`
 - `/do:fast "add a missing null check in UserService.parseToken"`
 - `/do:fast "update the button color in the theme config"`
@@ -50,8 +51,9 @@ ALL of the following must be true for `/do:fast` to be valid:
 If any criterion fails, redirect to `/do:task`.
 
 **Auto-escalation during execution:** If any criterion stops being true during Steps 6-8 (scope grows, shared abstractions get touched, schema changes needed), abandon and preserve the task. Print:
+
 > "Fast-path criteria no longer met: <reason>. The task has been abandoned and preserved at `.do/tasks/<filename>` for reference. Please run `/do:task "description"` to start fresh with the full workflow."
-Do NOT attempt to automatically hand off to `/do:task`.
+> Do NOT attempt to automatically hand off to `/do:task`.
 
 ---
 
@@ -70,6 +72,7 @@ node ~/.claude/commands/do/scripts/task-abandon.cjs check --config .do/config.js
 ```
 
 If active task exists, offer options:
+
 - Continue it (`/do:continue`)
 - Abandon it and start new
 - Cancel
@@ -127,8 +130,10 @@ fast_path: true
 **Critical: Write a minimal Approach section (2-4 numbered bullets) derived inline from the user's description.** Both `do-executioner` and `do-code-reviewer` depend on the Approach section as their source of truth — the executioner uses it as the step-by-step guide and the code reviewer checks completeness against it.
 
 Example — for "fix the typo in the header component":
+
 ```markdown
 ## Approach
+
 1. Locate the header component file and identify the typo
 2. Fix the typo
 3. Verify the fix looks correct in context
@@ -139,6 +144,7 @@ Keep the bullets concrete and task-scoped. If the description is too vague to ge
 Also populate Problem Statement with the user's description (keep it brief — 1-3 sentences). Leave Clarifications empty. Context Loaded will be filled in Step 5.
 
 Update config:
+
 ```bash
 node -e "
 const fs = require('fs');
@@ -187,11 +193,12 @@ Execute the plan in this task file.
 Task file: .do/tasks/<active_task>
 
 Follow the Approach section step by step. Log each action to the Execution Log. Handle deviations appropriately. Return a summary when complete.
-`
-})
+`,
+});
 ```
 
 Handle result:
+
 - **COMPLETE**: Continue to Step 7
 - **BLOCKED**: Show blocker, ask user for resolution. Stop — do not attempt to continue automatically.
 - **FAILED**: Show error with last good state and task file path for `/do:continue` resume. Stop.
@@ -235,6 +242,7 @@ console.log(JSON.stringify({ available, missing }));
 Run each available script via `npm run <key>`. For missing scripts, log "Skipped <key>: not available in package.json". Do NOT assume any script exists — detection must be explicit.
 
 **Additionally:**
+
 - Check if a `__tests__/` directory exists near any changed files. If it does, run those tests directly (e.g., `node --test skills/do/scripts/__tests__/`).
 - Check if prettier is available (`node_modules/.bin/prettier` or `npx prettier --version`). If available, run `npx prettier --write` on changed files only.
 
@@ -257,8 +265,8 @@ Review the code changes from this task execution.
 Task file: .do/tasks/<active_task>
 
 Read the task file and git diff, evaluate the changes against the 6 criteria (Correctness, Quality, Tests, Types, Security, Completeness), and return APPROVED, NITPICKS_ONLY, or CHANGES_REQUESTED with file:line references.
-`
-})
+`,
+});
 ```
 
 **Handle result:**
@@ -266,11 +274,13 @@ Read the task file and git diff, evaluate the changes against the 6 criteria (Co
 ### If APPROVED or NITPICKS_ONLY
 
 Log any nitpicks (non-blocking). Update task frontmatter:
+
 ```yaml
 council_review_ran:
   code: true
 stage: complete
 ```
+
 Continue to Step 10.
 
 ### If CHANGES_REQUESTED (first time)
@@ -291,8 +301,8 @@ Issues to fix:
 <findings from do-code-reviewer with file:line references>
 
 Fix each issue. Log changes in the Execution Log. Return summary when complete.
-`
-})
+`,
+});
 ```
 
 After executioner completes, re-run Step 7 (override stage back to `execution: review_pending`), then re-spawn do-code-reviewer once more (go back to the top of Step 9).
@@ -329,6 +339,7 @@ fs.writeFileSync('.do/config.json', JSON.stringify(c, null, 2));
 ```
 
 Print this message:
+
 > "Fast-path review failed twice. The task has been abandoned and preserved at `.do/tasks/<filename>` for reference. Please run `/do:task "description"` to start fresh with the full workflow."
 
 **Stop.** Do NOT attempt to silently fall through to `/do:continue` routing or re-enter `/do:task` automatically. The user must invoke `/do:task` themselves.
@@ -374,6 +385,7 @@ Key invariant: `fast_path: true` + `stages.execution: review_pending` is the onl
 ## Failure Handling
 
 Any agent failure returns immediately to the user with:
+
 - Which agent failed
 - What it was trying to do
 - Last known good state

@@ -62,6 +62,14 @@ Inside a project, create a database entry:
 
 The orchestrator runs the full pipeline: plan → review → grill (if unclear) → user approval → execute → code review → verify.
 
+For trivial changes (1-3 files, no shared abstractions), use the fast path instead:
+
+```
+/do:fast "fix the typo in the header component"
+```
+
+Skips planning ceremony — entry criteria check, execute, validate, single code review round.
+
 ### Resume an interrupted session
 
 ```
@@ -77,6 +85,7 @@ Reads the task file's YAML frontmatter and picks up at the last completed stage.
 | `/do:init` | Initialize workspace or project (database structure, config) |
 | `/do:scan` | Scan a project and create a database entry |
 | `/do:task` | Full task workflow — plan, review, execute, verify |
+| `/do:fast` | Lightweight fast path for trivial changes (1-3 files) — skips planning ceremony |
 | `/do:continue` | Resume a task from its last completed stage |
 | `/do:abandon` | Pause a task and preserve its state for later |
 | `/do:debug` | Scientific method debugging with persistent session state |

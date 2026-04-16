@@ -100,6 +100,22 @@
 
 **Solution:** Ran `/do:optimise` on `do-planner` and `do-debugger`; applied findings. do-planner: removed WebSearch, added permissionMode, fixed ctx7 invocation to use Bash, added confidence writeback, 3-command budget cap. do-debugger: ctx7 `!==false` check. council-invoke.cjs: EPIPE guard, semver-safe PLUGIN_ROOT, pure-JS random, AbortController double-resolution guard.
 
+### /do:quick — Inline Execution with Single Council Review
+
+**Completed:** 2026-04-16 (v1.11.0)
+
+**Problem:** The execution-tier hierarchy was bimodal: inline edits (zero review) or `/do:fast` (task file + sub-agent spawns). No intermediate tier for mid-conversation follow-ups where context is warm and the change is mechanical but non-obvious enough to warrant a second opinion.
+
+**Solution:** Added `/do:quick` as a third execution tier:
+- Orchestrator executes inline (no sub-agent spawn)
+- No task file on the happy path (lazy materialization only on escalation)
+- Single council reviewer checks the diff (~30s)
+- One iteration budget; second CHANGES_REQUESTED escalates to materialized task with `fast_path: true` + `quick_path: true`
+- Entry criteria: 1-2 files, warm context, mechanical change, no schema/auth/API
+- `/do:task` Step 0 Smart Routing added (binary fast/task auto-router — `/do:quick` is manual-only)
+- Extracted `stage-fast-exec.md` reference from `fast.md` for reuse
+- Added quick-path escalation resume route to `/do:continue` Step 6
+
 ---
 
 ## Ideas
@@ -242,79 +258,3 @@ Append to the `## Ideas` section in the same structured format.
 
 ---
 
-### /do:quick — inline execution with single council review
-**id:** do-quick-skill
-
-**Problem:** The current execution-tier hierarchy is bimodal. On one end: inline execution (orchestrator edits files in the main conversation with zero review). On the other: `/do:fast` (task file created, `do-executioner` sub-agent spawned, `do-code-reviewer` sub-agent spawned, stage-override gymnastics, `active_task` mutated). There is no intermediate tier for the common "we've been discussing this, the change is small and mechanical, but the blast radius earns a second opinion" case — mid-conversation follow-ups that touch subtle rules (required validation, permission guards, reducer logic, one-line business-logic gates).
-
-**Impact:** Two failure modes recur:
-1. **Under-reviewed inline work.** Orchestrator makes a "quick" edit that touches a subtle rule without independent eyes on it. Issues ship that a 30-second council glance would have caught.
-2. **Over-ceremonied small work.** `/do:fast` invoked for a 2-file change where the executioner re-loads context the main session already has from conversation, creates a task file that will never be referenced again, and runs through the full reviewer-plus-stage-override flow. The ceremony cost dominates the actual work.
-
-**Fix:** Add a third execution tier: `skills/do/quick.md` (`/do:quick`).
-
-**Mechanism:**
-1. Orchestrator executes inline — no `do-executioner` spawn. The conversation IS the plan.
-2. No task file on the happy path (lazy creation — only on escalation).
-3. Run available validation on changed files (tsc/lint/prettier — reuse detection logic from `fast.md` Step 8).
-4. Spawn `do-council-reviewer` (single voice, picked by `.do/config.json` → `council_reviews.reviewer`). Skip `do-code-reviewer` — the council IS the review.
-5. One iteration budget:
-   - APPROVED / NITPICKS_ONLY → done. Display summary. No task file written.
-   - CHANGES_REQUESTED (first) → orchestrator fixes inline, re-spawn council once.
-   - CHANGES_REQUESTED (second) → materialize task file now with `fast_path: true`, `stage: execution`, `stages.execution: review_pending`; set `active_task`; print: "Quick-path review failed twice. Escalate with `/do:fast` or `/do:task`." Stop.
-
-**Entry criteria (tighter than /do:fast):**
-- 1–2 files, roughly <30 lines changed
-- Main session already has the context (invoked mid-conversation after discussion, not as a cold-start)
-- No backend/API/schema/auth/state-machine changes
-- Fix is mechanical once described — no real planning surface
-- If any criterion fails → redirect to `/do:fast`
-
-Match `fast-entry-declaration` spirit (no 4-checkbox gate) — single confirmation prompt, criteria documented in the skill description header.
-
-**Smart routing — `/do:task` as the front door.** Rather than asking users to pick the tier, `/do:task` itself should assess the task and auto-route to the appropriate tier, with user override. This keeps `/do:quick` and `/do:fast` as explicit manual entry points (skip the router when you already know what you want) but makes `/do:task` the default smart entrypoint that every caller hits.
-
-Add a new **Step 0: Routing** to `skills/do/task.md`, before refinement:
-
-1. Quick heuristic assessment of the task from `$ARGUMENTS`:
-   - Rough file-scope estimate (grep hints, description specificity)
-   - Confidence score (same mechanic as `/jira:start` Step 8)
-   - Mechanical-vs-planning signal (is the change obvious once described?)
-   - Context warmth (is this mid-conversation follow-up or cold-start?)
-2. Present the routing verdict to the user:
-   ```
-   ## Routing assessment
-
-   Task: <description>
-   Assessment: <N files estimate>, <mechanical/planning>, <confidence>
-   Recommended: /do:<tier>
-
-   Proceed with [quick | fast | task]? [<recommended>]
-   ```
-3. User picks any tier or accepts the default. Explicit override always wins.
-4. If `quick` or `fast` is chosen, hand off to the respective skill's flow (internally — no nested skill invocation; `task.md` inlines the fast/quick logic by delegating to shared reference files). If `task`, proceed with existing refinement → planning → etc.
-
-This collapses the tier decision into one entry point. `/jira:start` needs no changes — it already hands to `/do:task`, and the routing-inside-/do:task picks the right tier with the full ticket context available.
-
-**Manual entry points remain:**
-- `/do:quick "description"` — skip router, run quick-path directly (for when the user has already decided)
-- `/do:fast "description"` — skip router, run fast-path directly
-- `/do:task "description"` — smart router (default)
-
-**Scope:**
-- New: `skills/do/quick.md`
-- Modify: `skills/do/task.md` — add Step 0 routing block, refactor downstream steps so quick/fast paths can be dispatched from within (likely via shared reference files under `skills/do/references/stage-quick.md` and reuse of existing `stage-*` references for fast/full paths)
-- Modify: `skills/do/fast.md` — extract the post-Step-3 body into a reference file so it can be invoked from `task.md`'s router without duplication
-- Modify: `README.md` feature list and tier descriptions (three tiers now, one smart router)
-- Modify: `AGENTS.md` if it documents the tier matrix
-- No changes needed in `commands/jira/start.md` — it already routes to `/do:task`, which now does its own tier selection
-
-**Design considerations:**
-- **Vibes-based criteria.** `/do:fast` has 8 hard gates; `/do:quick` leans on "context is already warm." That's subjective and not automatable without judgment. Accept this as a manual-invoke-only tier — don't try to auto-route from user intent detection into `/do:quick`.
-- **Council latency trade-off.** ~30s for a single reviewer (vs ~60s for full council, vs 0s for inline). Worth the wait for the "small but non-obvious" sweet spot; not for true typos where review is skipped regardless.
-- **Escalation fidelity.** When the second CHANGES_REQUESTED triggers task-file materialization, the orchestrator must capture the diff, validation results, and both council findings into the task file so `/do:continue` / `/do:fast` / `/do:task` can resume with full context. Otherwise escalation loses the review history.
-- **Continuity state.** On escalation, materialize with `fast_path: true`, `stage: execution`, `stages.execution: review_pending` — same shape as `fast.md` post-exec — so `/do:continue` picks it up without new routing logic.
-- **Backlog completion tracking — known limitation.** Since `/do:quick` has no task file on the happy path, the `backlog_item` frontmatter field can't carry a backlog id through. `/do:backlog done <id>` would need to be invoked manually by the user if a quick-path run closes a backlog item. Accept this limitation; don't add task files just for backlog tracking.
-- **Skill-creator reminder.** `/do:quick` should still emit the same "`/skill-creator` if skill files were edited" reminder that `/do:fast` and `/do:task` do.
-- **Router honesty in `/do:task`.** The auto-router must be honest about its confidence. If the signals are ambiguous (e.g., description is vague, can't estimate file scope), default to the full `/do:task` flow and say so — don't gamble on quick/fast. Better to over-ceremony a small task than under-ceremony a subtle one. The user can always override down.
-- **No double task files.** If `/do:task` routes internally to fast/quick, the resulting task file (if any) should be written once at the appropriate tier's lifecycle point — not twice. Specifically: quick-path writes no task file on happy path; fast-path writes one at Step 4 as today; full-task writes one at refinement. The router itself writes nothing.

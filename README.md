@@ -56,19 +56,31 @@ Inside a project, create a database entry:
 
 ### Run a task
 
+do-lang has three execution tiers:
+
+**`/do:task` — smart router (default entry point)**
+
 ```
 /do:task "add pagination to the user list"
 ```
 
-The orchestrator runs the full pipeline: plan → review → grill (if unclear) → user approval → execute → code review → verify.
+The orchestrator assesses the task and auto-routes between fast-path and the full pipeline. Full pipeline: plan → review → grill (if unclear) → user approval → execute → code review → verify. The router only picks between fast and full — `/do:quick` is manual-only.
 
-For trivial changes (1-3 files, no shared abstractions), use the fast path instead:
+**`/do:fast` — mid-tier fast path (skip the router)**
 
 ```
 /do:fast "fix the typo in the header component"
 ```
 
-Skips planning ceremony — entry criteria check, execute, validate, single code review round.
+For trivial changes (1-3 files, no shared abstractions). Skips planning ceremony — entry criteria check, execute, validate, single code review round.
+
+**`/do:quick` — tightest tier (manual-only)**
+
+```
+/do:quick "add the null-check we just discussed in parseToken"
+```
+
+For mid-conversation follow-ups where context is already warm and the change is 1-2 files of mechanical work. Orchestrator executes inline (no sub-agent spawn), runs available validation, then a single council reviewer checks the diff in place. One iteration allowed. If council requests changes twice, materializes a task file and escalates to `/do:continue`.
 
 ### Resume an interrupted session
 
@@ -84,8 +96,9 @@ Reads the task file's YAML frontmatter and picks up at the last completed stage.
 |---------|-------------|
 | `/do:init` | Initialize workspace or project (database structure, config) |
 | `/do:scan` | Scan a project and create a database entry |
-| `/do:task` | Full task workflow — plan, review, execute, verify |
-| `/do:fast` | Lightweight fast path for trivial changes (1-3 files) — skips planning ceremony |
+| `/do:task` | Smart router — auto-selects fast or full pipeline based on task assessment |
+| `/do:fast` | Mid-tier fast path — skip router, run fast-path directly (1-3 files, trivial changes) |
+| `/do:quick` | Tightest tier — inline execution + single council review, no task file on happy path |
 | `/do:continue` | Resume a task from its last completed stage |
 | `/do:abandon` | Pause a task and preserve its state for later |
 | `/do:debug` | Scientific method debugging with persistent session state |

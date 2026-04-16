@@ -49,6 +49,67 @@ do-planner (cyan) → do-plan-reviewer (green)  ┐ (parallel) → do-griller (y
 
 ---
 
+## Step 0: Smart Routing
+
+**Manual entry via `/do:quick` or `/do:fast` skips this step entirely.** This router only chooses between `fast` and the full task pipeline — `/do:quick` is manual-only and never auto-recommended here (see design rationale: entry criteria for quick-path are "vibes-based" and not reliably automatable without judgment).
+
+**Note on confidence:** Step 0 uses a single routing heuristic (0.0-1.0 scalar) to decide `fast` vs `task`. This is a routing heuristic only. If routed to full `task`, the planner runs its own 4-factor confidence calculation (context/scope/complexity/familiarity) which supersedes the routing score — the two mechanisms are independent.
+
+### Heuristic Assessment
+
+Perform a quick heuristic assessment from `$ARGUMENTS`:
+
+1. **File scope estimate** — if the description mentions specific filenames or components, use a couple of Grep/Glob calls to estimate how many files are likely affected. Otherwise rate as "unclear". Target buckets: `1-3 files` / `3+ files` / `unclear`.
+
+2. **Mechanical-vs-planning signal** — yes/no judgment: can the change be described in 1-2 sentences without branching decisions?
+   - Presence of "and", "also", "plus" ≥ 2 times → planning signal
+   - Presence of comparative decisions ("either X or Y", "depending on", "need to figure out") → planning signal
+   - If both signals are absent and the change is a targeted fix → mechanical
+
+3. **Confidence score** — 0.0-1.0 scalar (same mechanism as `/jira:start` Step 8):
+   - Start at 1.0
+   - Deduct for: business logic clarity unclear (-0.10), affected files unknown (-0.10), edge-case risk present (-0.10), multiple concerns bundled (-0.10)
+   - Store as in-session `routing_confidence`. Do NOT write to a task file — no task file exists yet at this point.
+
+### Decision Matrix
+
+| Files | Mechanical | Confidence | Recommend |
+|-------|------------|------------|-----------|
+| 1-3 | yes | ≥ 0.8 | `fast` |
+| any | no | any | `task` |
+| any | any | < 0.8 | `task` (router honesty — default to full when unsure) |
+| unclear | any | any | `task` |
+
+**Router honesty:** If signals are ambiguous (description is vague, can't estimate file scope), default to `task` — do not gamble on `fast`. Better to over-ceremony a small task than under-ceremony a subtle one. The user can always override down.
+
+### Present Assessment
+
+Display the routing assessment:
+
+```
+## Routing assessment
+
+Task: <description>
+Assessment: <N files estimate>, <mechanical/planning>, confidence: <score>
+Recommended: /do:<fast|task>
+
+Proceed with [fast | task]? [<recommended>]
+```
+
+Prompt the user with two choices only: `fast` / `task`, with the recommended as default. Do NOT offer `quick` — if the user wants it they should invoke `/do:quick "description"` directly.
+
+### Branch on User Choice
+
+**If user chooses `fast`:**
+1. Run Steps 1-3 below (prerequisites, active task guard, model config read — same as `/do:fast` Steps 1-3b). Skip Step 4 (task-file creation); the fast reference writes the task file itself.
+2. Invoke `@references/stage-fast-exec.md` with `<description>` and `models` as in-session variables per the caller-contract preamble
+3. **STOP** — do not fall through to Step 4. The fast reference handles task-file creation; falling through would write a second task file (violation of "no double task files" invariant).
+
+**If user chooses `task`:**
+- Continue normally to Step 1 below.
+
+---
+
 ## Step 1: Check Prerequisites
 
 ```bash

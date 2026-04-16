@@ -23,6 +23,18 @@ stages:
 # pre_abandon_stage: null  # Set to previous stage when task is abandoned (e.g., "execution")
                            # Used by /do:continue --task to restore the task to its prior state
 
+# fast_path: true          # Optional. Set by /do:fast and /do:task fast-path router.
+                           # Signals /do:continue to use fast-path routing (single code-reviewer,
+                           # no plan review, no do-verifier).
+
+# quick_path: true         # Optional. Set only when a /do:quick run escalates (two council
+                           # CHANGES_REQUESTED rounds). Requires fast_path: true also present.
+                           # Signals /do:continue Step 6 to run the full code-review stack
+                           # (council + do-code-reviewer in parallel) rather than the single-
+                           # reviewer fast round. /do:continue flips council_review_ran.code
+                           # from true to false before invoking stage-code-review.md so the
+                           # CR-0 guard does not skip the review.
+
 # Council review tracking (prevents re-running on resume)
 council_review_ran:
   plan: false

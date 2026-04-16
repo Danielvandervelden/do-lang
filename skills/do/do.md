@@ -21,8 +21,9 @@ Most coding tasks follow predictable patterns: initialize a project, scan for co
 |---------|-------------|
 | `/do:init` | Setting up a new project or checking workspace health |
 | `/do:scan` | Creating documentation for an existing codebase |
-| `/do:task` | Starting a new piece of work (feature, fix, refactor) |
-| `/do:fast` | Quick, low-risk changes (1-3 files, no shared abstractions) |
+| `/do:task` | Starting a new piece of work — smart router picks fast vs full automatically |
+| `/do:fast` | Mid-tier fast path — skip the router, run fast-path directly (1-3 files, no shared abstractions) |
+| `/do:quick` | Tightest tier — mid-conversation follow-ups where context is warm and change is 1-2 files, mechanical; single council review inline |
 | `/do:continue` | Resuming work from a previous session |
 | `/do:abandon` | Stopping current work to start something else |
 | `/do:debug` | Investigating why something isn't working |
@@ -39,6 +40,9 @@ When the user invokes `/do` without specifying a sub-command, infer from context
 - "quick fix for the typo in the header" → `/do:fast "fix the typo in the header"`
 - "small tweak to the button color" → `/do:fast "update the button color in the theme config"`
 - "fast path — add a null check in UserService" → `/do:fast "add null check in UserService.parseToken"`
+- "the null check we just discussed in parseToken" → `/do:quick "add the null-check we just discussed in parseToken"`
+- "same one-liner fix as before" → `/do:quick "fix the off-by-one in the pagination helper"`
+- "wire the guard we sketched" → `/do:quick "wire the permission guard on the Admin reducer we sketched"`
 - "let's pick up where we left off" → `/do:continue`
 - "this endpoint is returning 500 errors" → `/do:debug`
 - "set up this repo for the do workflow" → `/do:init`
@@ -57,6 +61,10 @@ When the user invokes `/do` without specifying a sub-command, infer from context
 - "add this to the backlog" → `/do:backlog add "description"`
 - "start a backlog item" → `/do:backlog start`
 
-**Routing note for `/do:fast`:** Only route to `/do:fast` when the user explicitly says "fast" or the description is clearly trivial (fix a typo, update a color, add a single null check). Keep `/do:task` as the default for anything ambiguous or multi-file.
+**Routing note:** `/do:task` is the smart default entry point — it assesses the task and auto-routes between `fast` and the full pipeline. Use `/do:fast` or `/do:quick` to skip the router when you already know what tier you want:
+- `/do:fast` — explicit mid-tier skip (1-3 files, clearly trivial, no planning needed)
+- `/do:quick` — explicit tightest-tier skip (mid-conversation, 1-2 files, already discussed, mechanical)
+
+`/do:quick` is **never auto-recommended** by the router — invoke it directly when you want it. For ambiguous intent, `/do:task` is always safe (its router defaults to full when unsure).
 
 If intent is genuinely ambiguous, show the table above and ask which sub-command they want.

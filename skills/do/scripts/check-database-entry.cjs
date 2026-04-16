@@ -26,7 +26,8 @@ const path = require('path');
 
 /**
  * @typedef {Object} DatabaseEntryResult
- * @property {boolean} exists - Whether the database entry exists
+ * @property {boolean} exists - Whether the database entry exists AND has content (>= 100 bytes)
+ * @property {boolean} empty - Whether the file exists but has fewer than 100 bytes (stub with no useful content)
  * @property {string|null} project_name - Project name from config
  * @property {string|null} expected_path - Expected path to project.md
  * @property {string|null} error - Error message if something went wrong
@@ -93,6 +94,7 @@ function checkDatabaseEntry(projectPath) {
   if (!workspaceConfigPath) {
     return {
       exists: false,
+      empty: false,
       project_name: null,
       expected_path: null,
       error: 'Workspace not initialized'
@@ -104,6 +106,7 @@ function checkDatabaseEntry(projectPath) {
   if (!workspaceConfig || !workspaceConfig.database) {
     return {
       exists: false,
+      empty: false,
       project_name: null,
       expected_path: null,
       error: 'Invalid workspace config: missing database path'
@@ -117,6 +120,7 @@ function checkDatabaseEntry(projectPath) {
   if (!fs.existsSync(projectConfigPath)) {
     return {
       exists: false,
+      empty: false,
       project_name: null,
       expected_path: null,
       error: 'Project not initialized'
@@ -128,6 +132,7 @@ function checkDatabaseEntry(projectPath) {
   if (!projectConfig || !projectConfig.project_name) {
     return {
       exists: false,
+      empty: false,
       project_name: null,
       expected_path: null,
       error: 'Invalid project config: missing project_name'
@@ -136,13 +141,28 @@ function checkDatabaseEntry(projectPath) {
 
   const projectName = projectConfig.project_name;
 
-  // Step 5: Check database entry exists
+  // Step 5: Check database entry exists and has content
   // Path per D-16: <database>/projects/<project_name>/project.md
   const expectedPath = path.join(databasePath, 'projects', projectName, 'project.md');
-  const exists = fs.existsSync(expectedPath);
+  const fileExists = fs.existsSync(expectedPath);
+
+  if (!fileExists) {
+    return {
+      exists: false,
+      empty: false,
+      project_name: projectName,
+      expected_path: expectedPath,
+      error: null
+    };
+  }
+
+  // Guard against empty stubs — a project.md with fewer than 100 bytes has no useful content
+  const stats = fs.statSync(expectedPath);
+  const isEmpty = stats.size < 100;
 
   return {
-    exists,
+    exists: !isEmpty,
+    empty: isEmpty,
     project_name: projectName,
     expected_path: expectedPath,
     error: null
@@ -158,6 +178,14 @@ function checkDatabaseEntry(projectPath) {
 function formatMissingEntryMessage(result) {
   if (result.error) {
     return `Error: ${result.error}`;
+  }
+
+  if (result.empty) {
+    return `This project's database entry exists but has no useful content.
+
+Expected path: ${result.expected_path}
+
+Run /do:scan to populate the database entry.`;
   }
 
   return `This project needs a database entry before running /do:task.
@@ -202,10 +230,13 @@ Examples:
 Output format (JSON):
   {
     "exists": true|false,
+    "empty": true|false,
     "project_name": "my-project"|null,
     "expected_path": "/path/to/database/projects/my-project/project.md"|null,
     "error": null|"Error message"
   }
+  Note: "exists" is false when the file is missing OR when it exists but has fewer than 100 bytes (empty stub).
+        "empty" is true only when the file exists but has no useful content.
 `);
     process.exit(0);
   }

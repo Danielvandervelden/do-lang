@@ -25,6 +25,7 @@ Read the task file provided in the prompt before running the script.
 - **DO NOT read the plan or code in detail** — just verify the task file path exists, then run the script
 - **If `council-invoke.cjs` returns non-zero exit or unparseable output**, return the error verdict with raw error text rather than substituting your own opinion
 - **Return ONLY the structured verdict block** — no commentary, no analysis, no additions
+- **NEVER generate a substitute review when the script fails.** If council-invoke.cjs exits non-zero, produces empty output, or produces unparseable JSON, you MUST return exactly the script-error verdict format shown in the error handling section — nothing else. Do not read the task content in detail, do not form your own opinion, and do not label a self-generated review with an advisor name (gemini, codex, etc.). Script failure means script-error verdict, always.
 
 </critical_rules>
 

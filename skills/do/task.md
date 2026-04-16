@@ -65,7 +65,7 @@ node ~/.claude/commands/do/scripts/task-abandon.cjs check --config .do/config.js
 
 If active task exists, offer options:
 - Continue it (`/do:continue`)
-- Abandon it and start new
+- Abandon it and start new: `node ~/.claude/commands/do/scripts/task-abandon.cjs abandon <filename>`
 - Cancel
 
 ## Step 3: Read Model Config
@@ -97,6 +97,7 @@ Create task file from template using the Write tool:
 - Replace `{{CREATED_AT}}` with ISO timestamp
 - Replace `{{DESCRIPTION}}` with user's task description
 - Write to `.do/tasks/${TASK_FILE}`
+- Leave all other `{{PLACEHOLDER}}` fields as-is — do-planner fills them in Step 5.
 
 Update config:
 ```bash
@@ -142,6 +143,7 @@ Parse the returned summary for:
 
 Handle result:
 - **APPROVED** (council_review_ran.plan set to true by reference file): Continue to Step 7
+- **ITERATE**: stage-plan-review.md owns this loop — follow its PR-5 steps, which will re-spawn do-planner and reviewers (up to 3x). Do NOT handle plan revisions manually or edit the task file yourself.
 - **MAX_ITERATIONS**: Show user the outstanding issues, ask to proceed or revise
 - **ESCALATE**: Show critical issues, require user decision
 
@@ -227,6 +229,7 @@ Handle result:
 
 Handle result:
 - **VERIFIED** (stage:verification + council_review_ran.code set by reference file): Continue to Step 11
+- **ITERATE**: stage-code-review.md owns this loop — follow its CR-5 steps, which will re-spawn do-executioner and reviewers (up to 3x). Do NOT fix code issues manually.
 - **MAX_ITERATIONS**: Show outstanding issues to user, ask to proceed or fix manually
 
 ## Step 11: Spawn do-verifier

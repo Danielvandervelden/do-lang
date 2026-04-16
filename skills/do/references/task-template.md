@@ -37,6 +37,9 @@ confidence:
     complexity: {{COMPLEXITY_FACTOR}}
     familiarity: {{FAMILIARITY_FACTOR}}
 
+# Backlog item this task was started from (set by /do:backlog start)
+backlog_item: null
+
 # Wave breakdown (only added when user confirms complex task - per D-03)
 # waves:
 #   - name: <wave-name>

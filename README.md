@@ -91,6 +91,7 @@ Reads the task file's YAML frontmatter and picks up at the last completed stage.
 | `/do:debug` | Scientific method debugging with persistent session state |
 | `/do:update` | Check for a newer version and self-update |
 | `/do:optimise` | Audit any target (agent, skill, script, project) against best practices |
+| `/do:backlog` | Manage the backlog — list, add, start (promote to task), done (remove) |
 
 ## Agent Pipeline
 

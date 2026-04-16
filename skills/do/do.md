@@ -28,6 +28,7 @@ Most coding tasks follow predictable patterns: initialize a project, scan for co
 | `/do:debug` | Investigating why something isn't working |
 | `/do:update` | Check for and install newer versions |
 | `/do:optimise` | Checking best practices for a project, file, agent, skill, or script |
+| `/do:backlog` | Managing backlog items (list, add, start, done) |
 
 ## Routing
 
@@ -51,6 +52,10 @@ When the user invokes `/do` without specifying a sub-command, infer from context
 - "are there improvements for this skill?" → `/do:optimise skills/do/task.md`
 - "deep audit of this project" → `/do:optimise --effort high`
 - "quick check this file" → `/do:optimise path/to/file --effort low`
+- "show me the backlog" → `/do:backlog`
+- "what's on the backlog?" → `/do:backlog`
+- "add this to the backlog" → `/do:backlog add "description"`
+- "start a backlog item" → `/do:backlog start`
 
 **Routing note for `/do:fast`:** Only route to `/do:fast` when the user explicitly says "fast" or the description is clearly trivial (fix a typo, update a color, add a single null check). Keep `/do:task` as the default for anything ambiguous or multi-file.
 

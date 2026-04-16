@@ -346,6 +346,8 @@ Print this message:
 
 ## Step 10: Completion
 
+**Backlog cleanup:** Read the `backlog_item` field from the active task's frontmatter. If non-null, invoke `/do:backlog done <id>` to remove the item from BACKLOG.md. Log: "Removed backlog item `<id>` from BACKLOG.md."
+
 Display brief completion summary:
 
 ```

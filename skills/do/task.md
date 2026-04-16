@@ -256,6 +256,8 @@ Handle result:
 
 ## Step 12: Completion
 
+**Backlog cleanup:** Read the `backlog_item` field from the active task's frontmatter. If non-null, invoke `/do:backlog done <id>` to remove the item from BACKLOG.md. Log: "Removed backlog item `<id>` from BACKLOG.md."
+
 Read the task file to check final stage:
 
 ```bash

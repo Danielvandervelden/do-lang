@@ -1,0 +1,22 @@
+{
+  "version": "0.3.0",
+  "project_name": "do",
+  "council_reviews": {
+    "planning": true,
+    "execution": true,
+    "reviewer": "codex"
+  },
+  "web_search": {
+    "context7": true
+  },
+  "models": {
+    "default": "sonnet",
+    "overrides": {
+      "planner": "opus",
+      "debugger": "opus"
+    }
+  },
+  "auto_grill_threshold": 0.9,
+  "database_entry": true,
+  "active_task": null
+}

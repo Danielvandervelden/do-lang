@@ -38,6 +38,17 @@ Orchestrate a large multi-phase project: intake grilling → project plan → ph
 /do:project resume                        Resume not yet implemented (Task γ)
 ```
 
+## Authoritative state reads
+
+β's reference files and this skill read node state (`status`, `scope`, confidence score) from **leaf files only**:
+- project state from `.do/projects/<slug>/project.md`
+- phase state from `.do/projects/<slug>/phases/<phase-slug>/phase.md`
+- wave state from `.do/projects/<slug>/phases/<phase-slug>/waves/<wave-slug>/wave.md`
+
+`project.md.phases[]` and `phase.md.waves[]` are **parent indexes seeded once by `project-scaffold.cjs`** (at phase/wave creation) with `{ slug, status: 'planning' }` and are **not kept in sync** by `project-state.cjs` on subsequent status transitions. They are advisory / display-only — do not use them for control-flow decisions (next-phase selection, precondition checks, γ-gate, etc.). To enumerate phases or waves, walk the filesystem (`fs.readdirSync` on the folder) and read each leaf file's frontmatter; sort lexically by slug for ordering (slugs are NN-prefix allocated).
+
+Future work (γ or a follow-up backlog item): α's `project-state.cjs` could be extended to propagate status changes to the parent index, at which point authoritative reads could shift back to the indexes. β does not depend on that.
+
 ## Prerequisites
 
 1. **do workspace initialized** — `.do/config.json` exists (run `/do:init` first)
@@ -123,7 +134,7 @@ Parse `argv[1]` ∈ `{new, abandon, complete}`:
 
 Run Phase-Complete State Transition:
 
-1. **Precondition check** — every in-scope wave must be `completed`:
+1. **Precondition check** — every in-scope wave must be `completed`. Read wave state from each `wave.md` leaf file directly, NOT from `phase.md.waves[]` (the parent index is seeded by scaffold and not maintained by `project-state.cjs` on state changes, so it goes stale — see §Authoritative state reads below):
    ```bash
    node -e "
    const fm = require('gray-matter');
@@ -132,10 +143,20 @@ Run Phase-Complete State Transition:
    const proj = fm(fs.readFileSync('.do/projects/<active_project>/project.md', 'utf8'));
    const activePhase = proj.data.active_phase;
    if (!activePhase) { console.error('No active phase'); process.exit(1); }
-   // Read phase.md waves[]
-   const phasePath = '.do/projects/<active_project>/phases/' + activePhase + '/phase.md';
-   const phase = fm(fs.readFileSync(phasePath, 'utf8'));
-   const waves = phase.data.waves || [];
+   // Read wave state authoritatively from each wave.md leaf file
+   const wavesDir = '.do/projects/<active_project>/phases/' + activePhase + '/waves';
+   const waves = fs.existsSync(wavesDir)
+     ? fs.readdirSync(wavesDir)
+         .filter(d => fs.statSync(path.join(wavesDir, d)).isDirectory())
+         .map(slug => {
+           const wPath = path.join(wavesDir, slug, 'wave.md');
+           if (!fs.existsSync(wPath)) return null;
+           const w = fm(fs.readFileSync(wPath, 'utf8'));
+           return { slug, status: w.data.status, scope: w.data.scope };
+         })
+         .filter(Boolean)
+         .sort((a, b) => a.slug.localeCompare(b.slug))
+     : [];
    const incomplete = waves.filter(w => w.scope === 'in_scope' && w.status !== 'completed');
    if (incomplete.length > 0) {
      console.error('Incomplete waves: ' + incomplete.map(w => w.slug).join(', '));
@@ -162,7 +183,26 @@ Run Phase-Complete State Transition:
 
 4. **Backlog cleanup:** read `phase.md` `backlog_item`. If non-null, invoke `/do:backlog done <id>`. Log: "Removed backlog item `<id>` from BACKLOG.md."
 
-5. **Identify next phase (planning-gate preserved):** find the next in-scope phase in `project.md`'s `phases[]` with `status: planning`. If no such phase remains (terminal): set `active_phase: null` on `project.md` (atomic temp-file + rename), do NOT auto-complete the project — user runs `/do:project complete`. If found (non-terminal): do **NOT** write `active_phase` here — that pointer is owned by `stage-phase-plan-review.md` step 5 and is written only after the next phase's plan review approves. Leave the phase's `status` at `planning` and let the re-grill + plan review gate in step 6 below drive the transitions. This preserves the planning gate per `project-state-machine.md` §(c) and the orchestrator contract (§6) and keeps `active_phase` single-owner in `stage-phase-plan-review.md`.
+5. **Identify next phase (planning-gate preserved):** find the next in-scope phase with `status: planning` by walking the `phases/` folder and reading each `phase.md` leaf file directly (NOT `project.md.phases[]`, which is seeded once by scaffold and not synced by `project-state.cjs` — see §Authoritative state reads below):
+   ```bash
+   NEXT_PHASE=$(node -e "
+   const fm = require('gray-matter'), fs = require('fs'), path = require('path');
+   const phasesDir = '.do/projects/<active_project>/phases';
+   const phases = fs.readdirSync(phasesDir)
+     .filter(d => fs.statSync(path.join(phasesDir, d)).isDirectory())
+     .map(slug => {
+       const phPath = path.join(phasesDir, slug, 'phase.md');
+       if (!fs.existsSync(phPath)) return null;
+       const ph = fm(fs.readFileSync(phPath, 'utf8'));
+       return { slug, status: ph.data.status, scope: ph.data.scope };
+     })
+     .filter(Boolean)
+     .sort((a, b) => a.slug.localeCompare(b.slug));
+   const next = phases.find(p => p.scope === 'in_scope' && p.status === 'planning');
+   process.stdout.write(next ? next.slug : '');
+   ")
+   ```
+   If no such phase remains (terminal): set `active_phase: null` on `project.md` (atomic temp-file + rename), do NOT auto-complete the project — user runs `/do:project complete`. If found (non-terminal): do **NOT** write `active_phase` here — that pointer is owned by `stage-phase-plan-review.md` step 6 and is written only after the next phase's plan review approves. Leave the phase's `status` at `planning` and let the re-grill + plan review gate in step 6 below drive the transitions. This preserves the planning gate per `project-state-machine.md` §(c) and the orchestrator contract (§6) and keeps `active_phase` single-owner in `stage-phase-plan-review.md`.
 
 6. **Per-phase re-grill (Pass 3):** if a next phase was found, read its `phase.md` confidence score. If below `project_intake_threshold`, spawn `do-griller` against next phase's `phase.md`; the `Threshold:` field in the prompt MUST be the project threshold (the fallback in `do-griller` is task-safe, so callers who want `project_intake_threshold` must pass it explicitly):
 
@@ -236,7 +276,27 @@ Parse `argv[1]` ∈ `{new, complete, abandon, next}`:
 #### `wave next`
 
 1. Read `active_project` + `active_phase` from config and `project.md`.
-2. Read `phase.md` `waves[]`. Find first wave with `status: planning` AND `scope: in_scope`.
+2. Walk the current phase's `waves/` folder and read each `wave.md` leaf file directly; find the first wave (lexical sort by NN-prefixed slug) with `status: planning` AND `scope: in_scope`. Do NOT read `phase.md.waves[]` (seeded once by scaffold, not synced — see §Authoritative state reads below):
+   ```bash
+   NEXT_WAVE=$(node -e "
+   const fm = require('gray-matter'), fs = require('fs'), path = require('path');
+   const wavesDir = '.do/projects/<active_project>/phases/<active_phase>/waves';
+   const waves = fs.existsSync(wavesDir)
+     ? fs.readdirSync(wavesDir)
+         .filter(d => fs.statSync(path.join(wavesDir, d)).isDirectory())
+         .map(slug => {
+           const wPath = path.join(wavesDir, slug, 'wave.md');
+           if (!fs.existsSync(wPath)) return null;
+           const w = fm(fs.readFileSync(wPath, 'utf8'));
+           return { slug, status: w.data.status, scope: w.data.scope };
+         })
+         .filter(Boolean)
+         .sort((a, b) => a.slug.localeCompare(b.slug))
+     : [];
+   const next = waves.find(w => w.scope === 'in_scope' && w.status === 'planning');
+   process.stdout.write(next ? next.slug : '');
+   ")
+   ```
 3. If none found:
    ```
    No planning waves in current phase; run `/do:project wave new <slug>` to create one.

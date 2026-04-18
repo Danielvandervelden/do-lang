@@ -25,12 +25,23 @@ Parse the output to get:
 
 ## PC-1: Precondition Check — All In-Scope Phases Completed
 
+Read phase state authoritatively from each `phase.md` leaf file, NOT from `project.md.phases[]` (parent index is seeded once by scaffold and not synced — see §Authoritative state reads in `skills/do/project.md`).
+
 ```bash
 node -e "
 const fm = require('gray-matter');
-const fs = require('fs');
-const proj = fm(fs.readFileSync('<project_path>', 'utf8'));
-const phases = proj.data.phases || [];
+const fs = require('fs'), path = require('path');
+const phasesDir = '.do/projects/<active_project>/phases';
+const phases = fs.readdirSync(phasesDir)
+  .filter(d => fs.statSync(path.join(phasesDir, d)).isDirectory())
+  .map(slug => {
+    const phPath = path.join(phasesDir, slug, 'phase.md');
+    if (!fs.existsSync(phPath)) return null;
+    const ph = fm(fs.readFileSync(phPath, 'utf8'));
+    return { slug, status: ph.data.status, scope: ph.data.scope };
+  })
+  .filter(Boolean)
+  .sort((a, b) => a.slug.localeCompare(b.slug));
 const incomplete = phases.filter(p => p.scope === 'in_scope' && p.status !== 'completed');
 if (incomplete.length > 0) {
   console.error('Incomplete in-scope phases: ' + incomplete.map(p => p.slug).join(', '));
@@ -58,14 +69,26 @@ Stop.
 
 For each in-scope phase, check whether `handoff.md` exists:
 
+Enumerate phases authoritatively from leaf files (not `project.md.phases[]`):
+
 ```bash
 node -e "
 const fm = require('gray-matter');
 const fs = require('fs'), path = require('path');
-const proj = fm(fs.readFileSync('<project_path>', 'utf8'));
-const phases = (proj.data.phases || []).filter(p => p.scope === 'in_scope');
+const phasesDir = '.do/projects/<active_project>/phases';
+const phases = fs.readdirSync(phasesDir)
+  .filter(d => fs.statSync(path.join(phasesDir, d)).isDirectory())
+  .map(slug => {
+    const phPath = path.join(phasesDir, slug, 'phase.md');
+    if (!fs.existsSync(phPath)) return null;
+    const ph = fm(fs.readFileSync(phPath, 'utf8'));
+    return { slug, status: ph.data.status, scope: ph.data.scope };
+  })
+  .filter(Boolean)
+  .filter(p => p.scope === 'in_scope')
+  .sort((a, b) => a.slug.localeCompare(b.slug));
 const missing = phases.filter(p => {
-  const handoffPath = path.join('.do/projects/<active_project>/phases', p.slug, 'handoff.md');
+  const handoffPath = path.join(phasesDir, p.slug, 'handoff.md');
   return !fs.existsSync(handoffPath);
 });
 if (missing.length > 0) {

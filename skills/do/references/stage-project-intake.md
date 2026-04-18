@@ -287,7 +287,7 @@ console.log('planner-output-ok');
 "
 ```
 
-If this check fails, stop and surface the specific failure to the user (missing header / unreplaced placeholder / slug-as-title / empty section). Do NOT proceed to PI-7 — the project must not advance to `planning` with incomplete curation. The user can then: re-spawn the planner with the specific failure, fill sections manually, or abandon.
+If this check fails, stop and surface the specific failure to the user (missing header / unreplaced placeholder / empty section). Do NOT proceed to PI-7 — the project must not advance to `planning` with incomplete curation. The user can then: re-spawn the planner with the specific failure, fill sections manually, or abandon.
 
 ---
 

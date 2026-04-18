@@ -76,15 +76,14 @@ Handle result:
   Options:
   1. Resolve blocker and re-invoke `/do:project wave next`
   2. Abandon wave (`/do:project wave abandon <slug>`)
-  3. Mark out of scope. Run the same state-machine-legal two-step used by `stage-wave-verify.md` Option 4 so the parent phase stays consistent:
+  3. Mark out of scope. Run the same state-machine-legal two-step used by `stage-wave-verify.md` Option 4 (leaf-only writes — the phase-completion check reads `wave.md` directly per `skills/do/project.md` §Authoritative state reads):
      a. Transition wave status `in_progress → blocked`:
         `project-state.cjs set wave <phase_slug>/<wave_slug> status=blocked --project <active_project>`
      b. Transition wave scope `in_scope → out_of_scope` (now legal because status is `blocked`):
         `project-state.cjs set wave <phase_slug>/<wave_slug> scope=out_of_scope --project <active_project>`
-     c. Update parent `phase.md` `waves[]` index (atomic): flip this wave's entry to `status: blocked`, `scope: out_of_scope`. The phase-completion check at `skills/do/project.md` step 1 reads this index.
-     d. Clear `active_wave` in `phase.md` (atomic).
-     e. Append two changelog lines (status-change then scope-change).
-     Do NOT hand-edit `wave.md` — it bypasses the state-machine guards and leaves `phase.md`'s `waves[]` index stale.
+     c. Clear `active_wave` in `phase.md` (atomic temp-file + rename).
+     d. Append two changelog lines (status-change then scope-change).
+     Do NOT hand-edit `wave.md` — it bypasses the state-machine guards in `project-state.cjs`.
 
   Awaiting user decision.
   ```

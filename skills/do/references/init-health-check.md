@@ -135,8 +135,8 @@ Suggested fixes:
 | `orphanedActivePhase` | error | Clear `active_phase` in project.md or restore the phase folder |
 | `orphanedActiveWave` | error | Clear `active_wave` in phase.md or restore the wave folder |
 | `orphanProjectFolder` | warning | Move folder to `.do/projects/completed/` or `.do/projects/archived/`, or set `active_project` |
-| `phaseStatusDrift` | warning | Manually reconcile: update `project.md` `phases[].status` to match `phase.md` frontmatter `status`, OR update `phase.md` `status` to match the `project.md` entry — whichever reflects intent. No automated sync tool in v1; fixes are manual edits |
-| `waveStatusDrift` | warning | Manually reconcile: update `phase.md` `waves[].status` to match `wave.md` frontmatter `status`, OR update `wave.md` `status` to match the `phase.md` entry — whichever reflects intent |
+| `phaseStatusDrift` | info | Advisory only. Per `skills/do/project.md` §Authoritative state reads, `project.md.phases[]` is a scaffold-seeded snapshot and not kept in sync by `project-state.cjs`. Control-flow reads use `phase.md` leaves directly, so drift here is expected — the parent index is for display. Reconcile manually only if you want the index to reflect current leaf state |
+| `waveStatusDrift` | info | Advisory only. Same as phase drift — `phase.md.waves[]` is a scaffold-seeded snapshot. Control flow reads `wave.md` leaves. Reconcile manually only for display consistency |
 | `schemaVersionMismatch` | error | Run schema migration (v1 only, so this issue should not occur until v2 lands) |
 | `invalidScopeValue` | error | Set `scope` to `in_scope` or `out_of_scope` |
 | `illegalScopeTransition` | error | Set `status: blocked` or `abandoned` before setting `scope: out_of_scope` |

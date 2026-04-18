@@ -1,7 +1,7 @@
 ---
 id: 260416-do-quick-skill
 created: 2026-04-16T17:51:59Z
-updated: 2026-04-16T19:00:00Z
+updated: 2026-04-18T00:00:00Z
 description: "/do:quick — inline execution with single council review"
 
 # Stage tracking (linear by default)
@@ -10,7 +10,7 @@ description: "/do:quick — inline execution with single council review"
 # Note: 'abandoned' is set when user abandons task via /do:task or /do:abandon
 # When abandoned, 'pre_abandon_stage' preserves the previous stage for resume capability
 # Abandoned tasks remain in .do/tasks/ and can be resumed via /do:continue --task <file>
-stage: verified
+stage: complete
 stages:
   refinement: complete
   grilling: skipped
@@ -452,7 +452,7 @@ Generated checklist:
 6. [ ] `/do:continue` quick-path escalation resume — task with `quick_path: true` + `stages.execution: review_pending` triggers `council_review_ran.code` flip to `false` and invokes full code-review stack
 7. [ ] `task-template.md` — `quick_path` field documented in frontmatter comments, visible alongside `fast_path`
 
-User response: pending — deferred to post-release real-session testing
+User response: yes — all 7 UAT items confirmed on 2026-04-18
 
 ## Remaining Actions
 

@@ -56,6 +56,58 @@ Set `review_iterations = 0` (in-session variable, not persisted).
 
 ---
 
+## PR-2b: Initial Plan Curation (idempotent)
+
+Check if `wave.md` body still contains scaffold placeholders:
+
+```bash
+node -e "
+const fm = require('gray-matter'), fs = require('fs');
+const doc = fm(fs.readFileSync('<wave_path>', 'utf8'));
+const hasPlaceholders = /\{\{[A-Z_]+\}\}/.test(doc.content);
+process.exit(hasPlaceholders ? 0 : 1);
+"
+```
+
+**If no placeholders (exit 1):** Skip to PR-3 — body is already curated (manual edit, re-entry, or `--from-backlog` already filled all sections).
+
+**If placeholders remain (exit 0):** Spawn do-planner to curate the wave body from phase and project context before reviewers see it:
+
+```javascript
+Agent({
+  description: "Curate wave plan from phase context",
+  subagent_type: "do-planner",
+  model: "<models.overrides.planner || models.default>",
+  prompt: `
+Curate the wave plan body sections from phase and project context.
+
+Target file: <wave_path>
+Phase file: .do/projects/<active_project>/phases/<phase_slug>/phase.md
+Project file: .do/projects/<active_project>/project.md
+
+Read the phase's Goal, Wave Plan (to understand this wave's position and purpose),
+and the project's Vision for broader context. Also check if \`## Problem Statement\`
+already has non-placeholder content (may be pre-seeded from a backlog entry via
+--from-backlog). Fill in the wave body sections:
+
+- Replace \`# {{TITLE}}\` H1 with a descriptive wave title
+- ## Problem Statement — what this wave solves (preserve existing content if non-placeholder)
+- ## Approach — proposed solution and implementation steps (numbered list of concrete actions)
+- ## Concerns — potential issues or risks (numbered list with mitigations)
+
+Write the wave title to frontmatter field \`title\`.
+Calculate confidence and write to frontmatter.
+Do NOT change status, scope, stage, stages, or other metadata fields.
+
+Return summary of sections populated.
+`
+})
+```
+
+**Wait for do-planner to complete before proceeding to PR-3.** Reviewers must see curated content, not scaffold placeholders — sending reviewers against a template with `{{PROBLEM_STATEMENT}}` / `{{APPROACH}}` markers would cause an automatic RETHINK verdict on every first pass.
+
+---
+
 ## PR-3: Spawn Reviewers
 
 ### PR-3a: If council enabled

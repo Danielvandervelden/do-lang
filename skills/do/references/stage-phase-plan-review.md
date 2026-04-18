@@ -58,6 +58,57 @@ Set `review_iterations = 0` (in-session variable, not persisted).
 
 ---
 
+## PR-2b: Initial Plan Curation (idempotent)
+
+Check if `phase.md` body still contains scaffold placeholders:
+
+```bash
+node -e "
+const fm = require('gray-matter'), fs = require('fs');
+const doc = fm(fs.readFileSync('<phase_path>', 'utf8'));
+const hasPlaceholders = /\{\{[A-Z_]+\}\}/.test(doc.content);
+process.exit(hasPlaceholders ? 0 : 1);
+"
+```
+
+**If no placeholders (exit 1):** Skip to PR-3 — body is already curated (manual edit, re-entry, or `--from-backlog` already filled all sections).
+
+**If placeholders remain (exit 0):** Spawn do-planner to curate the phase body from project context before reviewers see it:
+
+```javascript
+Agent({
+  description: "Curate phase plan from project context",
+  subagent_type: "do-planner",
+  model: "<models.overrides.planner || models.default>",
+  prompt: `
+Curate the phase plan body sections from the project context.
+
+Target file: <phase_path>
+Project file: .do/projects/<active_project>/project.md
+
+Read the project's Vision, Phase Plan, and any existing Goal content in the target file
+(may be pre-seeded from a backlog entry via --from-backlog). Fill in the phase body sections:
+
+- Replace \`# {{TITLE}}\` H1 with a descriptive phase title
+- ## Goal — what this phase accomplishes (one paragraph; preserve existing content if non-placeholder)
+- ## Entry Criteria — what must be true before this phase starts (bullet list)
+- ## Exit Criteria — what must be true for completion (bullet list)
+- ## Wave Plan — ordered list of waves (format: Wave NN — <slug>: <one-line goal>)
+- ## Concerns — potential blockers or risks (numbered list)
+
+Write the phase title to frontmatter field \`title\`.
+Calculate confidence and write to frontmatter.
+Do NOT change status, scope, or other metadata fields.
+
+Return summary of sections populated.
+`
+})
+```
+
+**Wait for do-planner to complete before proceeding to PR-3.** Reviewers must see curated content, not scaffold placeholders — sending reviewers against a template with `{{GOAL}}` / `{{WAVE_PLAN}}` markers would cause an automatic RETHINK verdict on every first pass.
+
+---
+
 ## PR-3: Spawn Reviewers
 
 ### PR-3a: If council enabled

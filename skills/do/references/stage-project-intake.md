@@ -219,8 +219,13 @@ intake Q&A). Synthesise the answers into the project.md body sections:
 - ## Risks — risk list from Q6 answer in format: Risk / Likelihood / Impact / Mitigation
 - ## Phase Plan — phase breakdown from Q11 answer (Pass 2 Q1), with MVP phase marked from Q13 answer
 
-Do NOT overwrite the frontmatter. Use Edit tool to fill in each section's body.
+Do NOT overwrite the frontmatter (except \`title\` and \`confidence\`). Use Edit tool to fill in each section's body.
 Write the project title to frontmatter field \`title\` based on Q1 answer.
+
+**Also replace the body H1 placeholder** \`# {{TITLE}}\` (on line ~29 of the scaffolded file)
+with the same title you wrote to frontmatter. PI-6b rejects any remaining \`{{PLACEHOLDER}}\`
+in the body, and the scaffold ships the H1 as a placeholder — forgetting this fails the gate.
+
 Calculate overall confidence after all answers and write to frontmatter.
 
 Return summary of sections populated.

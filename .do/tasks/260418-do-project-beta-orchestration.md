@@ -573,3 +573,15 @@ What this smoke test does NOT cover: a live end-to-end `/do:task` spawn through 
   4. `skills/do/project.md:389-395`: rewrote abandon recovery display string. Now tells the user the project is archived, that `/do:project resume` ships in γ, and explicitly warns not to hand-edit `active_project` in `.do/config.json` to revive it. No broken command reference.
 - **Tests:** No code changes; test suite not re-run (doc-only iteration). 50/50 from iter 16 remains current.
 - **Files changed (4):** `skills/do/project.md` (3 "below"→"above" + abandon recovery rewrite), `agents/do-council-reviewer.md` (task-file → target-file terminology), `agents/do-verifier.md` (step 4.2 terminology), this iteration log.
+
+### Iteration 18 (2026-04-18)
+- **Self-review:** APPROVED — first clean pass. All iter-17 fixes verified correct.
+- **Council (codex):** CHANGES_REQUESTED — two architectural gaps:
+  1. `stage-phase-plan-review.md` and `stage-wave-plan-review.md` both send reviewers (PR-3) directly against scaffold templates with `{{PLACEHOLDER}}` markers. No initial planner step fills the body before review. Reviewers would auto-RETHINK on every first pass, then the ITERATE loop would spawn a planner with no starting material — wasteful and error-prone.
+  2. `stage-project-intake.md` PI-6 tells planner to fill 7 body sections + set frontmatter `title`, but template has a body H1 `# {{TITLE}}` (not in the 7 sections). PI-6b rejects any remaining `{{PLACEHOLDER}}` in body. A planner following PI-6 literally would leave the H1 as `# {{TITLE}}` → PI-6b gate blocks. Internally contradictory.
+- **Action:**
+  1. Added PR-2b (Initial Plan Curation) to `stage-phase-plan-review.md`: spawns do-planner BEFORE reviewers with project context (project.md Vision + Phase Plan). Idempotent — checks for `{{PLACEHOLDER}}` presence and skips if body already curated (handles re-entry, manual edits, or `--from-backlog` pre-fill).
+  2. Added PR-2b (Initial Plan Curation) to `stage-wave-plan-review.md`: same pattern, context from phase.md Goal + Wave Plan + project.md Vision. Fills Problem Statement, Approach, Concerns.
+  3. Updated `stage-project-intake.md` PI-6 planner prompt to explicitly instruct replacing body H1 `# {{TITLE}}` with the project title, with a note that PI-6b rejects leftover placeholders.
+- **Tests:** No code changes (doc-only fixes to skill stage references). 50/50 from iter 16 remains current.
+- **Files changed (4):** `skills/do/references/stage-phase-plan-review.md` (PR-2b added), `skills/do/references/stage-wave-plan-review.md` (PR-2b added), `skills/do/references/stage-project-intake.md` (PI-6 H1 instruction), this iteration log.

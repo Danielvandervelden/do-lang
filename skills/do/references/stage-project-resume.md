@@ -98,12 +98,35 @@ Action required: Run `/do:project complete` to finalise the project.
 Return control to the user. Do NOT auto-invoke `stage-project-complete.md`.
 **STOP** (advisory only — user triggers completion explicitly).
 
-**For all other actions**, display:
+**For all other actions**, read display fields from disk then display:
+
+```bash
+node -e "
+const fm = require('gray-matter'), fs = require('fs'), path = require('path');
+const projPath = '.do/projects/<active_project>/project.md';
+const proj = fm(fs.readFileSync(projPath, 'utf8'));
+const activePhase = proj.data.active_phase || null;
+let activeWave = null;
+if (activePhase) {
+  const phPath = path.join('.do/projects/<active_project>/phases', activePhase, 'phase.md');
+  if (fs.existsSync(phPath)) {
+    const ph = fm(fs.readFileSync(phPath, 'utf8'));
+    activeWave = ph.data.active_wave || null;
+  }
+}
+const clPath = '.do/projects/<active_project>/changelog.md';
+const clLines = fs.existsSync(clPath) ? fs.readFileSync(clPath, 'utf8').split('\n').filter(l => l.trim()) : [];
+const lastAction = clLines.length > 0 ? clLines[clLines.length - 1] : '(none)';
+console.log('Project: <active_project>');
+console.log('Active phase: ' + (activePhase || '(none)'));
+console.log('Active wave: ' + (activeWave || '(none)'));
+console.log('Last action: ' + lastAction);
+"
 ```
-Project: <active_project>
-Active phase: <active_phase or "(none)">
-Active wave: <active_wave or "(none)">
-Last action: <last changelog entry from project changelog>
+
+Then display:
+```
+<output from above>
 
 Next: <summary from project-resume.cjs output>
 ```
@@ -125,9 +148,9 @@ Based on the `action` value from `project-resume.cjs`, route as follows:
 | `stage-wave-verify` | Invoke `@references/stage-wave-verify.md` targeting the active wave |
 | `wave-next-needed` | Display "No active wave. Run `/do:project wave next` to activate the next wave." **STOP.** |
 | `wave-completed-next-needed` | Display "Active wave completed. Run `/do:project wave next` for the next wave." **STOP.** |
-| `project-blocked` | Display "Project `<active_project>` is blocked. Resolve the blocker and retry." **STOP.** |
-| `phase-blocked` | Display "Phase `<active_phase>` is blocked. Resolve the blocker and retry." **STOP.** |
-| `wave-blocked` | Display "Wave `<active_wave>` is blocked. Resolve the blocker and retry." **STOP.** |
+| `project-blocked` | Display "Project `<active_project>` is blocked. Resolve the blocker and retry." **STOP.** (`<active_project>` is known from SPR-0 config read.) |
+| `phase-blocked` | Display "Phase is blocked. Resolve the blocker and retry." (Phase slug is in SPR-4 output above.) **STOP.** |
+| `wave-blocked` | Display "Wave is blocked. Resolve the blocker and retry." (Wave slug is in SPR-4 output above.) **STOP.** |
 | `terminal-pre-complete` | Handled in SPR-4 above (advisory, no auto-routing). **STOP.** |
 | _(unknown)_ | Display "Unexpected resume action: `<action>`. Run `/do:init` for diagnostics." **STOP.** |
 

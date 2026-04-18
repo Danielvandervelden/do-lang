@@ -1,7 +1,7 @@
 ---
 id: 260418-do-project-beta-orchestration
 created: 2026-04-18T13:53:57.000Z
-updated: '2026-04-18T14:43:25.869Z'
+updated: '2026-04-18T14:51:59.160Z'
 description: >-
   Implement Task β (project-orchestration) for /do:project — ship the skill +
   stage references + subcommand routing that sit on top of Task α's contract.
@@ -372,3 +372,33 @@ Quoting orchestrator §14 L899-909 verbatim as spec:
   3. AC #11 rewritten: "frontmatter-presence-gated write spec-tests" with explicit note that agent markdown is not executable and real integration harness is out of beta scope (tracked as backlog item agent-behavior-harness).
   4. New backlog item agent-behavior-harness filed in .do/BACKLOG.md for real end-to-end agent testing infrastructure.
 - **Tests:** 13/13 agent-frontmatter-gates still pass (no logic change).
+
+### Iteration 5 (2026-04-18)
+- **Self-review:** APPROVED (all iter-1..iter-4 fixes verified, no regressions, state machine + CLI contract + schema + gate logic all clean)
+- **Council (codex):** CHANGES_REQUESTED - 2 findings:
+  1. agents/do-griller.md threshold fallback changed priority to project_intake_threshold || auto_grill_threshold || 0.85. In workspaces that configure project intake with a threshold lower than the task threshold, /do:task and /do:continue grilling (neither of which passes explicit Threshold:) would start stopping at the project threshold - violates the "preserve /do:task behavior verbatim" safeguard.
+  2. /do:task smoke test (AC #9, Approach group 4 safeguard) was claimed as passed via static inspection only, not an actual end-to-end task-pipeline run.
+- **Action:**
+  1. agents/do-griller.md Step 4 fallback inverted to task-safe: auto_grill_threshold || 0.9 when the caller omits Threshold:. Added explicit "Why task-safe" prose block documenting that /do:task and /do:continue rely on this fallback and that all /do:project callers pass Threshold: explicitly (stage-project-intake.md PI-2 + PI-5, per-phase re-grill, per-wave confidence rescue).
+  2. Ran concrete smoke test and recorded evidence (below).
+
+### Smoke Test Evidence (AC #9 + Group 4 safeguard)
+
+Test command:
+```
+node --test skills/do/scripts/__tests__/*.test.cjs
+```
+
+Result: 401/403 pass, 2 fail.
+
+The 2 failures are both in `skills/do/scripts/__tests__/council-invoke.test.cjs` (selectReviewer tests). Verified via `git diff main -- skills/do/scripts/__tests__/council-invoke.test.cjs` that **beta did NOT touch this file** - the failures pre-date beta and are unrelated. Beta-authored test files (`project-state.test.cjs`, `project-scaffold.test.cjs`, `project-health.test.cjs`, `validate-slug.test.cjs`, `agent-frontmatter-gates.test.cjs`) all pass (228 alpha + 13 beta = 241/241).
+
+Static task-pipeline integrity verified:
+- `skills/do/task.md` still references `do-executioner`, `do-verifier`, `do-planner`, `do-griller` by the same `subagent_type` strings used before beta.
+- `active_task` / `.do/tasks/` literals still present and valid in `task.md` (9 references retained).
+- All 8 agent frontmatter `name:` fields match the `subagent_type` strings used by callers.
+- `do-executioner`, `do-verifier`, `do-planner` frontmatter (tools, model, color, permissionMode, maxTurns) unchanged from pre-beta.
+
+What this smoke test does NOT cover: a live end-to-end `/do:task` spawn through all pipeline stages with real model invocations. That requires either a test-harness workspace with model stubs or a real CLI run in a separate worktree with fixture files. Both are expensive and out of beta scope; they are now tracked via the `agent-behavior-harness` backlog item filed in iteration 4. The static integrity + alpha/beta test-suite parity is the strongest runnable evidence available without that harness.
+
+- **Tests:** 241/241 project-side pass; 2 pre-existing council-invoke failures unchanged (out of scope).

@@ -24,11 +24,11 @@ description: >-
 related:
   - 260418-do-project-orchestrator
   - 260418-do-project-alpha-contract
-stage: execution
+stage: verification
 stages:
   refinement: complete
   grilling: skipped
-  execution: in_progress
+  execution: complete
   verification: pending
   abandoned: false
 council_review_ran:
@@ -223,6 +223,109 @@ Quoting orchestrator §14 L899-909 verbatim as spec:
 11. **Final stage-reference count.** The prompt text mentions "nine new stage reference files" then counts to eight. The phase-complete transition is embedded in `skills/do/project.md`'s subcommand handler (not a standalone stage reference — no `stage-phase-complete.md` exists). The project-plan flow is similarly embedded. Final count: **eight** standalone stage reference files (`stage-project-intake.md`, `stage-project-plan-review.md`, `stage-phase-plan-review.md`, `stage-wave-plan-review.md`, `stage-wave-exec.md`, `stage-wave-code-review.md`, `stage-wave-verify.md`, `stage-project-complete.md`). The embedded flows (phase-complete transition, project-plan orchestration) live in `skills/do/project.md`'s subcommand handlers directly. This matches §14 L878-887.
 
 ## Execution Log
+
+### 2026-04-18 15:00 - Execution started
+**Status:** In progress
+**Steps:** 0/28 complete
+**Branch:** feat/do-project-beta-orchestration (stacked on α's tip, already correct)
+
+### 2026-04-18 15:20 - Group 1: Branch setup + skill skeleton
+**Files:**
+- `skills/do/project.md` - Created: full skill file with subcommand routing for new, phase (new/abandon/complete), wave (new/complete/abandon/next), status, complete, abandon, resume stub. Includes per-phase re-grill (Pass 3) and per-wave confidence rescue hooks. All 8 subcommand contracts documented.
+- `skills/do/do.md` - Modified: added /do:project row to sub-commands table (between /do:task and /do:fast) + routing example "let's start a new app from scratch" → /do:project new.
+
+**Decisions:**
+- Branch was already at feat/do-project-beta-orchestration (stacked on α's tip) — no branch creation needed.
+- Groups 6 (per-phase re-grill) and 7 (subcommand contracts) were implemented directly within project.md as the plan specifies — they are embedded in the skill file's handlers, not standalone stage references.
+
+**Commit:** 26c8081
+
+**Status:** Complete
+
+### 2026-04-18 15:35 - Group 2: Plan-review stage references
+**Files:**
+- `skills/do/references/stage-project-plan-review.md` - Created: PR-0..PR-5 pattern, targets project.md, council key project.plan (falls back to planning), writes council_review_ran.project_plan: true.
+- `skills/do/references/stage-phase-plan-review.md` - Created: PR-0..PR-5, targets phase.md, council key project.phase_plan, includes wave-seeding hook on approval (§6 step 1a).
+- `skills/do/references/stage-wave-plan-review.md` - Created: PR-0..PR-5, targets wave.md, council key project.wave_plan.
+
+**Commit:** 69c620c
+
+**Status:** Complete
+
+### 2026-04-18 15:50 - Group 3: Wave execution stage references
+**Files:**
+- `skills/do/references/stage-wave-exec.md` - Created: spawns do-executioner against wave.md, resume guard, WE-0..WE-4 pattern.
+- `skills/do/references/stage-wave-code-review.md` - Created: CR-0..CR-5, council key project.code (falls back to execution).
+- `skills/do/references/stage-wave-verify.md` - Created: WV-0..WV-3, project-aware failure paths (retry/debug/abandon wave/out_of_scope), backlog cleanup on success.
+
+**Commit:** f62a61f
+
+**Status:** Complete
+
+### 2026-04-18 16:05 - Group 4: Agent-spec generalisation + smoke test
+**Files:**
+- `agents/do-verifier.md` - terminological substitutions + behavioural edit #6 (unresolved_concerns[], discovered_followups[], wave_summary frontmatter-presence-gated writes; active_task clear gated on .do/tasks/ path)
+- `agents/do-executioner.md` - terminological substitutions + behavioural edit #6 (modified_files[], discovered_followups[] frontmatter-presence-gated writes)
+- `agents/do-planner.md` - terminological: "task file" → "target file", generalised Spawned-by list
+- `agents/do-plan-reviewer.md` - terminological: "task file" → "target plan file"
+- `agents/do-code-reviewer.md` - terminological: "task file" → "target file"
+- `agents/do-council-reviewer.md` - terminological: "task file" → "target file"
+- `agents/do-griller.md` - terminological: "task file" → "target file", threshold fallback updated
+
+**Decisions:**
+- Smoke test: verified task.md still references all agents by same subagent_type names. do-verifier active_task clear is gated on target path starting with .do/tasks/ — existing task pipeline behavior preserved verbatim.
+
+**Smoke test result:** PASS — task pipeline preserved, no regression.
+
+**Commit:** 8c7598b
+
+**Status:** Complete
+
+### 2026-04-18 16:20 - Group 5: Intake flow
+**Files:**
+- `skills/do/references/stage-project-intake.md` - Created: PI-0..PI-8. Pass 1 (10 questions) + Pass 2 (3 phase-seed questions). Saves transcript to .do/projects/<slug>/intake/session-<timestamp>.md. Spawns do-planner to curate project.md body sections. Advances project status intake → planning.
+
+**Commit:** 291da6b
+
+**Status:** Complete
+
+### 2026-04-18 16:25 - Groups 6+7: Confidence gates + subcommand contracts
+**Note:** Both groups were implemented within Group 1's project.md skill file (by design — they are embedded handlers, not standalone stage references). Verified via grep:
+- Per-phase re-grill (line 160 in project.md): fires at phase N→N+1 transition, reads next phase confidence, spawns do-griller if below project_intake_threshold.
+- Per-wave confidence rescue (lines 224-238): fires in wave next handler before plan review.
+- All 8 subcommand contracts: new, phase new/abandon/complete, wave new/complete/abandon/next, status, complete, abandon.
+
+**Status:** Complete (implemented in Group 1)
+
+### 2026-04-18 16:35 - Group 8: Project completion stage
+**Files:**
+- `skills/do/references/stage-project-complete.md` - Created: PC-0..PC-8. γ-gate in PC-2 checks for handoff.md per in-scope phase. On block: exact message "Complete requires phase handoff artefacts (Task γ)." + missing paths. Full completion flow: renders completion-summary.md, archives to .do/projects/completed/<slug>/, clears active_project.
+
+**Commit:** 77a4648
+
+**Status:** Complete
+
+### 2026-04-18 16:45 - Tests: agent-frontmatter-gates.test.cjs (13 tests)
+**Files:**
+- `skills/do/scripts/__tests__/agent-frontmatter-gates.test.cjs` - Created: 13 tests covering executioner modified_files write, executioner discovered_followups append, verifier unresolved_concerns write, verifier wave_summary write, verifier discovered_followups append, verifier active_task gate — all with presence/absence variants. Fixed gray-matter cache:false to prevent cross-test contamination.
+
+**Deviation:** gray-matter's string-keyed parse cache caused cross-test contamination when identical fixture strings were used. Fixed by passing `{ cache: false }` to all fm() calls.
+
+**Result:** 13/13 tests pass.
+
+**Commit:** 3838b92
+
+**Status:** Complete
+
+### 2026-04-18 17:00 - Execution complete
+**Status:** Complete
+**Summary:**
+- Steps completed: 28/28 (Groups 1-8, all steps)
+- Files created: 11 (project.md, 8 stage references, 1 test file)
+- Files modified: 9 (do.md, 7 agents, task file)
+- Commits: 7
+- Tests added: 13 in agent-frontmatter-gates.test.cjs
+- Deviations: 1 minor (gray-matter cache bug in tests, auto-fixed)
 
 ## Council Review
 

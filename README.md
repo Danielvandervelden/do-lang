@@ -158,6 +158,9 @@ Project configuration lives in `.do/config.json`:
     "execution": true,
     "reviewer": "random"
   },
+  "web_search": {
+    "context7": true
+  },
   "models": {
     "default": "sonnet",
     "overrides": {}
@@ -167,6 +170,12 @@ Project configuration lives in `.do/config.json`:
 ```
 
 **`council_reviews.reviewer`** — which external AI to use for council reviews: `"codex"`, `"gemini"`, `"both"`, or `"random"`. Set `planning` and `execution` to `false` to disable council reviews for those stages.
+
+**`web_search.context7`** — enables ctx7 documentation lookups during `/do:optimise`. Set to `false` to skip library-doc fetching.
+
+**`auto_grill_threshold`** — confidence score below which `/do:task` spawns `do-griller` for clarifying questions. Default `0.9`.
+
+**`models.overrides`** — per-agent model overrides (e.g. `{"planner": "opus", "debugger": "opus"}`). Agents not listed fall back to `models.default`.
 
 ## Development
 

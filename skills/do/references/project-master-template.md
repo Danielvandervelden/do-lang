@@ -93,6 +93,15 @@ Format:
 - Phase 02 — <slug>: <one-line goal>
 -->
 
+## Clarifications
+
+<!--
+Populated by do-griller during intake (Pass 1 + Pass 2 Q&A) and per-phase re-grill.
+Format:
+### Q1: <question>
+<answer>
+-->
+
 ## Changelog Pointer
 
 See `changelog.md` in this project folder for the full history of state transitions and scaffold events.

@@ -597,3 +597,15 @@ What this smoke test does NOT cover: a live end-to-end `/do:task` spawn through 
   3. Verified stage-wave-plan-review.md ITERATE prompt — already correct ("Problem Statement, Approach, and/or Concerns" matches wave-template.md).
 - **Tests:** Doc-only fixes. 50/50 from iter 16 remains current.
 - **Files changed (3):** `stage-phase-plan-review.md` (ITERATE prompt), `stage-project-plan-review.md` (ITERATE prompt), this iteration log.
+
+### Iteration 20 (2026-04-18)
+- **Self-review:** APPROVED — iter-19 section-name fixes verified correct.
+- **Council (codex):** CHANGES_REQUESTED — `## Clarifications` section missing from all three templates:
+  1. `stage-project-intake.md` references `## Clarifications` (lines 91, 111, 156, 211) for griller Pass 1/2 Q&A output, but `project-master-template.md` doesn't ship the section. First griller write has no target.
+  2. `do-griller` agent (line 91) writes to `## Clarifications` for any target file. Phase and wave templates also lack the section, so per-phase re-grill (`skills/do/project.md:207`) and per-wave confidence rescue (`:312`) have nowhere to persist Q&A.
+- **Action:** Added `## Clarifications` section with HTML comment describing purpose and format to all three templates:
+  1. `project-master-template.md` — between `## Phase Plan` and `## Changelog Pointer`
+  2. `phase-template.md` — between `## Concerns` and `## Review Notes`
+  3. `wave-template.md` — between `## Concerns` and `## Review Notes`
+- **Tests:** Doc-only template additions. 50/50 from iter 16 remains current.
+- **Files changed (4):** `project-master-template.md`, `phase-template.md`, `wave-template.md`, this iteration log.

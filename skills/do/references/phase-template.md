@@ -74,6 +74,15 @@ Potential blockers, unknowns, or risks specific to this phase.
 Format: numbered list with mitigation notes.
 -->
 
+## Clarifications
+
+<!--
+Populated by do-griller during per-phase re-grill when confidence is below threshold.
+Format:
+### Q1: <question>
+<answer>
+-->
+
 ## Review Notes
 
 <!--

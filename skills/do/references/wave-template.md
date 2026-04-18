@@ -99,6 +99,15 @@ Populated during verification (do-verifier writes here).
 ### Result: PASS|FAIL
 -->
 
+## Clarifications
+
+<!--
+Populated by do-griller during per-wave confidence rescue when confidence is below threshold.
+Format:
+### Q1: <question>
+<answer>
+-->
+
 ## Review Notes
 
 <!--

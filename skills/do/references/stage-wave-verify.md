@@ -89,19 +89,19 @@ Wait for user response:
 - **Option 1 (Retry):** Ask "What was fixed?" — log answer in `wave.md` Execution Log as a deviation note, then return to WV-1 and re-spawn do-verifier.
 - **Option 2 (Debug):** Display: "Run `/do:debug` to investigate. After debugging, return to this wave by re-invoking `/do:project wave next`."
 - **Option 3 (Abandon wave):**
-  - Call `project-state.cjs abandon wave <active_project> <phase_slug> <wave_slug>`
+  - Call `project-state.cjs abandon wave <phase_slug>/<wave_slug> --project <active_project>`
   - Append changelog: `<ISO> abandon:wave:<wave_slug>: verification-failed`
   - Display: "Wave `<wave_slug>` abandoned. Run `/do:project wave next` to start the next planning wave, or `/do:project wave new <slug>` to create a replacement."
 - **Option 4 (Out of scope):** The authoritative state machine forbids `in_scope → out_of_scope` while the wave is `in_progress`. This option therefore takes TWO legal transitions and updates the parent phase's `waves[]` index. Run in order:
   1. **Transition wave status `in_progress → blocked`** (legal per `project-state-machine.md` §(c)):
      ```bash
-     node ~/.claude/commands/do/scripts/project-state.cjs set wave <active_project> <phase_slug> <wave_slug> blocked
+     node ~/.claude/commands/do/scripts/project-state.cjs set wave <phase_slug>/<wave_slug> status=blocked --project <active_project>
      ```
   2. **Transition wave scope `in_scope → out_of_scope`** (now legal because status is `blocked`):
      ```bash
-     node ~/.claude/commands/do/scripts/project-state.cjs set wave <active_project> <phase_slug> <wave_slug> out_of_scope --scope
+     node ~/.claude/commands/do/scripts/project-state.cjs set wave <phase_slug>/<wave_slug> scope=out_of_scope --project <active_project>
      ```
-     (If the `--scope` flag is not yet implemented in `project-state.cjs`, fall back to an atomic temp-file + rename on `wave.md` to set `scope: out_of_scope`, matching the guard check described in §(d) of the state machine.)
+     (The mutation form is the unified `<status=X|scope=X>` positional arg — no separate `--scope` flag exists. `opSet`'s `SCOPE_TRANSITIONS` table enforces the `in_scope → out_of_scope` guard against the wave's current status, which is why step 1 transitioned to `blocked` first.)
   3. **Update parent `phase.md` `waves[]` index** (atomic): flip this wave's entry from `scope: in_scope` → `scope: out_of_scope` and `status: in_progress` → `status: blocked` so the phase-completion check in `/do:project phase complete` sees the correct state.
   4. **Clear `active_wave` in `phase.md`** (atomic temp-file + rename) so the phase is no longer pointed at the now-out-of-scope wave.
   5. **Append changelog:**
@@ -117,7 +117,7 @@ Wait for user response:
 
 1. **Set wave `completed`:**
    ```bash
-   node ~/.claude/commands/do/scripts/project-state.cjs set wave <active_project> <phase_slug> <wave_slug> completed
+   node ~/.claude/commands/do/scripts/project-state.cjs set wave <phase_slug>/<wave_slug> status=completed --project <active_project>
    ```
 
 2. **Clear `active_wave` in `phase.md`** (atomic temp-file + rename):

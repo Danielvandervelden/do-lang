@@ -114,7 +114,7 @@ Parse `argv[1]` ∈ `{new, abandon, complete}`:
 
 1. Call:
    ```bash
-   node ~/.claude/commands/do/scripts/project-state.cjs abandon phase <active_project> <slug>
+   node ~/.claude/commands/do/scripts/project-state.cjs abandon phase <slug> --project <active_project>
    ```
    This cascades `status: abandoned` to phase + every in-scope wave (records `pre_abandon_status`).
 2. Append changelog entry: `<ISO> abandon:phase:<slug>`.
@@ -148,7 +148,7 @@ Run Phase-Complete State Transition:
 
 2. **State transition:**
    ```bash
-   node ~/.claude/commands/do/scripts/project-state.cjs set phase <active_project> <active_phase> completed
+   node ~/.claude/commands/do/scripts/project-state.cjs set phase <active_phase> status=completed --project <active_project>
    ```
 
 3. **Clear `active_phase` and `active_wave` in project.md**, append changelog.
@@ -191,17 +191,17 @@ Parse `argv[1]` ∈ `{new, complete, abandon, next}`:
 
 1. Call:
    ```bash
-   node ~/.claude/commands/do/scripts/project-state.cjs set wave <active_project> <active_phase> <slug> completed
+   node ~/.claude/commands/do/scripts/project-state.cjs set wave <active_phase>/<slug> status=completed --project <active_project>
    ```
 2. Append changelog: `<ISO> complete:wave:<slug>`.
 
-> **No backlog cleanup here.** Wave-backed backlog cleanup runs exclusively in the two trigger points locked by the Task β contract: (a) `stage-wave-verify.md` success path (WV-3 step 4), and (b) `phase complete`'s phase-level cleanup (which reads `phase.md`'s `backlog_item`). Adding it to the manual `wave complete <slug>` command would let a user mark a backlog item done before the wave has actually been verified — see `.do/tasks/260418-do-project-orchestrator.md` §11.
+> **No backlog cleanup here.** Wave-backed backlog cleanup runs exclusively in the two trigger points locked by the β contract: (a) `stage-wave-verify.md` success path (WV-3 step 4), and (b) `phase complete`'s phase-level cleanup (which reads `phase.md`'s `backlog_item`). Adding it to the manual `wave complete <slug>` command would let a user mark a backlog item done before the wave has actually been verified. (Rationale: orchestrator design §11 — backlog integration is verification-gated.)
 
 #### `wave abandon <slug>`
 
 1. Call:
    ```bash
-   node ~/.claude/commands/do/scripts/project-state.cjs abandon wave <active_project> <active_phase> <slug>
+   node ~/.claude/commands/do/scripts/project-state.cjs abandon wave <active_phase>/<slug> --project <active_project>
    ```
    Records `pre_abandon_status`, sets `status: abandoned`. Does NOT cascade to parent phase.
 2. Append changelog: `<ISO> abandon:wave:<slug>`.
@@ -217,7 +217,7 @@ Parse `argv[1]` ∈ `{new, complete, abandon, next}`:
    Stop.
 4. Set wave status to `in_progress`:
    ```bash
-   node ~/.claude/commands/do/scripts/project-state.cjs set wave <active_project> <active_phase> <wave_slug> in_progress
+   node ~/.claude/commands/do/scripts/project-state.cjs set wave <active_phase>/<wave_slug> status=in_progress --project <active_project>
    ```
 5. Update `phase.md` `active_wave: <wave_slug>` (atomic).
 6. Append changelog: `<ISO> activate:wave:<wave_slug>`.
@@ -288,6 +288,8 @@ Top-level project abandon:
 3. Call:
    ```bash
    node ~/.claude/commands/do/scripts/project-state.cjs abandon project <active_project>
+
+   # Note: `abandon project` does NOT take --project (project slug is the path arg).
    ```
    Cascades `status: abandoned` on project + every in-scope phase + wave (records `pre_abandon_status`; out-of-scope untouched).
 4. Append changelog: `<ISO> abandon:project:<slug>: <reason>`.

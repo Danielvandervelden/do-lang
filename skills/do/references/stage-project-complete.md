@@ -192,7 +192,7 @@ Write `completion-summary.md` to `.do/projects/<active_project>/completion-summa
 ## PC-5: Advance Project State
 
 ```bash
-node ~/.claude/commands/do/scripts/project-state.cjs set project <active_project> completed
+node ~/.claude/commands/do/scripts/project-state.cjs set project <active_project> status=completed
 ```
 
 Update `project.md` frontmatter:

@@ -7,7 +7,7 @@ description: "Phase plan review block for /do:project. Council gate check, paral
 
 This reference file is loaded by `skills/do/project.md` when a phase enters planning (after `phase new` or after the per-phase re-grill). It encodes the full plan review logic for `phase.md` including wave-seeding on approval.
 
-**Caller contract:** The caller provides `<phase_path>` = abs path to `phase.md`, `<active_project>` slug, and `<phase_slug>`. When this stage returns APPROVED, `council_review_ran.plan: true` has been written into `phase.md`'s frontmatter, AND all wave folders for in-scope waves have been seeded via `project-scaffold.cjs wave`. Return control to caller. If ESCALATE or MAX_ITERATIONS, stop and present to the user.
+**Caller contract:** The caller provides `<phase_path>` = abs path to `phase.md`, `<active_project>` slug, and `<phase_slug>`. When this stage returns APPROVED, three writes have landed: (1) `council_review_ran.plan: true` in `phase.md`'s frontmatter, (2) all in-scope wave folders seeded via `project-scaffold.cjs wave`, and (3) phase `status: planning → in_progress` via `project-state.cjs set phase ... status=in_progress`. Return control to caller. If ESCALATE or MAX_ITERATIONS, stop and present to the user.
 
 ---
 
@@ -165,7 +165,16 @@ Apply single-review fallback in PR-4b (skip PR-4a).
    ```
    Skip any wave that already has a folder. Append changelog entry per wave seeded.
 
-3. Return control to caller.
+3. **Promote phase to `in_progress` (planning → in_progress gate):** now that the plan is approved and the in-scope wave folders are seeded, transition the phase status so execution can begin:
+   ```bash
+   node ~/.claude/commands/do/scripts/project-state.cjs set phase <phase_slug> status=in_progress --project <active_project>
+   ```
+   This satisfies the `/do:project phase complete` and `/do:project wave next` contracts in `skills/do/project.md`, which both rely on this stage reference to perform the `planning → in_progress` transition after plan approval. Append changelog:
+   ```
+   <ISO> status-change:phase:<phase_slug>: planning -> in_progress (stage-phase-plan-review approved)
+   ```
+
+4. Return control to caller.
 
 ### If ITERATE (and review_iterations < 3)
 

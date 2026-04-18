@@ -211,7 +211,7 @@ updated: <ISO timestamp>
 ```
 
 ```bash
-node ~/.claude/commands/do/scripts/project-state.cjs set project <active_project> planning
+node ~/.claude/commands/do/scripts/project-state.cjs set project <active_project> status=planning
 ```
 
 ---

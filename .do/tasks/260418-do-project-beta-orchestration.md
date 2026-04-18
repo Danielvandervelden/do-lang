@@ -1,7 +1,7 @@
 ---
 id: 260418-do-project-beta-orchestration
 created: 2026-04-18T13:53:57.000Z
-updated: '2026-04-18T14:29:40.302Z'
+updated: '2026-04-18T14:34:31.826Z'
 description: >-
   Implement Task β (project-orchestration) for /do:project — ship the skill +
   stage references + subcommand routing that sit on top of Task α's contract.
@@ -342,3 +342,9 @@ Quoting orchestrator §14 L899-909 verbatim as spec:
   3. project.md wave complete <slug>: backlog cleanup at wrong trigger point (violates contract §11)
 - **Action:** All 9 findings fixed inline (no executioner re-spawn per user blocker/nitpick policy). Files: stage-wave-verify.md (Option 4 now two-step blocked→out_of_scope + phase.md index update), project.md (phase complete preserves planning gate; wave complete strips backlog cleanup with inline rationale), stage-project-complete.md (dead glob alias dropped), agents/do-executioner.md (2 terminology fixes), agents/do-verifier.md (3 terminology fixes + heuristic variable rename).
 - **Tests:** 13/13 agent-frontmatter-gates pass after edits.
+
+### Iteration 2 (2026-04-18)
+- **Self-review:** CHANGES_REQUESTED - 2 blockers (CLI contract mismatch in stage-wave-verify.md:102; missing planning->in_progress transition in stage-phase-plan-review.md APPROVED path)
+- **Council (codex):** CHANGES_REQUESTED - same 2 blockers, broadened: **every** project-state.cjs invocation in beta docs uses wrong CLI contract (12 call sites across 5 files). Authoritative form is `set <node-type> <path> <status=X|scope=X> [--project <slug>]` and `abandon <node-type> <path> [--project <slug>]`.
+- **Action:** Normalized all 12 CLI invocations across 5 files (project.md x6, stage-project-intake.md, stage-project-complete.md, stage-wave-verify.md x4, stage-phase-plan-review.md x1 new). Added explicit `set phase ... status=in_progress` call to stage-phase-plan-review.md APPROVED path step 3 + updated caller contract line 10. Fixed inline rationale reference from transient task path to stable spec citation.
+- **Tests:** 241/241 project-side tests still pass.

@@ -130,3 +130,17 @@ Suggested fixes:
 | `missingField` | warning | Add field to config.json |
 | `noTasksFolder` | error | Run `mkdir -p .do/tasks` |
 | `staleActiveTask` | warning | Clear active_task or restore file |
+| `orphanedActiveProject` | error | Clear `active_project` in config.json or restore the project folder |
+| `activeProjectNoActivePhase` | warning | Run `/do:project phase new <slug>` or re-activate a phase |
+| `orphanedActivePhase` | error | Clear `active_phase` in project.md or restore the phase folder |
+| `orphanedActiveWave` | error | Clear `active_wave` in phase.md or restore the wave folder |
+| `orphanProjectFolder` | warning | Move folder to `.do/projects/completed/` or `.do/projects/archived/`, or set `active_project` |
+| `phaseStatusDrift` | info | Advisory only. Per `skills/do/project.md` §Authoritative state reads, `project.md.phases[]` is a scaffold-seeded snapshot and not kept in sync by `project-state.cjs`. Control-flow reads use `phase.md` leaves directly, so drift here is expected — the parent index is for display. Reconcile manually only if you want the index to reflect current leaf state |
+| `waveStatusDrift` | info | Advisory only. Same as phase drift — `phase.md.waves[]` is a scaffold-seeded snapshot. Control flow reads `wave.md` leaves. Reconcile manually only for display consistency |
+| `schemaVersionMismatch` | error | Run schema migration (v1 only, so this issue should not occur until v2 lands) |
+| `invalidScopeValue` | error | Set `scope` to `in_scope` or `out_of_scope` |
+| `illegalScopeTransition` | error | Set `status: blocked` or `abandoned` before setting `scope: out_of_scope` |
+| `missingHandoffFields` | warning | Ensure completed waves have `modified_files[]`, `unresolved_concerns[]`, `discovered_followups[]`, and a non-null `wave_summary` populated |
+| `illegalPhaseTransition` | error | Complete all in-scope waves before marking phase completed, or mark remaining waves `out_of_scope` |
+
+**Note on drift reconciliation.** α ships no automated drift-reconciliation command. `project-state.cjs status` is read-only; no `sync` op exists. β or a later phase may add `/do:project sync` or an equivalent reconciliation command. Until then, fixes for `phaseStatusDrift` and `waveStatusDrift` are manual edits to the affected frontmatter blocks.

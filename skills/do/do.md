@@ -22,6 +22,7 @@ Most coding tasks follow predictable patterns: initialize a project, scan for co
 | `/do:init` | Setting up a new project or checking workspace health |
 | `/do:scan` | Creating documentation for an existing codebase |
 | `/do:task` | Starting a new piece of work — smart router picks fast vs full automatically |
+| `/do:project` | Starting a large multi-phase project — new codebase or massive feature |
 | `/do:fast` | Mid-tier fast path — skip the router, run fast-path directly (1-3 files, no shared abstractions) |
 | `/do:quick` | Tightest tier — mid-conversation follow-ups where context is warm and change is 1-2 files, mechanical; single council review inline |
 | `/do:continue` | Resuming work from a previous session |
@@ -36,6 +37,7 @@ Most coding tasks follow predictable patterns: initialize a project, scan for co
 When the user invokes `/do` without specifying a sub-command, infer from context:
 
 **Examples:**
+- "let's start a new app from scratch" → `/do:project new "my-app"`
 - "I want to add user authentication" → `/do:task "add user authentication"`
 - "quick fix for the typo in the header" → `/do:fast "fix the typo in the header"`
 - "small tweak to the button color" → `/do:fast "update the button color in the theme config"`

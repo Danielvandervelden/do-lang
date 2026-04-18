@@ -83,6 +83,7 @@ test -d .do && test -f .do/config.json
 **Project creates:**
 - `.do/config.json` — Project settings (council, thresholds)
 - `.do/tasks/` — Task file storage
+- `.do/projects/` — Project artefacts for `/do:project` (project.md, phases/, waves/, changelog.md). Created at first `/do:project new`. Also recognised: `.do/projects/completed/` and `.do/projects/archived/`.
 
 ## Files
 

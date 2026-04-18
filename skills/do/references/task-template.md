@@ -3,6 +3,7 @@ id: {{TASK_ID}}
 created: {{CREATED_AT}}
 updated: {{CREATED_AT}}
 description: "{{DESCRIPTION}}"
+related: []
 
 # Stage tracking (linear by default)
 # Valid stages: refinement, grilling, execution, verification, verified, complete, abandoned

@@ -122,6 +122,25 @@
 
 (Add future backlog items below)
 
+### Agent compound learning — capture reviewer patterns to reduce iteration loops
+**id:** agent-compound-learning
+
+**Problem:** β's code review loop ran 21 iterations. Many findings were pattern-level mistakes that recurred across iterations: template-section name mismatches (iter 19), missing template sections (iter 20), shared-agent terminology drift (iter 17), parent-index staleness (iter 16). The planner and executioner have no mechanism to learn from past reviewer/council findings, so they repeat the same classes of errors on every new task.
+
+**Impact:** Each avoidable iteration costs ~5-10 minutes of agent time + context tokens. Over a large task like β, pattern-level mistakes that could have been avoided on first pass consumed significant review budget. The council and self-reviewer effectively re-discover the same lesson each time.
+
+**Fix:** Ship a `lessons-learned.md` (or structured equivalent) that accumulates reviewer findings categorized by pattern type (template-contract alignment, shared-agent terminology, state-reads architecture, section-naming). Planner and executioner load this as context when starting work. Key design decisions:
+1. **Capture mechanism:** After each ITERATE cycle, the orchestrator extracts the pattern category and appends a one-liner to `lessons-learned.md`
+2. **Staleness guard:** Lessons reference specific files/sections — if those are deleted/renamed, the lesson is auto-pruned or flagged
+3. **Context budget:** Cap at ~50 lessons; older ones compress or archive. Tradeoff: loading past mistakes costs tokens, stale lessons could mislead
+
+**Open questions:**
+- Per-project or workspace-global? Project-specific patterns (template names) vs. universal patterns (always check template-stage contract alignment)
+- Should council findings auto-promote to lessons, or require human curation?
+- Is a structured file better than a memory-system entry? (Memory is cross-conversation but not agent-loadable as context)
+
+---
+
 ### Auto-invoke /do:debug from do-executioner when bugs are encountered
 **id:** auto-debug-executioner
 
@@ -258,3 +277,41 @@ Append to the `## Ideas` section in the same structured format.
 
 ---
 
+### Review findings classifier — blockers re-spawn planner, nitpicks go inline
+**id:** review-findings-classifier
+
+**Problem:** `stage-plan-review.md` (and `stage-code-review.md` by analogy) treats every non-PASS verdict the same — any CONCERN returned by self-reviewer or council triggers a full `do-planner` / `do-executioner` re-spawn. That's ~45k opus tokens and ~3 minutes per round. In a healthy iteration, late rounds surface nitpicks (example-text corrections, missing one-line clarifications, fix-text wording) that a one-line Edit tool call would resolve. Observed live during Task α plan review: across 4 iterations, ~6 of ~12 findings were nitpicks that cost full planner spawns. The reviewers are doing the right thing — they're finding real residuals — but the response is over-sized for the severity.
+
+**Fix:** Extend `stage-plan-review.md` (and `stage-code-review.md`) with a finding-classification step BEFORE the ITERATE branch. Each reviewer finding gets a severity tag:
+- **blocker** — scope gap, unassigned responsibility, contradicts authoritative source, or a design-level ambiguity. Requires planner/executioner re-spawn with a structured patch brief.
+- **nitpick** — doc-text wording, missing example, typo, one-line clarification, or a fix that demonstrably changes no code path. Handle inline via Edit tool; log the inline patch in a dedicated "Review Iterations — Inline Patches" subsection.
+
+If the set of findings is all-nitpick: PASS the stage after inline application, no re-spawn. If any finding is a blocker: re-spawn planner with all findings (nitpicks included — the planner can batch them into the same patch pass). Keep the 3-iteration cap; nitpick-only passes don't count against it.
+
+Classification could be done by the orchestrator reading each finding's severity (reviewers already produce severity-ish language), or by adding an explicit `severity: blocker | nitpick` field to the reviewer output contract. Latter is cleaner but requires prompt changes in both `do-plan-reviewer.md` and the council-invoke codex prompt. Former is zero-config but relies on orchestrator judgment.
+
+Secondary surfaces to review once the core logic lands: `stage-code-review.md` (same pattern), `task.md` Step 6 + Step 10 (reference the new classification), possibly the `do-plan-reviewer` / `do-code-reviewer` output contracts (if explicit severity tagging is adopted).
+
+Scope: primarily `skills/do/references/stage-plan-review.md` + `skills/do/references/stage-code-review.md`, with optional reviewer-output-contract updates. Ship with tests covering: all-PASS (no-op), all-nitpick (inline + pass), mixed (re-spawn with full brief), all-blocker (re-spawn with full brief).
+
+---
+
+
+### Agent-behavior integration test harness — end-to-end `do-executioner` / `do-verifier` testing
+**id:** agent-behavior-harness
+
+**Problem:** Task β shipped `skills/do/scripts/__tests__/agent-frontmatter-gates.test.cjs` to lock down the frontmatter-presence-gated write contract for `do-executioner` and `do-verifier` (fields: `modified_files[]`, `discovered_followups[]`, `unresolved_concerns[]`, `wave_summary`, `active_task` clear gate). The tests are **spec-tests**: they exercise helper functions that reimplement the documented gate logic from the agent markdown. They do not actually run the agents against real fixture files, because agents are prose prompts, not executable code.
+
+This is honest and sufficient as a drift-check against the helper — but the original task β AC #11 asked for "behavioural tests" which these are not, strictly speaking. A real harness would spawn `do-executioner` / `do-verifier` in a fixture workspace, let each agent touch a prepared target file (task / phase / wave), and diff the result against a golden snapshot.
+
+**Fix:** Build an agent-behavior integration test harness. Scope sketch:
+- Fixture workspace generator (`mkdtempSync` based — same pattern as existing unit tests).
+- Harness runner: spawn a named agent with a deterministic prompt, capture the resulting file state.
+- Golden-snapshot diff model: record the expected post-state in a fixture file, compare the agent's actual output.
+- CI-viability note: agent spawning costs tokens + time; either stub the model layer (fast, no-token) or run the real agent behind a `CI_INTEGRATION=1` flag (slow, accurate).
+
+Secondary: once the harness exists, back-fill coverage for the β frontmatter-presence-gated write contract (replace or supplement `agent-frontmatter-gates.test.cjs` with real agent invocations) and extend to other agent specs (planner, griller, code-reviewer).
+
+Scope: new file `skills/do/scripts/lib/agent-harness.cjs` + a `__tests__/integration/` folder. Ship with one reference integration test exercising `do-executioner`'s `modified_files[]` write gate end-to-end. Flagged behind a CI env var so the unit-test suite stays fast.
+
+---

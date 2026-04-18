@@ -185,7 +185,29 @@ Apply single-review fallback in PR-4b (skip PR-4a).
    # phase approvals.
    ```
 
-4. **Promote phase to `in_progress` (planning → in_progress gate):** now that the plan is approved and the in-scope wave folders are seeded, transition the phase status so execution can begin:
+4. **Phase-pointer non-hijack guard (read `project.md.active_phase`):** If another phase is already active (`active_phase` is set to a different, non-null slug), this plan-review was triggered by `/do:project phase new` during an in-progress phase (planning a future phase while the current one is still active). In that case, **do NOT proceed to steps 5 and 6 below** (do not promote the phase to `in_progress`, do not rewrite `active_phase`). Write only the `council_review_ran.plan: true` frontmatter field on this phase, return control to caller, and let `/do:project phase complete` on the currently-active phase be what transitions the pointer to this one.
+
+   ```bash
+   CURRENT_ACTIVE_PHASE=$(node -e "
+   const fm = require('gray-matter'), fs = require('fs');
+   const doc = fm(fs.readFileSync('.do/projects/<active_project>/project.md', 'utf8'));
+   process.stdout.write(doc.data.active_phase || '');
+   ")
+
+   if [ -n "$CURRENT_ACTIVE_PHASE" ] && [ "$CURRENT_ACTIVE_PHASE" != "<phase_slug>" ]; then
+     # Another phase is currently active — this is a future-phase-plan-review
+     # from `phase new` during an in-progress phase. Do NOT promote or hijack.
+     echo "$(date -Iseconds) plan-approved-for-future-phase:<phase_slug>  active_phase=$CURRENT_ACTIVE_PHASE remains (no hijack)" \
+       >> .do/projects/<active_project>/changelog.md
+     # Return control to caller without executing steps 5–6.
+     exit 0
+   fi
+   # Else: active_phase is null (first phase approval, or phase-complete just cleared it)
+   # or equals <phase_slug> (idempotent re-approval on the currently-owned phase).
+   # Proceed to steps 5 + 6.
+   ```
+
+5. **Promote phase to `in_progress` (planning → in_progress gate):** now that the plan is approved, the in-scope wave folders are seeded, AND the phase-pointer guard confirmed no other phase currently owns the pointer, transition the phase status so execution can begin:
    ```bash
    node ~/.claude/commands/do/scripts/project-state.cjs set phase <phase_slug> status=in_progress --project <active_project>
    ```

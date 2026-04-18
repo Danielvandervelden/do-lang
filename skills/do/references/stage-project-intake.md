@@ -199,6 +199,34 @@ Return summary of sections populated.
 })
 ```
 
+**Wait for `do-planner` to complete before proceeding.** The `Agent(...)` call is synchronous in the orchestrator — do NOT fire-and-forget. PI-7 (status advance) and PI-8 (handoff to plan review) both depend on `project.md`'s body sections being populated. Advancing to `planning` or handing off to `stage-project-plan-review.md` before the planner has curated the body would put the project into plan review with empty sections, causing the reviewer to reject on missing content.
+
+---
+
+## PI-6b: Verify Planner Output
+
+After the PI-6 spawn returns, confirm the curated sections actually landed. This is a cheap sanity gate that catches silent-failure cases (planner returned summary but didn't Edit the file, or Edit partially failed):
+
+```bash
+node -e "
+const fm = require('gray-matter'), fs = require('fs');
+const doc = fm(fs.readFileSync('<project_path>', 'utf8'));
+const required = ['## Vision', '## Target Users', '## Non-Goals', '## Success Criteria', '## Constraints', '## Risks', '## Phase Plan'];
+const missing = required.filter(h => !doc.content.includes(h));
+if (missing.length > 0) {
+  console.error('Planner did not populate: ' + missing.join(', '));
+  process.exit(1);
+}
+if (!doc.data.title) {
+  console.error('Planner did not set frontmatter title');
+  process.exit(1);
+}
+console.log('planner-output-ok');
+"
+```
+
+If this check fails, stop and surface the missing sections to the user. Do NOT proceed to PI-7 — the project must not advance to `planning` with incomplete curation. The user can then: re-spawn the planner, fill sections manually, or abandon.
+
 ---
 
 ## PI-7: Advance project.md Status

@@ -165,19 +165,24 @@ Apply single-review fallback in PR-4b (skip PR-4a).
    ```
    Skip any wave that already has a folder. Append changelog entry per wave seeded.
 
-3. **Promote project to `in_progress` (first-phase-approval gate, idempotent):** read `project.md` status. If it is still `planning`, promote it now — this is the single authoritative place the project transitions out of `planning`, without which `/do:project complete` will hard-fail later (α's state machine only allows `project: in_progress → completed`).
+3. **Promote project to `in_progress` (first-phase-approval gate, idempotent):** read `project.md` status. If it is still `planning`, promote it now — this is the single authoritative place the project transitions out of `planning`, without which `/do:project complete` will hard-fail later (α's state machine only allows `project: in_progress → completed`). On the 2nd, 3rd, Nth phase approval the project is already `in_progress`, so this step **must be a true shell no-op** (exit 0, no promotion call, no changelog write).
 
    ```bash
-   node -e "
+   CURRENT_STATUS=$(node -e "
    const fm = require('gray-matter'), fs = require('fs');
    const proj = fm(fs.readFileSync('.do/projects/<active_project>/project.md', 'utf8'));
-   process.exit(proj.data.status === 'planning' ? 0 : 1);
-   " && node ~/.claude/commands/do/scripts/project-state.cjs set project <active_project> status=in_progress
-   ```
+   process.stdout.write(proj.data.status);
+   ")
 
-   The exit-1 branch (project already `in_progress` from a prior phase approval) is intentional — this step is a no-op on the 2nd, 3rd, Nth phase approval. Append changelog only when the transition actually fired:
-   ```
-   <ISO> status-change:project:<active_project>: planning -> in_progress (reason: first phase approved — stage-phase-plan-review)
+   if [ "$CURRENT_STATUS" = "planning" ]; then
+     node ~/.claude/commands/do/scripts/project-state.cjs set project <active_project> status=in_progress
+     # Append changelog ONLY when the transition fired:
+     echo "$(date -Iseconds) status-change:project:<active_project>: planning -> in_progress (reason: first phase approved — stage-phase-plan-review)" \
+       >> .do/projects/<active_project>/changelog.md
+   fi
+   # Any other status: silent no-op. Exit 0 regardless — do NOT use && chaining,
+   # which would propagate the skip-path as a shell failure and break non-first
+   # phase approvals.
    ```
 
 4. **Promote phase to `in_progress` (planning → in_progress gate):** now that the plan is approved and the in-scope wave folders are seeded, transition the phase status so execution can begin:

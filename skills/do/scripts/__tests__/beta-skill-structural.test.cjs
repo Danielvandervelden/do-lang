@@ -60,7 +60,7 @@ describe('β skill file: skills/do/project.md', () => {
     assert.ok(fm.data.description && fm.data.description.length > 20);
   });
 
-  it('declares all 8 subcommand handlers per orchestrator §14', () => {
+  it('declares all top-level + nested subcommand handlers per orchestrator §14 (incl. γ resume stub)', () => {
     const required = ['### `new ', '### `status`', '### `complete`', '### `abandon`', '### `resume`'];
     for (const h of required) {
       assert.ok(content.includes(h), `missing section: ${h}`);
@@ -132,29 +132,23 @@ describe('β stage references: required preamble + invariants', () => {
     describe(name, () => {
       let content;
       before(() => {
-        if (!fs.existsSync(stageFile)) {
-          // stage-wave-plan-review / stage-wave-code-review / stage-project-plan-review
-          // may not exist yet — skip gracefully.
-          return;
-        }
+        assert.ok(fs.existsSync(stageFile),
+          `β stage reference missing: ${name} — all 8 β stage references must exist`);
         content = read(stageFile);
       });
 
       it('has frontmatter with name + description', () => {
-        if (!content) return; // skipped
         const fm = matter(content);
         assert.ok(fm.data.name, `${name} missing frontmatter.name`);
         assert.ok(fm.data.description, `${name} missing frontmatter.description`);
       });
 
       it('declares caller contract', () => {
-        if (!content) return;
         assert.ok(/Caller contract:/i.test(content),
           `${name} must declare a caller contract`);
       });
 
       it('uses documented CLI form for project-state.cjs invocations', () => {
-        if (!content) return;
         // Find every `project-state.cjs ...` line and check it matches the contract
         const lines = content.split('\n').filter(l => /project-state\.cjs\s+(set|abandon|status)/.test(l));
         for (const line of lines) {
@@ -252,7 +246,7 @@ describe('β backlog integration: skill-documented patterns present in project.m
 
   it('stage-wave-verify documents /do:backlog done cleanup trigger', () => {
     const f = path.join(STAGE_DIR, 'stage-wave-verify.md');
-    if (!fs.existsSync(f)) return;
+    assert.ok(fs.existsSync(f), 'stage-wave-verify.md must exist');
     const content = read(f);
     assert.ok(/\/do:backlog\s+done/.test(content),
       'stage-wave-verify must document /do:backlog done cleanup on success path');

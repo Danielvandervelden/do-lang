@@ -277,3 +277,22 @@ Scope: primarily `skills/do/references/stage-plan-review.md` + `skills/do/refere
 
 ---
 
+
+### Agent-behavior integration test harness — end-to-end `do-executioner` / `do-verifier` testing
+**id:** agent-behavior-harness
+
+**Problem:** Task β shipped `skills/do/scripts/__tests__/agent-frontmatter-gates.test.cjs` to lock down the frontmatter-presence-gated write contract for `do-executioner` and `do-verifier` (fields: `modified_files[]`, `discovered_followups[]`, `unresolved_concerns[]`, `wave_summary`, `active_task` clear gate). The tests are **spec-tests**: they exercise helper functions that reimplement the documented gate logic from the agent markdown. They do not actually run the agents against real fixture files, because agents are prose prompts, not executable code.
+
+This is honest and sufficient as a drift-check against the helper — but the original task β AC #11 asked for "behavioural tests" which these are not, strictly speaking. A real harness would spawn `do-executioner` / `do-verifier` in a fixture workspace, let each agent touch a prepared target file (task / phase / wave), and diff the result against a golden snapshot.
+
+**Fix:** Build an agent-behavior integration test harness. Scope sketch:
+- Fixture workspace generator (`mkdtempSync` based — same pattern as existing unit tests).
+- Harness runner: spawn a named agent with a deterministic prompt, capture the resulting file state.
+- Golden-snapshot diff model: record the expected post-state in a fixture file, compare the agent's actual output.
+- CI-viability note: agent spawning costs tokens + time; either stub the model layer (fast, no-token) or run the real agent behind a `CI_INTEGRATION=1` flag (slow, accurate).
+
+Secondary: once the harness exists, back-fill coverage for the β frontmatter-presence-gated write contract (replace or supplement `agent-frontmatter-gates.test.cjs` with real agent invocations) and extend to other agent specs (planner, griller, code-reviewer).
+
+Scope: new file `skills/do/scripts/lib/agent-harness.cjs` + a `__tests__/integration/` folder. Ship with one reference integration test exercising `do-executioner`'s `modified_files[]` write gate end-to-end. Flagged behind a CI env var so the unit-test suite stays fast.
+
+---

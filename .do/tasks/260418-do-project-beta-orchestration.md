@@ -1,7 +1,7 @@
 ---
 id: 260418-do-project-beta-orchestration
 created: 2026-04-18T13:53:57.000Z
-updated: '2026-04-18T14:38:39.184Z'
+updated: '2026-04-18T14:43:25.869Z'
 description: >-
   Implement Task β (project-orchestration) for /do:project — ship the skill +
   stage references + subcommand routing that sit on top of Task α's contract.
@@ -99,7 +99,7 @@ Verbatim scope from orchestrator §14 L873-915 ("Task β — project-orchestrati
 8. `/do:project phase complete` runs the state transition and prints "Handoff artefact pending (Task γ)" in place of the render step (γ hasn't shipped yet).
 9. `/do:task` smoke test on a known existing task passes post-edit — agent generalisation has not regressed the task pipeline.
 10. Structural assertions pass on every new skill / stage-reference file: required sections present, correct preamble shape, no stale `/do:task` / `.do/tasks/` literals.
-11. New behavioural tests for `do-executioner` and `do-verifier`: with frontmatter arrays present → writes happen; with arrays absent → no-op.
+11. New frontmatter-presence-gated write **spec-tests** for `do-executioner` and `do-verifier` contract (helper reimplementations of the documented gate logic, since agent markdown is not executable). Covers both presence → writes-happen and absence → no-op cases for all five gated fields. Real agent-behavior integration harness is explicitly out of β scope and tracked as backlog item `agent-behavior-harness`.
 
 ## Clarifications
 
@@ -360,3 +360,15 @@ Quoting orchestrator §14 L899-909 verbatim as spec:
   2. stage-project-intake.md Pass-1 griller prompt rewritten to enumerate the three stop conditions explicitly (>= threshold OR 10 questions asked OR user override), removing the ambiguous "reaches" phrasing.
   3. agent-frontmatter-gates.test.cjs header updated with honest framing: these are spec-tests documenting the gate contract in code form, not agent-behavior integration tests. Real agent-behavior harness deferred to later task.
 - **Tests:** 13/13 still pass after framing update (no test logic changed).
+
+### Iteration 4 (2026-04-18)
+- **Self-review:** NITPICKS_ONLY (one nitpick: Pass-2 header in stage-project-intake.md:50 misleading prose vs PI-4 authoritative flow)
+- **Council (codex):** CHANGES_REQUESTED - 2 findings:
+  1. AC #11 language overstates coverage - "behavioural tests" vs helper spec-tests actually shipped
+  2. stage-wave-exec.md:76 Option 3 "edit wave.md scope field manually" bypasses state-machine and parent phase.md waves[] index update (same bug pattern as iter-1 fixed in stage-wave-verify.md)
+- **Action:**
+  1. stage-wave-exec.md Option 3 rewritten to use the same legal two-step (status->blocked, scope->out_of_scope) + parent phase.md waves[] index update + active_wave clear + two changelog lines, matching stage-wave-verify.md Option 4. Explicit "Do NOT hand-edit wave.md" warning added.
+  2. stage-project-intake.md Pass-2 header retitled to "(3 questions - always runs after Pass 1)" with prose explaining the threshold gates nothing about Pass 2 execution.
+  3. AC #11 rewritten: "frontmatter-presence-gated write spec-tests" with explicit note that agent markdown is not executable and real integration harness is out of beta scope (tracked as backlog item agent-behavior-harness).
+  4. New backlog item agent-behavior-harness filed in .do/BACKLOG.md for real end-to-end agent testing infrastructure.
+- **Tests:** 13/13 agent-frontmatter-gates still pass (no logic change).

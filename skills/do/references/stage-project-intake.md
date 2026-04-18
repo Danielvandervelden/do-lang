@@ -45,9 +45,9 @@ Questions target the four confidence factors. Ask one at a time. Write each Q&A 
 | 9 | context | "Is there an existing codebase or greenfield? If existing, describe the tech stack and main architectural patterns." |
 | 10 | scope | "Is there a 'minimum viable' milestone? What's the smallest thing you could ship that delivers real value?" |
 
-### Pass 2 — Phase Seed (3 questions)
+### Pass 2 — Phase Seed (3 questions — always runs after Pass 1)
 
-After Pass 1 threshold met:
+Pass 2 runs unconditionally after Pass 1 completes (see PI-4 / PI-5). The threshold in PI-4 gates nothing about Pass 2 execution — it only records whether Pass 1 ended satisfied or via override. Pass 2 questions:
 
 | # | Factor | Question |
 |---|--------|----------|

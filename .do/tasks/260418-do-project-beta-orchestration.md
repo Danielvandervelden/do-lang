@@ -585,3 +585,15 @@ What this smoke test does NOT cover: a live end-to-end `/do:task` spawn through 
   3. Updated `stage-project-intake.md` PI-6 planner prompt to explicitly instruct replacing body H1 `# {{TITLE}}` with the project title, with a note that PI-6b rejects leftover placeholders.
 - **Tests:** No code changes (doc-only fixes to skill stage references). 50/50 from iter 16 remains current.
 - **Files changed (4):** `skills/do/references/stage-phase-plan-review.md` (PR-2b added), `skills/do/references/stage-wave-plan-review.md` (PR-2b added), `skills/do/references/stage-project-intake.md` (PI-6 H1 instruction), this iteration log.
+
+### Iteration 19 (2026-04-18)
+- **Self-review:** APPROVED — iter-18 PR-2b additions and PI-6 fix verified correct.
+- **Council (codex):** CHANGES_REQUESTED — two ITERATE-path planner prompts reference wrong section names:
+  1. `stage-phase-plan-review.md:318` tells planner to update "Goal, Wave Plan, Acceptance Criteria, and/or Risks" — phase template has "Goal, Entry Criteria, Exit Criteria, Wave Plan, Concerns". Two wrong names.
+  2. `stage-project-plan-review.md:206` tells planner to update "Vision, Phase Plan, Success Criteria, Risks, and/or Concerns" — project template has no "Concerns" section (it uses "Risks") and is missing "Target Users", "Non-Goals", "Constraints" from the section list.
+- **Action:**
+  1. `stage-phase-plan-review.md:318`: "Acceptance Criteria" → "Entry Criteria, Exit Criteria" and "Risks" → "Concerns" to match phase-template.md sections exactly.
+  2. `stage-project-plan-review.md:206`: replaced with full section list from project-master-template.md: "Vision, Target Users, Non-Goals, Success Criteria, Constraints, Risks, and/or Phase Plan". Dropped "Concerns" (not in template).
+  3. Verified stage-wave-plan-review.md ITERATE prompt — already correct ("Problem Statement, Approach, and/or Concerns" matches wave-template.md).
+- **Tests:** Doc-only fixes. 50/50 from iter 16 remains current.
+- **Files changed (3):** `stage-phase-plan-review.md` (ITERATE prompt), `stage-project-plan-review.md` (ITERATE prompt), this iteration log.

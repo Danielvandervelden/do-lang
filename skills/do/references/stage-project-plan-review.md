@@ -203,9 +203,9 @@ Return control to caller (continue to next step).
    Target file: <project_path>
    Reviewer feedback: <combined findings from self-review and council>
 
-   Update the Vision, Phase Plan, Success Criteria, Risks, and/or Concerns
-   sections to address the issues listed. Do not change the project slug or
-   frontmatter metadata (project_schema_version, status, etc.).
+   Update the Vision, Target Users, Non-Goals, Success Criteria, Constraints,
+   Risks, and/or Phase Plan sections to address the issues listed. Do not change
+   the project slug or frontmatter metadata (project_schema_version, status, etc.).
    Return a summary of changes made.
    `
    })

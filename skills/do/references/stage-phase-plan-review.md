@@ -315,9 +315,9 @@ Apply single-review fallback in PR-4b (skip PR-4a).
    Target file: <phase_path>
    Reviewer feedback: <combined findings from self-review and council>
 
-   Update the Goal, Wave Plan, Acceptance Criteria, and/or Risks sections to
-   address the issues. Do not change the phase slug or frontmatter metadata
-   (status, scope, project_schema_version, etc.).
+   Update the Goal, Entry Criteria, Exit Criteria, Wave Plan, and/or Concerns
+   sections to address the issues. Do not change the phase slug or frontmatter
+   metadata (status, scope, project_schema_version, etc.).
    Return a summary of changes made.
    `
    })

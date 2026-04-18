@@ -258,3 +258,22 @@ Append to the `## Ideas` section in the same structured format.
 
 ---
 
+### Review findings classifier — blockers re-spawn planner, nitpicks go inline
+**id:** review-findings-classifier
+
+**Problem:** `stage-plan-review.md` (and `stage-code-review.md` by analogy) treats every non-PASS verdict the same — any CONCERN returned by self-reviewer or council triggers a full `do-planner` / `do-executioner` re-spawn. That's ~45k opus tokens and ~3 minutes per round. In a healthy iteration, late rounds surface nitpicks (example-text corrections, missing one-line clarifications, fix-text wording) that a one-line Edit tool call would resolve. Observed live during Task α plan review: across 4 iterations, ~6 of ~12 findings were nitpicks that cost full planner spawns. The reviewers are doing the right thing — they're finding real residuals — but the response is over-sized for the severity.
+
+**Fix:** Extend `stage-plan-review.md` (and `stage-code-review.md`) with a finding-classification step BEFORE the ITERATE branch. Each reviewer finding gets a severity tag:
+- **blocker** — scope gap, unassigned responsibility, contradicts authoritative source, or a design-level ambiguity. Requires planner/executioner re-spawn with a structured patch brief.
+- **nitpick** — doc-text wording, missing example, typo, one-line clarification, or a fix that demonstrably changes no code path. Handle inline via Edit tool; log the inline patch in a dedicated "Review Iterations — Inline Patches" subsection.
+
+If the set of findings is all-nitpick: PASS the stage after inline application, no re-spawn. If any finding is a blocker: re-spawn planner with all findings (nitpicks included — the planner can batch them into the same patch pass). Keep the 3-iteration cap; nitpick-only passes don't count against it.
+
+Classification could be done by the orchestrator reading each finding's severity (reviewers already produce severity-ish language), or by adding an explicit `severity: blocker | nitpick` field to the reviewer output contract. Latter is cleaner but requires prompt changes in both `do-plan-reviewer.md` and the council-invoke codex prompt. Former is zero-config but relies on orchestrator judgment.
+
+Secondary surfaces to review once the core logic lands: `stage-code-review.md` (same pattern), `task.md` Step 6 + Step 10 (reference the new classification), possibly the `do-plan-reviewer` / `do-code-reviewer` output contracts (if explicit severity tagging is adopted).
+
+Scope: primarily `skills/do/references/stage-plan-review.md` + `skills/do/references/stage-code-review.md`, with optional reviewer-output-contract updates. Ship with tests covering: all-PASS (no-op), all-nitpick (inline + pass), mixed (re-spawn with full brief), all-blocker (re-spawn with full brief).
+
+---
+

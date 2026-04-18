@@ -4,11 +4,19 @@
   "database_entry": false,
   "active_task": null,
   "active_debug": null,
+  "active_project": null,
   "auto_grill_threshold": 0.9,
+  "project_intake_threshold": 0.85,
   "council_reviews": {
     "planning": true,
     "execution": true,
-    "reviewer": "random"
+    "reviewer": "random",
+    "project": {
+      "plan": true,
+      "phase_plan": true,
+      "wave_plan": true,
+      "code": true
+    }
   },
   "web_search": {
     "context7": true

@@ -109,7 +109,7 @@ After each answer, check if confidence >= threshold. The threshold comes from th
 node -e "const c=require('./.do/config.json'); console.log(c.auto_grill_threshold || 0.9)"
 ```
 
-**Why task-safe:** `/do:task` and `/do:continue` spawn do-griller without an explicit `Threshold:` value and expect `auto_grill_threshold` (default 0.9). `/do:project` and its stage references (`stage-project-intake.md` PI-2 + PI-5, per-phase re-grill at `project.md` phase-complete step 6, per-wave confidence rescue in `stage-wave-exec.md`) always pass `Threshold: <project_intake_threshold>` explicitly. Falling back to `project_intake_threshold` here would silently change `/do:task` grilling behavior in any workspace that also configures project intake. Only the task fallback is used — project callers are responsible for passing the value.
+**Why task-safe:** `/do:task` and `/do:continue` spawn do-griller without an explicit `Threshold:` value and expect `auto_grill_threshold` (default 0.9). `/do:project` and its stage references (`stage-project-intake.md` PI-2 + PI-5, per-phase re-grill in `skills/do/project.md` phase-complete handler step 6, per-wave confidence rescue in `skills/do/project.md` wave-next handler step 8) always pass `Threshold: <project_intake_threshold>` explicitly. Falling back to `project_intake_threshold` here would silently change `/do:task` grilling behavior in any workspace that also configures project intake. Only the task fallback is used — project callers are responsible for passing the value.
 
 - If threshold reached: Stop grilling, return success
 - If more questions needed: Continue to next question

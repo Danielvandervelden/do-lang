@@ -189,62 +189,21 @@ Write `completion-summary.md` to `.do/projects/<active_project>/completion-summa
 
 ---
 
-## PC-5: Advance Project State
+## PC-5: Advance Project State (single-owner transition)
+
+**`project-state.cjs set project <slug> status=completed` already performs the full completion transition:** (a) validates all in-scope phases are `completed` (blocks if not), (b) pre-flight-checks for `completedDestinationExists` in `.do/projects/completed/<slug>/`, (c) writes `status: completed` + fresh `updated` timestamp to `project.md`, (d) `fs.renameSync` the project folder into `.do/projects/completed/<slug>/`, (e) clears `config.active_project` to `null` if it matches the slug. All atomic, all in one script invocation. Do NOT re-implement these side effects inline — α's script is the single owner.
 
 ```bash
 node ~/.claude/commands/do/scripts/project-state.cjs set project <active_project> status=completed
 ```
 
-Update `project.md` frontmatter:
-```yaml
-status: completed
-updated: <ISO timestamp>
-```
+The script appends its own state-transition changelog line before renaming the folder. No additional changelog write is needed here.
 
-Append changelog: `<ISO> complete:project:<active_project>`.
+**If the script fails** (e.g. `illegalTransition` because an in-scope phase isn't complete, or `completedDestinationExists`): surface the error JSON to the user and stop. Do not proceed to PC-6.
 
 ---
 
-## PC-6: Archive Project Folder
-
-Create the `completed/` directory if needed and move the project folder:
-
-```bash
-mkdir -p .do/projects/completed/
-node -e "
-const fs = require('fs');
-const src = '.do/projects/<active_project>';
-const dst = '.do/projects/completed/<active_project>';
-if (fs.existsSync(dst)) {
-  console.error('Archive destination exists: ' + dst);
-  process.exit(1);
-}
-fs.renameSync(src, dst);
-console.log('Archived: ' + dst);
-"
-```
-
-If destination exists, stop and report the collision — do not overwrite.
-
----
-
-## PC-7: Clear active_project
-
-```bash
-node -e "
-const fs = require('fs'), os = require('os'), path = require('path');
-const cfg = JSON.parse(fs.readFileSync('.do/config.json', 'utf8'));
-cfg.active_project = null;
-const tmp = path.join(os.tmpdir(), 'config-' + Date.now() + '.json');
-fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2));
-fs.renameSync(tmp, '.do/config.json');
-console.log('active_project cleared');
-"
-```
-
----
-
-## PC-8: Display Completion Summary
+## PC-6: Display Completion Summary
 
 ```
 Project `<active_project>` complete.

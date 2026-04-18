@@ -164,7 +164,27 @@ Run Phase-Complete State Transition:
 
 5. **Promote next phase (planning-gate preserved):** find next in-scope phase in `project.md`'s `phases[]` with `status: planning`. If found (non-terminal): set `active_phase: <next_phase_slug>` in `project.md` but **leave the phase's `status` at `planning`**. The phase transitions to `in_progress` only after `stage-phase-plan-review.md` approves the plan and the user explicitly starts a wave under it. This preserves the planning gate per `project-state-machine.md` §(c) and the orchestrator contract (§6). If no planning phase remains (terminal): set `active_phase: null` (do NOT auto-complete project — user runs `/do:project complete`).
 
-6. **Per-phase re-grill (Pass 3):** if a next phase was found, read its `phase.md` confidence score. If below `project_intake_threshold`, spawn `do-griller` against next phase's `phase.md` before firing `stage-phase-plan-review.md`. If at/above threshold, proceed directly to `stage-phase-plan-review.md`. Both paths run with the phase at `planning` — that stage reference is what promotes it to `in_progress` after plan approval.
+6. **Per-phase re-grill (Pass 3):** if a next phase was found, read its `phase.md` confidence score. If below `project_intake_threshold`, spawn `do-griller` against next phase's `phase.md`; the `Threshold:` field in the prompt MUST be the project threshold (the fallback in `do-griller` is task-safe, so callers who want `project_intake_threshold` must pass it explicitly):
+
+   ```javascript
+   Agent({
+     description: "Per-phase re-grill (Pass 3)",
+     subagent_type: "do-griller",
+     model: "<models.overrides.griller || models.default>",
+     prompt: `
+   Phase confidence is below threshold. Ask clarifying questions to raise confidence for the upcoming phase.
+
+   Target file: .do/projects/<active_project>/phases/<next_phase_slug>/phase.md
+   Current confidence: <score>
+   Threshold: <project_intake_threshold>
+
+   Ask targeted questions for lowest-scoring factors (scope, dependencies, acceptance criteria).
+   Update confidence after each answer. Stop when threshold reached, all 10 questions asked, or user overrides ("proceed anyway").
+   `
+   })
+   ```
+
+   After re-grill returns (or immediately if already at/above threshold), invoke `@references/stage-phase-plan-review.md` for the next phase. Both paths run with the phase at `planning` — that stage reference is what promotes it to `in_progress` after plan approval **and** sets `project.md.active_phase = <next_phase_slug>`.
 
 7. Print:
    ```

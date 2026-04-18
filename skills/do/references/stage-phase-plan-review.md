@@ -7,7 +7,7 @@ description: "Phase plan review block for /do:project. Council gate check, paral
 
 This reference file is loaded by `skills/do/project.md` when a phase enters planning (after `phase new` or after the per-phase re-grill). It encodes the full plan review logic for `phase.md` including wave-seeding on approval.
 
-**Caller contract:** The caller provides `<phase_path>` = abs path to `phase.md`, `<active_project>` slug, and `<phase_slug>`. When this stage returns APPROVED, three writes have landed: (1) `council_review_ran.plan: true` in `phase.md`'s frontmatter, (2) all in-scope wave folders seeded via `project-scaffold.cjs wave`, and (3) phase `status: planning → in_progress` via `project-state.cjs set phase ... status=in_progress`. Return control to caller. If ESCALATE or MAX_ITERATIONS, stop and present to the user.
+**Caller contract:** The caller provides `<phase_path>` = abs path to `phase.md`, `<active_project>` slug, and `<phase_slug>`. When this stage returns APPROVED, four writes have landed: (1) `council_review_ran.plan: true` in `phase.md`'s frontmatter, (2) all in-scope wave folders seeded via `project-scaffold.cjs wave`, (3) phase `status: planning → in_progress` via `project-state.cjs set phase ... status=in_progress`, and (4) `active_phase: <phase_slug>` set atomically on `project.md`. Return control to caller. If ESCALATE or MAX_ITERATIONS, stop and present to the user.
 
 ---
 
@@ -174,7 +174,24 @@ Apply single-review fallback in PR-4b (skip PR-4a).
    <ISO> status-change:phase:<phase_slug>: planning -> in_progress (stage-phase-plan-review approved)
    ```
 
-4. Return control to caller.
+4. **Activate phase pointer on project.md:** `/do:project wave new` and `/do:project wave next` both read `active_phase` from `project.md` to know which phase to target. After this approval is the moment that pointer becomes authoritative. Atomic temp-file + rename on `project.md`:
+   ```javascript
+   const fm = require('gray-matter'), fs = require('fs'), os = require('os'), path = require('path');
+   const projPath = '.do/projects/<active_project>/project.md';
+   const doc = fm(fs.readFileSync(projPath, 'utf8'));
+   doc.data.active_phase = '<phase_slug>';
+   doc.data.updated = new Date().toISOString();
+   const tmp = path.join(os.tmpdir(), 'project-' + Date.now() + '.md');
+   fs.writeFileSync(tmp, fm.stringify(doc.content, doc.data));
+   fs.renameSync(tmp, projPath);
+   ```
+   Append changelog:
+   ```
+   <ISO> activate:active_phase:project:<active_project>  phase:<phase_slug>  reason: stage-phase-plan-review approved
+   ```
+   This closes the otherwise-silent gap where `project-scaffold.cjs project` initialises `active_phase: null` and no earlier step in the phase new → plan review flow sets it. Without this write, `wave new` and `wave next` would find `active_phase: null` and fail.
+
+5. Return control to caller.
 
 ### If ITERATE (and review_iterations < 3)
 

@@ -162,7 +162,7 @@ stages:
 ```markdown
 ## EXECUTION COMPLETE
 
-**Task:** <task-file-path>
+**Target:** <target-file-path>
 **Steps:** <completed>/<total>
 
 ### Files Modified
@@ -212,6 +212,6 @@ Execution complete when:
 - [ ] All Approach steps executed (or blocked with clear reason)
 - [ ] Each step logged with files and decisions
 - [ ] Deviations handled appropriately
-- [ ] Task file updated with complete Execution Log
+- [ ] Target file updated with complete Execution Log
 - [ ] Summary returned to orchestrator
 </success_criteria>

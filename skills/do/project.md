@@ -155,9 +155,9 @@ Run Phase-Complete State Transition:
 
 4. **Backlog cleanup:** read `phase.md` `backlog_item`. If non-null, invoke `/do:backlog done <id>`. Log: "Removed backlog item `<id>` from BACKLOG.md."
 
-5. **Promote next phase:** find next in-scope phase in `project.md`'s `phases[]` with `status: planning`. If found (non-terminal): set `status: in_progress`, set `active_phase: <next_phase_slug>` in `project.md`. If none (terminal): set `active_phase: null` (do NOT auto-complete project — user runs `/do:project complete`).
+5. **Promote next phase (planning-gate preserved):** find next in-scope phase in `project.md`'s `phases[]` with `status: planning`. If found (non-terminal): set `active_phase: <next_phase_slug>` in `project.md` but **leave the phase's `status` at `planning`**. The phase transitions to `in_progress` only after `stage-phase-plan-review.md` approves the plan and the user explicitly starts a wave under it. This preserves the planning gate per `project-state-machine.md` §(c) and the orchestrator contract (§6). If no planning phase remains (terminal): set `active_phase: null` (do NOT auto-complete project — user runs `/do:project complete`).
 
-6. **Per-phase re-grill (Pass 3):** if a next phase was found, read its `phase.md` confidence score. If below `project_intake_threshold`, spawn `do-griller` against next phase's `phase.md` before firing `stage-phase-plan-review.md`. If at/above threshold, proceed directly to `stage-phase-plan-review.md`.
+6. **Per-phase re-grill (Pass 3):** if a next phase was found, read its `phase.md` confidence score. If below `project_intake_threshold`, spawn `do-griller` against next phase's `phase.md` before firing `stage-phase-plan-review.md`. If at/above threshold, proceed directly to `stage-phase-plan-review.md`. Both paths run with the phase at `planning` — that stage reference is what promotes it to `in_progress` after plan approval.
 
 7. Print:
    ```
@@ -194,7 +194,8 @@ Parse `argv[1]` ∈ `{new, complete, abandon, next}`:
    node ~/.claude/commands/do/scripts/project-state.cjs set wave <active_project> <active_phase> <slug> completed
    ```
 2. Append changelog: `<ISO> complete:wave:<slug>`.
-3. **Backlog cleanup:** read `wave.md` `backlog_item`. If non-null, invoke `/do:backlog done <id>`. Log: "Removed backlog item `<id>` from BACKLOG.md."
+
+> **No backlog cleanup here.** Wave-backed backlog cleanup runs exclusively in the two trigger points locked by the Task β contract: (a) `stage-wave-verify.md` success path (WV-3 step 4), and (b) `phase complete`'s phase-level cleanup (which reads `phase.md`'s `backlog_item`). Adding it to the manual `wave complete <slug>` command would let a user mark a backlog item done before the wave has actually been verified — see `.do/tasks/260418-do-project-orchestrator.md` §11.
 
 #### `wave abandon <slug>`
 

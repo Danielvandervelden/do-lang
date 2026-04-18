@@ -161,7 +161,7 @@ Deduplicate. Sort by path. Group by phase.
 ```bash
 node -e "
 const fm = require('gray-matter');
-const fs = require('fs'), path = require('path'), glob = require('fs');
+const fs = require('fs'), path = require('path');
 // Collect modified_files from all wave.md files
 const basePath = '.do/projects/<active_project>/phases';
 const phases = fs.readdirSync(basePath).filter(d => fs.statSync(path.join(basePath, d)).isDirectory());

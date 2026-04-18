@@ -92,10 +92,24 @@ Wait for user response:
   - Call `project-state.cjs abandon wave <active_project> <phase_slug> <wave_slug>`
   - Append changelog: `<ISO> abandon:wave:<wave_slug>: verification-failed`
   - Display: "Wave `<wave_slug>` abandoned. Run `/do:project wave next` to start the next planning wave, or `/do:project wave new <slug>` to create a replacement."
-- **Option 4 (Out of scope):**
-  - Update `wave.md` frontmatter: `scope: out_of_scope` (atomic)
-  - Append changelog: `<ISO> scope-change:wave:<wave_slug>: in_scope -> out_of_scope (verification-failed)`
-  - Display: "Wave `<wave_slug>` marked out of scope. It will not count toward phase completion. Run `/do:project wave next` to continue."
+- **Option 4 (Out of scope):** The authoritative state machine forbids `in_scope → out_of_scope` while the wave is `in_progress`. This option therefore takes TWO legal transitions and updates the parent phase's `waves[]` index. Run in order:
+  1. **Transition wave status `in_progress → blocked`** (legal per `project-state-machine.md` §(c)):
+     ```bash
+     node ~/.claude/commands/do/scripts/project-state.cjs set wave <active_project> <phase_slug> <wave_slug> blocked
+     ```
+  2. **Transition wave scope `in_scope → out_of_scope`** (now legal because status is `blocked`):
+     ```bash
+     node ~/.claude/commands/do/scripts/project-state.cjs set wave <active_project> <phase_slug> <wave_slug> out_of_scope --scope
+     ```
+     (If the `--scope` flag is not yet implemented in `project-state.cjs`, fall back to an atomic temp-file + rename on `wave.md` to set `scope: out_of_scope`, matching the guard check described in §(d) of the state machine.)
+  3. **Update parent `phase.md` `waves[]` index** (atomic): flip this wave's entry from `scope: in_scope` → `scope: out_of_scope` and `status: in_progress` → `status: blocked` so the phase-completion check in `/do:project phase complete` sees the correct state.
+  4. **Clear `active_wave` in `phase.md`** (atomic temp-file + rename) so the phase is no longer pointed at the now-out-of-scope wave.
+  5. **Append changelog:**
+     ```
+     <ISO> status-change:wave:<wave_slug>: in_progress -> blocked (verification-failed, pre-out-of-scope)
+     <ISO> scope-change:wave:<wave_slug>: in_scope -> out_of_scope (verification-failed)
+     ```
+  6. Display: "Wave `<wave_slug>` marked out of scope (status: blocked). It will not count toward phase completion. Run `/do:project wave next` to continue."
 
 ---
 

@@ -293,13 +293,14 @@ Target file: <target_file_path>
 
 ### Step 6.1: Estimate context usage
 
-Use heuristic based on task file content:
+Use heuristic based on target file content:
 
 ```javascript
 // Rough estimation based on observable factors
-const executionLogEntries = (taskMarkdown.match(/^### \d{4}-\d{2}-\d{2}/gm) || []).length;
-const clarificationCount = (taskMarkdown.match(/^\*\*Q:\*\*/gm) || []).length;
-const approachSteps = (taskMarkdown.match(/^\d+\./gm) || []).length;
+const targetMarkdown = require('fs').readFileSync(targetPath, 'utf8');
+const executionLogEntries = (targetMarkdown.match(/^### \d{4}-\d{2}-\d{2}/gm) || []).length;
+const clarificationCount = (targetMarkdown.match(/^\*\*Q:\*\*/gm) || []).length;
+const approachSteps = (targetMarkdown.match(/^\d+\./gm) || []).length;
 
 // Each execution log entry ~750 tokens
 // Each Q&A pair ~300 tokens
@@ -389,10 +390,10 @@ The target file has been updated with progress.
 
 <success_criteria>
 Verification complete when:
-- [ ] Task file loaded
+- [ ] Target file loaded
 - [ ] Approach checklist verified against Execution Log
 - [ ] Quality checks run
-- [ ] Verification Results section written to task file
+- [ ] Verification Results section written to target file
 - [ ] UAT checklist displayed and user responded
-- [ ] Task marked complete or handoff provided
+- [ ] Target marked complete or handoff provided
 </success_criteria>

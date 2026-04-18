@@ -1,7 +1,7 @@
 ---
 id: 260418-do-project-beta-orchestration
 created: 2026-04-18T13:53:57.000Z
-updated: '2026-04-18T14:01:30.926Z'
+updated: '2026-04-18T14:29:40.302Z'
 description: >-
   Implement Task β (project-orchestration) for /do:project — ship the skill +
   stage references + subcommand routing that sit on top of Task α's contract.
@@ -24,7 +24,7 @@ description: >-
 related:
   - 260418-do-project-orchestrator
   - 260418-do-project-alpha-contract
-stage: verification
+stage: execution
 stages:
   refinement: complete
   grilling: skipped
@@ -330,3 +330,15 @@ Quoting orchestrator §14 L899-909 verbatim as spec:
 ## Council Review
 
 ## Verification Results
+
+
+## Code Review Iterations
+
+### Iteration 1 (2026-04-18)
+- **Self-review:** NITPICKS_ONLY (6 consistency nits in agents/ + dead alias in stage-project-complete.md)
+- **Council (codex):** CHANGES_REQUESTED — 3 blockers:
+  1. stage-wave-verify.md Option 4: illegal scope transition from in_progress; phase.md waves[] index not updated
+  2. project.md phase complete step 5: next phase promoted to in_progress, skipping planning gate
+  3. project.md wave complete <slug>: backlog cleanup at wrong trigger point (violates contract §11)
+- **Action:** All 9 findings fixed inline (no executioner re-spawn per user blocker/nitpick policy). Files: stage-wave-verify.md (Option 4 now two-step blocked→out_of_scope + phase.md index update), project.md (phase complete preserves planning gate; wave complete strips backlog cleanup with inline rationale), stage-project-complete.md (dead glob alias dropped), agents/do-executioner.md (2 terminology fixes), agents/do-verifier.md (3 terminology fixes + heuristic variable rename).
+- **Tests:** 13/13 agent-frontmatter-gates pass after edits.

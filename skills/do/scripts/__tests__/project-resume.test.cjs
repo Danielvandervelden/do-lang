@@ -528,6 +528,17 @@ describe('project-resume.cjs', () => {
       }
     });
 
+    it('wave in_progress + stage verification + stages.execution complete -> stage-wave-verify (realistic post-code-review state)', () => {
+      const { cwd } = mkWaveTree('in_progress', 'verification', { execution: 'complete', verification: 'in_progress' });
+      try {
+        const r = runResume(cwd);
+        assert.strictEqual(r.action, 'stage-wave-verify');
+        assert.strictEqual(r.target_type, 'wave');
+      } finally {
+        rm(cwd);
+      }
+    });
+
     it('wave in_progress + stages.execution = complete -> stage-wave-code-review', () => {
       const { cwd } = mkWaveTree('in_progress', 'execution', { execution: 'complete', verification: 'pending' });
       try {

@@ -326,7 +326,19 @@ function computeNextAction(projectSlug, projectsBase) {
 
   // Wave is in_progress — branch on stage
   if (waveStatus === 'in_progress') {
-    // Code review states: execution complete or review_pending
+    // Verification takes priority: once code review advances stage to verification,
+    // stages.execution is still 'complete' — must check verification first.
+    if (waveStage === 'verification') {
+      return {
+        action: 'stage-wave-verify',
+        target_file: waveRelPath,
+        target_type: 'wave',
+        summary: `Wave "${activeWave}" is in verification.`,
+        preamble_targets: preamble3
+      };
+    }
+
+    // Code review states: execution complete or review_pending (but NOT verification)
     const execStatus = waveStages.execution;
     if (execStatus === 'complete' || execStatus === 'review_pending') {
       return {
@@ -334,16 +346,6 @@ function computeNextAction(projectSlug, projectsBase) {
         target_file: waveRelPath,
         target_type: 'wave',
         summary: `Wave "${activeWave}" is in code review.`,
-        preamble_targets: preamble3
-      };
-    }
-
-    if (waveStage === 'verification') {
-      return {
-        action: 'stage-wave-verify',
-        target_file: waveRelPath,
-        target_type: 'wave',
-        summary: `Wave "${activeWave}" is in verification.`,
         preamble_targets: preamble3
       };
     }

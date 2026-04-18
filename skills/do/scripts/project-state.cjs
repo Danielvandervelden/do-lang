@@ -247,6 +247,61 @@ function allInScopePhasesCompleted(projectDir) {
 }
 
 // ---------------------------------------------------------------------------
+// Op: check (read-only queries for skill orchestration)
+// ---------------------------------------------------------------------------
+
+function opCheck(projectsDir, checkType, checkArgs, projectSlug) {
+  const projectDir = path.join(projectsDir, projectSlug);
+  if (!fs.existsSync(projectDir)) {
+    throw { error: 'notFound', reason: `Project directory not found: ${projectSlug}` };
+  }
+
+  if (checkType === 'waves-complete') {
+    const phaseSlug = checkArgs[0];
+    if (!phaseSlug) throw { error: 'missingArg', reason: 'waves-complete requires: <phase-slug>' };
+    const wavesDir = path.join(projectDir, 'phases', phaseSlug, 'waves');
+    const waves = listLeafNodes(wavesDir, 'wave.md');
+    const incomplete = waves.filter(w => w.scope === 'in_scope' && w.status !== 'completed');
+    const result = { complete: incomplete.length === 0, incomplete, all: waves };
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+
+  } else if (checkType === 'next-planning-phase') {
+    const phasesDir = path.join(projectDir, 'phases');
+    const phases = listLeafNodes(phasesDir, 'phase.md');
+    const next = phases.find(p => p.scope === 'in_scope' && p.status === 'planning') || null;
+    const result = { found: !!next, slug: next ? next.slug : null, phases };
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+
+  } else if (checkType === 'next-planning-wave') {
+    const phaseSlug = checkArgs[0];
+    if (!phaseSlug) throw { error: 'missingArg', reason: 'next-planning-wave requires: <phase-slug>' };
+    const wavesDir = path.join(projectDir, 'phases', phaseSlug, 'waves');
+    const waves = listLeafNodes(wavesDir, 'wave.md');
+    const next = waves.find(w => w.scope === 'in_scope' && w.status === 'planning') || null;
+    const result = { found: !!next, slug: next ? next.slug : null, waves };
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+
+  } else {
+    throw { error: 'unknownCheckType', reason: `Unknown check type: ${checkType}. Valid: waves-complete, next-planning-phase, next-planning-wave` };
+  }
+}
+
+function listLeafNodes(dir, filename) {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir)
+    .filter(d => fs.statSync(path.join(dir, d)).isDirectory())
+    .map(slug => {
+      const filePath = path.join(dir, slug, filename);
+      if (!fs.existsSync(filePath)) return null;
+      const parsed = parseFrontmatter(filePath);
+      if (!parsed) return null;
+      return { slug, status: parsed.data.status, scope: parsed.data.scope };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.slug.localeCompare(b.slug));
+}
+
+// ---------------------------------------------------------------------------
 // Config helpers
 // ---------------------------------------------------------------------------
 
@@ -797,6 +852,21 @@ if (require.main === module) {
       // Delegate fully to opAbandon — single implementation, no duplication.
       opAbandon(doProjectsDir, nodeType, nodePath, cliChangelogPath, 'abandon', cliProjectSlug);
 
+    } else if (op === 'check') {
+      const checkType = args[1];
+      if (!checkType) exitError({ error: 'missingArg', reason: 'check requires: <check-type>' });
+      const projFlagIdx = args.indexOf('--project');
+      let cliProjectSlug = projFlagIdx >= 0 ? args[projFlagIdx + 1] : null;
+      if (!cliProjectSlug) {
+        const configPath = path.join(process.cwd(), '.do', 'config.json');
+        const config = readJsonSafe(configPath);
+        cliProjectSlug = config && config.active_project ? config.active_project : null;
+      }
+      if (!cliProjectSlug) exitError({ error: 'missingArg', reason: 'check requires --project <slug> or active_project in config' });
+      try { validateSlug(cliProjectSlug); } catch (e) { exitError(e); }
+      const checkArgs = args.slice(2).filter(a => a !== '--project' && a !== cliProjectSlug);
+      opCheck(doProjectsDir, checkType, checkArgs, cliProjectSlug);
+
     } else if (op === 'restore-from-abandoned') {
       const projectSlug = args[1];
       if (!projectSlug) exitError({ error: 'missingArg', reason: 'restore-from-abandoned requires: <project_slug>' });
@@ -839,4 +909,6 @@ module.exports = {
   resolveNodeFilePath,
   updateFrontmatterField,
   clearActiveProjectInConfig,
+  opCheck,
+  listLeafNodes,
 };

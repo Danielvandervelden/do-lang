@@ -42,6 +42,8 @@ const {
   opRestoreFromAbandoned,
   resolveNodePathWithProject,
   clearActiveProjectInConfig,
+  opCheck,
+  listLeafNodes,
 } = require('../project-state.cjs');
 
 // ---------------------------------------------------------------------------
@@ -140,7 +142,6 @@ function readFrontmatter(filePath) {
 }
 
 function captureExit(fn) {
-  // Capture process.exit calls
   let exitCode = null;
   let stderrOutput = '';
   const origExit = process.exit;
@@ -150,12 +151,28 @@ function captureExit(fn) {
   try {
     fn();
   } catch (e) {
-    if (!e.message.startsWith('process.exit(')) throw e;
+    if (e instanceof Error && e.message.startsWith('process.exit(')) {
+      // Expected: process.exit was called, already captured exitCode
+    } else if (e && e.error) {
+      // opCheck-style thrown object — serialize as if exitError had run
+      exitCode = 1;
+      stderrOutput = JSON.stringify(e);
+    } else {
+      throw e;
+    }
   } finally {
     process.exit = origExit;
     process.stderr.write = origStderrWrite;
   }
   return { exitCode, stderr: stderrOutput };
+}
+
+function captureStdout(fn) {
+  let output = '';
+  const origWrite = process.stdout.write.bind(process.stdout);
+  process.stdout.write = (s) => { output += s; return true; };
+  try { fn(); } finally { process.stdout.write = origWrite; }
+  return output;
 }
 
 // ---------------------------------------------------------------------------
@@ -1894,5 +1911,183 @@ describe('opSet: complete scope transitions via opSet (Issue 3 iter-2)', () => {
     });
     assert.strictEqual(exitCode, 1);
     assert.strictEqual(JSON.parse(stderr).error, 'illegalScopeTransition');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// opCheck: read-only queries for skill orchestration
+// ---------------------------------------------------------------------------
+
+describe('opCheck: waves-complete', () => {
+  let tempDir, projectsDir;
+
+  afterEach(() => {
+    if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('returns complete=true when all in-scope waves are completed', () => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'check-wc-'));
+    ({ projectsDir } = mkProjectTree(tempDir, 'p', {
+      projectStatus: 'in_progress',
+      phases: [{
+        slug: '01-alpha', status: 'in_progress', scope: 'in_scope',
+        waves: [
+          { slug: '01-w1', status: 'completed', scope: 'in_scope' },
+          { slug: '02-w2', status: 'completed', scope: 'in_scope' },
+        ],
+      }],
+    }));
+    const out = captureStdout(() => opCheck(projectsDir, 'waves-complete', ['01-alpha'], 'p'));
+    const result = JSON.parse(out);
+    assert.strictEqual(result.complete, true);
+    assert.strictEqual(result.incomplete.length, 0);
+    assert.strictEqual(result.all.length, 2);
+  });
+
+  it('returns complete=false with incomplete wave details', () => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'check-wc-'));
+    ({ projectsDir } = mkProjectTree(tempDir, 'p', {
+      projectStatus: 'in_progress',
+      phases: [{
+        slug: '01-alpha', status: 'in_progress', scope: 'in_scope',
+        waves: [
+          { slug: '01-w1', status: 'completed', scope: 'in_scope' },
+          { slug: '02-w2', status: 'in_progress', scope: 'in_scope' },
+        ],
+      }],
+    }));
+    const out = captureStdout(() => opCheck(projectsDir, 'waves-complete', ['01-alpha'], 'p'));
+    const result = JSON.parse(out);
+    assert.strictEqual(result.complete, false);
+    assert.strictEqual(result.incomplete.length, 1);
+    assert.strictEqual(result.incomplete[0].slug, '02-w2');
+  });
+
+  it('ignores out-of-scope waves', () => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'check-wc-'));
+    ({ projectsDir } = mkProjectTree(tempDir, 'p', {
+      projectStatus: 'in_progress',
+      phases: [{
+        slug: '01-alpha', status: 'in_progress', scope: 'in_scope',
+        waves: [
+          { slug: '01-w1', status: 'completed', scope: 'in_scope' },
+          { slug: '02-w2', status: 'abandoned', scope: 'out_of_scope' },
+        ],
+      }],
+    }));
+    const out = captureStdout(() => opCheck(projectsDir, 'waves-complete', ['01-alpha'], 'p'));
+    const result = JSON.parse(out);
+    assert.strictEqual(result.complete, true);
+  });
+
+  it('throws when phase slug is missing', () => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'check-wc-'));
+    ({ projectsDir } = mkProjectTree(tempDir, 'p', { projectStatus: 'in_progress' }));
+    const { exitCode, stderr } = captureExit(() => opCheck(projectsDir, 'waves-complete', [], 'p'));
+    assert.strictEqual(exitCode, 1);
+    assert.strictEqual(JSON.parse(stderr).error, 'missingArg');
+  });
+});
+
+describe('opCheck: next-planning-phase', () => {
+  let tempDir, projectsDir;
+
+  afterEach(() => {
+    if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('finds the first in-scope planning phase (lexical order)', () => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'check-npp-'));
+    ({ projectsDir } = mkProjectTree(tempDir, 'p', {
+      projectStatus: 'in_progress',
+      phases: [
+        { slug: '01-done', status: 'completed', scope: 'in_scope' },
+        { slug: '02-next', status: 'planning', scope: 'in_scope' },
+        { slug: '03-later', status: 'planning', scope: 'in_scope' },
+      ],
+    }));
+    const out = captureStdout(() => opCheck(projectsDir, 'next-planning-phase', [], 'p'));
+    const result = JSON.parse(out);
+    assert.strictEqual(result.found, true);
+    assert.strictEqual(result.slug, '02-next');
+  });
+
+  it('returns found=false when no planning phases remain', () => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'check-npp-'));
+    ({ projectsDir } = mkProjectTree(tempDir, 'p', {
+      projectStatus: 'in_progress',
+      phases: [
+        { slug: '01-done', status: 'completed', scope: 'in_scope' },
+      ],
+    }));
+    const out = captureStdout(() => opCheck(projectsDir, 'next-planning-phase', [], 'p'));
+    const result = JSON.parse(out);
+    assert.strictEqual(result.found, false);
+    assert.strictEqual(result.slug, null);
+  });
+
+  it('skips out-of-scope planning phases', () => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'check-npp-'));
+    ({ projectsDir } = mkProjectTree(tempDir, 'p', {
+      projectStatus: 'in_progress',
+      phases: [
+        { slug: '01-done', status: 'completed', scope: 'in_scope' },
+        { slug: '02-dropped', status: 'planning', scope: 'out_of_scope' },
+      ],
+    }));
+    const out = captureStdout(() => opCheck(projectsDir, 'next-planning-phase', [], 'p'));
+    const result = JSON.parse(out);
+    assert.strictEqual(result.found, false);
+  });
+});
+
+describe('opCheck: next-planning-wave', () => {
+  let tempDir, projectsDir;
+
+  afterEach(() => {
+    if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('finds the first in-scope planning wave', () => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'check-npw-'));
+    ({ projectsDir } = mkProjectTree(tempDir, 'p', {
+      projectStatus: 'in_progress',
+      phases: [{
+        slug: '01-alpha', status: 'in_progress', scope: 'in_scope',
+        waves: [
+          { slug: '01-done', status: 'completed', scope: 'in_scope' },
+          { slug: '02-next', status: 'planning', scope: 'in_scope' },
+        ],
+      }],
+    }));
+    const out = captureStdout(() => opCheck(projectsDir, 'next-planning-wave', ['01-alpha'], 'p'));
+    const result = JSON.parse(out);
+    assert.strictEqual(result.found, true);
+    assert.strictEqual(result.slug, '02-next');
+  });
+
+  it('returns found=false when no planning waves remain', () => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'check-npw-'));
+    ({ projectsDir } = mkProjectTree(tempDir, 'p', {
+      projectStatus: 'in_progress',
+      phases: [{
+        slug: '01-alpha', status: 'in_progress', scope: 'in_scope',
+        waves: [
+          { slug: '01-done', status: 'completed', scope: 'in_scope' },
+        ],
+      }],
+    }));
+    const out = captureStdout(() => opCheck(projectsDir, 'next-planning-wave', ['01-alpha'], 'p'));
+    const result = JSON.parse(out);
+    assert.strictEqual(result.found, false);
+    assert.strictEqual(result.slug, null);
+  });
+
+  it('throws on unknown check type', () => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'check-bad-'));
+    ({ projectsDir } = mkProjectTree(tempDir, 'p', { projectStatus: 'in_progress' }));
+    const { exitCode, stderr } = captureExit(() => opCheck(projectsDir, 'bogus', [], 'p'));
+    assert.strictEqual(exitCode, 1);
+    assert.strictEqual(JSON.parse(stderr).error, 'unknownCheckType');
   });
 });

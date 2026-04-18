@@ -149,15 +149,10 @@ describe('β stage references: required preamble + invariants', () => {
       });
 
       it('uses documented CLI form for project-state.cjs invocations', () => {
-        // Find every `project-state.cjs ...` line and check it matches the contract
-        const lines = content.split('\n').filter(l => /project-state\.cjs\s+(set|abandon|status)/.test(l));
+        const lines = content.split('\n').filter(l => /project-state\.cjs\s+(set|abandon|status|check)/.test(l));
         for (const line of lines) {
-          // Skip prose descriptions (those contain backticks around the command)
           if (!/node.*project-state\.cjs/.test(line)) continue;
-          // Valid forms: set <type> <path> field=value [--project <slug>]
-          //              abandon <type> <path> [--project <slug>]
-          //              status <slug>
-          const valid = /project-state\.cjs\s+(set|abandon|status)\s+\S+/.test(line);
+          const valid = /project-state\.cjs\s+(set|abandon|status|check)\s+\S+/.test(line);
           assert.ok(valid, `${name} has malformed project-state.cjs invocation: ${line.trim()}`);
         }
       });

@@ -105,6 +105,30 @@ Reads the task file's YAML frontmatter and picks up at the last completed stage.
 | `/do:update` | Check for a newer version and self-update |
 | `/do:optimise` | Audit any target (agent, skill, script, project) against best practices |
 | `/do:backlog` | Manage the backlog — list, add, start (promote to task), done (remove) |
+| `/do:project` | Multi-phase project orchestrator — intake, phases, waves, resume |
+
+### Run a project
+
+For large initiatives that span multiple sessions, phases, and waves of work:
+
+```
+/do:project new my-app
+```
+
+The orchestrator runs a structured intake interview (two passes of grilling), then plans the project into phases and waves. Each wave goes through the full pipeline: plan → review → execute → code review → verify.
+
+```
+/do:project new <slug>              Start a new project (intake → plan review)
+/do:project phase new <slug>        Create and plan a new phase
+/do:project phase complete          Complete the active phase → handoff → next phase
+/do:project wave next               Activate next wave → plan → execute → review → verify
+/do:project status                  Read-only status table
+/do:project resume                  Cold-start resume from any point
+/do:project complete                Render completion summary
+/do:project abandon                 Cascade abandon + archive
+```
+
+State persists in `.do/projects/` — fully separate from `/do:task`'s `.do/tasks/`. `/do:project resume` reloads context from disk and routes to the exact stage where work left off.
 
 ## Agent Pipeline
 

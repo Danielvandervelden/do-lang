@@ -123,23 +123,22 @@ describe("detectRuntime", () => {
 // ============================================================================
 
 describe("selectReviewer", () => {
+  const ALL_REVIEWERS = ["codex", "gemini"];
+
   test("selectReviewer('random', 'claude') returns 'codex' or 'gemini' (not 'claude')", () => {
-    // Run multiple times to verify randomness doesn't return 'claude'
     const results = new Set();
     for (let i = 0; i < 20; i++) {
-      const result = selectReviewer("random", "claude");
+      const result = selectReviewer("random", "claude", ALL_REVIEWERS);
       results.add(result);
       assert.ok(
         result === "codex" || result === "gemini",
         `random selection in Claude runtime should return 'codex' or 'gemini', got '${result}'`,
       );
     }
-    // Should have at least some variety (not always same)
-    // This is a probabilistic test - with 20 runs and 50/50 chance, very unlikely to get all same
   });
 
   test("selectReviewer('codex', 'claude') returns 'codex'", () => {
-    const result = selectReviewer("codex", "claude");
+    const result = selectReviewer("codex", "claude", ALL_REVIEWERS);
     assert.strictEqual(
       result,
       "codex",
@@ -148,7 +147,7 @@ describe("selectReviewer", () => {
   });
 
   test("selectReviewer('gemini', 'claude') returns 'gemini'", () => {
-    const result = selectReviewer("gemini", "claude");
+    const result = selectReviewer("gemini", "claude", ALL_REVIEWERS);
     assert.strictEqual(
       result,
       "gemini",
@@ -157,8 +156,7 @@ describe("selectReviewer", () => {
   });
 
   test("selectReviewer('codex', 'codex') falls back to random (self-review prevention per D-40)", () => {
-    // In Codex runtime, 'codex' is self-review, so should fall back
-    const result = selectReviewer("codex", "codex");
+    const result = selectReviewer("codex", "codex", ["claude", "gemini"]);
     assert.ok(
       result === "claude" || result === "gemini",
       `self-review prevention: codex in codex runtime should fall back, got '${result}'`,
@@ -166,8 +164,7 @@ describe("selectReviewer", () => {
   });
 
   test("selectReviewer('claude', 'claude') falls back to random (self-review prevention per D-40)", () => {
-    // In Claude runtime, 'claude' is self-review, so should fall back
-    const result = selectReviewer("claude", "claude");
+    const result = selectReviewer("claude", "claude", ALL_REVIEWERS);
     assert.ok(
       result === "codex" || result === "gemini",
       `self-review prevention: claude in claude runtime should fall back, got '${result}'`,
@@ -175,12 +172,12 @@ describe("selectReviewer", () => {
   });
 
   test("selectReviewer('both', 'claude') returns 'both'", () => {
-    const result = selectReviewer("both", "claude");
+    const result = selectReviewer("both", "claude", ALL_REVIEWERS);
     assert.strictEqual(result, "both", "should return 'both' when configured");
   });
 
   test("selectReviewer('both', 'codex') returns 'both'", () => {
-    const result = selectReviewer("both", "codex");
+    const result = selectReviewer("both", "codex", ALL_REVIEWERS);
     assert.strictEqual(
       result,
       "both",
@@ -189,7 +186,7 @@ describe("selectReviewer", () => {
   });
 
   test("selectReviewer with invalid value falls back to random", () => {
-    const result = selectReviewer("invalid-reviewer", "claude");
+    const result = selectReviewer("invalid-reviewer", "claude", ALL_REVIEWERS);
     assert.ok(
       result === "codex" || result === "gemini",
       `invalid reviewer should fall back to random, got '${result}'`,

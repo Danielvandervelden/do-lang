@@ -38,16 +38,14 @@ Orchestrate a large multi-phase project: intake grilling → project plan → ph
 /do:project resume                        Resume from cold start (reload context + route to active stage)
 ```
 
-## Authoritative state reads
+## Authoritative state reads — LEAF FILES ONLY
 
-β's reference files and this skill read node state (`status`, `scope`, confidence score) from **leaf files only**:
-- project state from `.do/projects/<slug>/project.md`
-- phase state from `.do/projects/<slug>/phases/<phase-slug>/phase.md`
-- wave state from `.do/projects/<slug>/phases/<phase-slug>/waves/<wave-slug>/wave.md`
+All control-flow decisions read state from **leaf files**, never from parent indexes:
+- project → `.do/projects/<slug>/project.md`
+- phase → `.do/projects/<slug>/phases/<phase-slug>/phase.md`
+- wave → `.do/projects/<slug>/phases/<phase-slug>/waves/<wave-slug>/wave.md`
 
-`project.md.phases[]` and `phase.md.waves[]` are **parent indexes seeded once by `project-scaffold.cjs`** (at phase/wave creation) with `{ slug, status: 'planning' }` and are **not kept in sync** by `project-state.cjs` on subsequent status transitions. They are advisory / display-only — do not use them for control-flow decisions (next-phase selection, precondition checks, γ-gate, etc.). To enumerate phases or waves, walk the filesystem (`fs.readdirSync` on the folder) and read each leaf file's frontmatter; sort lexically by slug for ordering (slugs are NN-prefix allocated).
-
-Future work (γ or a follow-up backlog item): α's `project-state.cjs` could be extended to propagate status changes to the parent index, at which point authoritative reads could shift back to the indexes. β does not depend on that.
+`project.md.phases[]` and `phase.md.waves[]` are scaffold-seeded once and never updated on status transitions. They are display-only. For enumeration, use `project-state.cjs check` which walks leaf files sorted by NN-prefixed slug.
 
 ## Prerequisites
 
@@ -132,106 +130,57 @@ Parse `argv[1]` ∈ `{new, abandon, complete}`:
 
 #### `phase complete`
 
-Run Phase-Complete State Transition:
+Completes the active phase and advances to the next one. The multi-step sequence here exists because phase transitions involve a handoff artefact, backlog cleanup, and a planning gate for the next phase — these can't be collapsed into a single script call without losing the grilling and plan review stages.
 
-1. **Precondition check** — every in-scope wave must be `completed`. Read wave state from each `wave.md` leaf file directly, NOT from `phase.md.waves[]` (the parent index is seeded by scaffold and not maintained by `project-state.cjs` on state changes, so it goes stale — see §Authoritative state reads above):
+1. **Read active phase** from `project.md` frontmatter (`active_phase`). Error if null.
+
+2. **Precondition check** — every in-scope wave must be completed:
    ```bash
-   node -e "
-   const fm = require('gray-matter');
-   const fs = require('fs'), path = require('path');
-   // Read active phase from project.md
-   const proj = fm(fs.readFileSync('.do/projects/<active_project>/project.md', 'utf8'));
-   const activePhase = proj.data.active_phase;
-   if (!activePhase) { console.error('No active phase'); process.exit(1); }
-   // Read wave state authoritatively from each wave.md leaf file
-   const wavesDir = '.do/projects/<active_project>/phases/' + activePhase + '/waves';
-   const waves = fs.existsSync(wavesDir)
-     ? fs.readdirSync(wavesDir)
-         .filter(d => fs.statSync(path.join(wavesDir, d)).isDirectory())
-         .map(slug => {
-           const wPath = path.join(wavesDir, slug, 'wave.md');
-           if (!fs.existsSync(wPath)) return null;
-           const w = fm(fs.readFileSync(wPath, 'utf8'));
-           return { slug, status: w.data.status, scope: w.data.scope };
-         })
-         .filter(Boolean)
-         .sort((a, b) => a.slug.localeCompare(b.slug))
-     : [];
-   const incomplete = waves.filter(w => w.scope === 'in_scope' && w.status !== 'completed');
-   if (incomplete.length > 0) {
-     console.error('Incomplete waves: ' + incomplete.map(w => w.slug).join(', '));
-     process.exit(1);
-   }
-   console.log(JSON.stringify({ activePhase, waves }));
-   "
+   node ~/.claude/commands/do/scripts/project-state.cjs check waves-complete <active_phase> --project <active_project>
    ```
-   If any in-scope wave is not `completed`, abort with list of incomplete waves.
+   If `complete: false`, abort with the `incomplete` list from the JSON output.
 
-2. **State transition:**
+3. **State transition:**
    ```bash
    node ~/.claude/commands/do/scripts/project-state.cjs set phase <active_phase> status=completed --project <active_project>
    ```
 
-3. **Clear active pointers (schema-correct: `active_wave` lives on `phase.md`, not `project.md`):**
-   - In the completing phase's `phase.md`: set `active_wave: null` (atomic temp-file + rename).
-   - In `project.md`: set `active_phase: null` (atomic temp-file + rename). Step 5 below may re-populate `active_phase` if a next planning phase exists.
-   - Append changelog:
-     ```
-     <ISO> clear:active_wave:phase:<active_phase>  reason: phase complete
-     <ISO> clear:active_phase:project:<active_project>  reason: phase complete
-     ```
+4. **Clear active pointers** (`active_wave` lives on `phase.md`, `active_phase` lives on `project.md`):
+   - Set `active_wave: null` on the completing phase's `phase.md` (atomic temp-file + rename).
+   - Set `active_phase: null` on `project.md` (atomic temp-file + rename).
+   - Append changelog entries for both clears.
 
-4. **Backlog cleanup:** read `phase.md` `backlog_item`. If non-null, invoke `/do:backlog done <id>`. Log: "Removed backlog item `<id>` from BACKLOG.md."
+5. **Backlog cleanup:** read `phase.md` `backlog_item`. If non-null, invoke `/do:backlog done <id>`.
 
-5. **Render handoff artefact:** invoke `@references/stage-phase-exit.md` with `<active_project>` and `<completed_phase_slug>`. The `<completed_phase_slug>` value was captured from `activePhase` in step 1's precondition check — use that captured value here (step 3 has already cleared `active_phase` on `project.md` so reading `active_phase` again would return null). This writes `handoff.md` for the just-completed phase. `stage-phase-exit.md` is read-only — all state transitions are already complete from steps 2–4.
+6. **Render handoff artefact:** invoke `@references/stage-phase-exit.md` with `<active_project>` and `<completed_phase_slug>`. Use the slug captured in step 1 — step 4 has already cleared `active_phase` so re-reading it would return null. This stage is read-only (all state transitions are done).
 
-6. **Identify next phase (planning-gate preserved):** find the next in-scope phase with `status: planning` by walking the `phases/` folder and reading each `phase.md` leaf file directly (NOT `project.md.phases[]`, which is seeded once by scaffold and not synced by `project-state.cjs` — see §Authoritative state reads above):
+7. **Find next phase:**
    ```bash
-   NEXT_PHASE=$(node -e "
-   const fm = require('gray-matter'), fs = require('fs'), path = require('path');
-   const phasesDir = '.do/projects/<active_project>/phases';
-   const phases = fs.readdirSync(phasesDir)
-     .filter(d => fs.statSync(path.join(phasesDir, d)).isDirectory())
-     .map(slug => {
-       const phPath = path.join(phasesDir, slug, 'phase.md');
-       if (!fs.existsSync(phPath)) return null;
-       const ph = fm(fs.readFileSync(phPath, 'utf8'));
-       return { slug, status: ph.data.status, scope: ph.data.scope };
-     })
-     .filter(Boolean)
-     .sort((a, b) => a.slug.localeCompare(b.slug));
-   const next = phases.find(p => p.scope === 'in_scope' && p.status === 'planning');
-   process.stdout.write(next ? next.slug : '');
-   ")
+   node ~/.claude/commands/do/scripts/project-state.cjs check next-planning-phase --project <active_project>
    ```
-   If no such phase remains (terminal): set `active_phase: null` on `project.md` (atomic temp-file + rename), do NOT auto-complete the project — user runs `/do:project complete`. If found (non-terminal): do **NOT** write `active_phase` here — that pointer is owned by `stage-phase-plan-review.md` step 6 and is written only after the next phase's plan review approves. Leave the phase's `status` at `planning` and let the re-grill + plan review gate in step 7 below drive the transitions. This preserves the planning gate per `project-state-machine.md` §(c) and the orchestrator contract (§6) and keeps `active_phase` single-owner in `stage-phase-plan-review.md`.
+   - If `found: false` (terminal): do NOT auto-complete — user runs `/do:project complete`.
+   - If `found: true`: do NOT write `active_phase` here. That pointer is single-owner in `stage-phase-plan-review.md` and is written only after the next phase's plan review approves. This preserves the planning gate.
 
-7. **Per-phase re-grill (Pass 3):** if a next phase was found, read its `phase.md` confidence score. If below `project_intake_threshold`, spawn `do-griller` against next phase's `phase.md`; the `Threshold:` field in the prompt MUST be the project threshold (the fallback in `do-griller` is task-safe, so callers who want `project_intake_threshold` must pass it explicitly):
+8. **Per-phase re-grill (Pass 3):** if a next phase was found, read its `phase.md` confidence score. If below `project_intake_threshold`, spawn `do-griller` (pass the project threshold explicitly — `do-griller`'s default is task-safe):
 
    ```javascript
    Agent({
      description: "Per-phase re-grill (Pass 3)",
      subagent_type: "do-griller",
      model: "<models.overrides.griller || models.default>",
-     prompt: `
-   Phase confidence is below threshold. Ask clarifying questions to raise confidence for the upcoming phase.
-
+     prompt: `Phase confidence is below threshold. Ask clarifying questions.
    Target file: .do/projects/<active_project>/phases/<next_phase_slug>/phase.md
    Current confidence: <score>
    Threshold: <project_intake_threshold>
-
-   Ask targeted questions for lowest-scoring factors (scope, dependencies, acceptance criteria).
-   Update confidence after each answer. Stop when threshold reached, all 10 questions asked, or user overrides ("proceed anyway").
-   `
+   Ask targeted questions for lowest-scoring factors. Stop when threshold reached, 10 questions asked, or user overrides.`
    })
    ```
 
-   After re-grill returns (or immediately if already at/above threshold), invoke `@references/stage-phase-plan-review.md` for the next phase. Both paths run with the phase at `planning` — that stage reference is the single owner of (a) the phase `planning → in_progress` promotion after plan approval, (b) the idempotent project-level `planning → in_progress` promotion on first-phase-approval, and (c) setting `project.md.active_phase = <next_phase_slug>`.
+   After re-grill (or immediately if at threshold), invoke `@references/stage-phase-plan-review.md` for the next phase.
 
-8. **Print handoff result:** read the rendered `handoff.md`:
-   - Non-terminal phase: print the `## Next Phase Entry Prompt` block and suggest:
-     "Phase `<completed_phase_slug>` complete. Consider `/clear` and paste the prompt above into a fresh session."
-   - Terminal phase: print the `## Project Completion Hint` line.
+9. **Print handoff result:** read `handoff.md`:
+   - Non-terminal: print the `## Next Phase Entry Prompt` block, suggest `/clear` + fresh session.
+   - Terminal: print the `## Project Completion Hint` line.
 
 ---
 
@@ -263,7 +212,7 @@ Parse `argv[1]` ∈ `{new, complete, abandon, next}`:
    ```
 2. Append changelog: `<ISO> complete:wave:<slug>`.
 
-> **No backlog cleanup here.** Wave-backed backlog cleanup runs exclusively in the two trigger points locked by the β contract: (a) `stage-wave-verify.md` success path (WV-3 step 4), and (b) `phase complete`'s phase-level cleanup (which reads `phase.md`'s `backlog_item`). Adding it to the manual `wave complete <slug>` command would let a user mark a backlog item done before the wave has actually been verified. (Rationale: orchestrator design §11 — backlog integration is verification-gated.)
+> **No backlog cleanup here.** Backlog cleanup is verification-gated: it only runs in `stage-wave-verify.md` (wave-level) and `phase complete` (phase-level). Manual wave completion skips verification, so it must not touch the backlog.
 
 #### `wave abandon <slug>`
 
@@ -276,63 +225,36 @@ Parse `argv[1]` ∈ `{new, complete, abandon, next}`:
 
 #### `wave next`
 
+Activates the next planning wave and runs it through the full execution pipeline. This is the inner loop of project execution — each wave goes through plan → review → execute → code review → verify.
+
 1. Read `active_project` + `active_phase` from config and `project.md`.
-2. Walk the current phase's `waves/` folder and read each `wave.md` leaf file directly; find the first wave (lexical sort by NN-prefixed slug) with `status: planning` AND `scope: in_scope`. Do NOT read `phase.md.waves[]` (seeded once by scaffold, not synced — see §Authoritative state reads above):
+2. Find the next planning wave:
    ```bash
-   NEXT_WAVE=$(node -e "
-   const fm = require('gray-matter'), fs = require('fs'), path = require('path');
-   const wavesDir = '.do/projects/<active_project>/phases/<active_phase>/waves';
-   const waves = fs.existsSync(wavesDir)
-     ? fs.readdirSync(wavesDir)
-         .filter(d => fs.statSync(path.join(wavesDir, d)).isDirectory())
-         .map(slug => {
-           const wPath = path.join(wavesDir, slug, 'wave.md');
-           if (!fs.existsSync(wPath)) return null;
-           const w = fm(fs.readFileSync(wPath, 'utf8'));
-           return { slug, status: w.data.status, scope: w.data.scope };
-         })
-         .filter(Boolean)
-         .sort((a, b) => a.slug.localeCompare(b.slug))
-     : [];
-   const next = waves.find(w => w.scope === 'in_scope' && w.status === 'planning');
-   process.stdout.write(next ? next.slug : '');
-   ")
+   node ~/.claude/commands/do/scripts/project-state.cjs check next-planning-wave <active_phase> --project <active_project>
    ```
-3. If none found:
-   ```
-   No planning waves in current phase; run `/do:project wave new <slug>` to create one.
-   ```
-   Stop.
+3. If `found: false`: display "No planning waves in current phase; run `/do:project wave new <slug>` to create one." Stop.
 4. Set wave status to `in_progress`:
    ```bash
    node ~/.claude/commands/do/scripts/project-state.cjs set wave <active_phase>/<wave_slug> status=in_progress --project <active_project>
    ```
-5. Update `phase.md` `active_wave: <wave_slug>` (atomic).
-6. Append changelog: `<ISO> activate:wave:<wave_slug>`.
-7. Load existing `wave.md` (no scaffold — wave must already exist from `wave new` or phase-seeding hook).
-8. **Per-wave confidence rescue:** read `wave.md` confidence score. If below `project_intake_threshold`, spawn `do-griller` against `wave.md`:
+5. Update `phase.md` `active_wave: <wave_slug>` (atomic). Append changelog.
+6. **Per-wave confidence rescue:** read `wave.md` confidence score. If below `project_intake_threshold`, spawn `do-griller` (pass the project threshold explicitly):
    ```javascript
    Agent({
      description: "Wave confidence rescue: grill for clarity",
      subagent_type: "do-griller",
      model: "<models.overrides.griller || models.default>",
-     prompt: `
-   Wave confidence is below threshold. Ask clarifying questions to raise confidence.
-
+     prompt: `Wave confidence is below threshold. Ask clarifying questions.
    Target file: .do/projects/<active_project>/phases/<active_phase>/waves/<wave_slug>/wave.md
    Current confidence: <score>
    Threshold: <project_intake_threshold>
-
-   Ask targeted questions for lowest-scoring factors (scope, acceptance criteria, blockers).
-   Update confidence after each answer. Stop when threshold reached or user overrides ("proceed anyway").
-   `
+   Ask targeted questions for lowest-scoring factors. Stop when threshold reached or user overrides.`
    })
    ```
-   On threshold-met or user override, proceed.
-9. Invoke `@references/stage-wave-plan-review.md` (targets `wave.md`).
-10. Then `@references/stage-wave-exec.md`.
-11. Then `@references/stage-wave-code-review.md`.
-12. Then `@references/stage-wave-verify.md`.
+7. Invoke `@references/stage-wave-plan-review.md` (targets `wave.md`).
+8. Then `@references/stage-wave-exec.md`.
+9. Then `@references/stage-wave-code-review.md`.
+10. Then `@references/stage-wave-verify.md`.
 
 ---
 
@@ -418,13 +340,7 @@ Run /do:project without arguments to see this help.
 
 ## Failure Handling
 
-Any agent or script failure returns immediately to user with:
-- Which subcommand failed
-- Which step failed
-- Last known good state
-- Project file path (for manual recovery)
-
-No automatic retries. User decides next step.
+On any failure: report which subcommand/step failed, the last known good state, and the project file path. No automatic retries — user decides next step.
 
 ---
 
@@ -432,7 +348,7 @@ No automatic retries. User decides next step.
 
 - **Scripts:**
   - `@scripts/project-scaffold.cjs` — Creates project/phase/wave folders and files
-  - `@scripts/project-state.cjs` — State transitions, abandon cascade, status reads
+  - `@scripts/project-state.cjs` — State transitions, abandon cascade, status reads, `check` queries (waves-complete, next-planning-phase, next-planning-wave)
   - `@scripts/project-health.cjs` — Health checks (used by `/do:init`)
   - `@scripts/project-resume.cjs` — State reader, returns next-action JSON for resume routing
 - **Stage references (called inline via `@references/...`):**

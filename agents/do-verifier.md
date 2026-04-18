@@ -155,7 +155,7 @@ If a check runs longer than 5 minutes, terminate and mark as:
 
 ### Step 4.2: Write Verification Results section
 
-Update the task markdown file by adding/updating the Verification Results section after Execution Log:
+Update the target file by adding/updating the Verification Results section after Execution Log:
 
 ```markdown
 ## Verification Results

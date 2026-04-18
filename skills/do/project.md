@@ -134,7 +134,7 @@ Parse `argv[1]` ∈ `{new, abandon, complete}`:
 
 Run Phase-Complete State Transition:
 
-1. **Precondition check** — every in-scope wave must be `completed`. Read wave state from each `wave.md` leaf file directly, NOT from `phase.md.waves[]` (the parent index is seeded by scaffold and not maintained by `project-state.cjs` on state changes, so it goes stale — see §Authoritative state reads below):
+1. **Precondition check** — every in-scope wave must be `completed`. Read wave state from each `wave.md` leaf file directly, NOT from `phase.md.waves[]` (the parent index is seeded by scaffold and not maintained by `project-state.cjs` on state changes, so it goes stale — see §Authoritative state reads above):
    ```bash
    node -e "
    const fm = require('gray-matter');
@@ -183,7 +183,7 @@ Run Phase-Complete State Transition:
 
 4. **Backlog cleanup:** read `phase.md` `backlog_item`. If non-null, invoke `/do:backlog done <id>`. Log: "Removed backlog item `<id>` from BACKLOG.md."
 
-5. **Identify next phase (planning-gate preserved):** find the next in-scope phase with `status: planning` by walking the `phases/` folder and reading each `phase.md` leaf file directly (NOT `project.md.phases[]`, which is seeded once by scaffold and not synced by `project-state.cjs` — see §Authoritative state reads below):
+5. **Identify next phase (planning-gate preserved):** find the next in-scope phase with `status: planning` by walking the `phases/` folder and reading each `phase.md` leaf file directly (NOT `project.md.phases[]`, which is seeded once by scaffold and not synced by `project-state.cjs` — see §Authoritative state reads above):
    ```bash
    NEXT_PHASE=$(node -e "
    const fm = require('gray-matter'), fs = require('fs'), path = require('path');
@@ -276,7 +276,7 @@ Parse `argv[1]` ∈ `{new, complete, abandon, next}`:
 #### `wave next`
 
 1. Read `active_project` + `active_phase` from config and `project.md`.
-2. Walk the current phase's `waves/` folder and read each `wave.md` leaf file directly; find the first wave (lexical sort by NN-prefixed slug) with `status: planning` AND `scope: in_scope`. Do NOT read `phase.md.waves[]` (seeded once by scaffold, not synced — see §Authoritative state reads below):
+2. Walk the current phase's `waves/` folder and read each `wave.md` leaf file directly; find the first wave (lexical sort by NN-prefixed slug) with `status: planning` AND `scope: in_scope`. Do NOT read `phase.md.waves[]` (seeded once by scaffold, not synced — see §Authoritative state reads above):
    ```bash
    NEXT_WAVE=$(node -e "
    const fm = require('gray-matter'), fs = require('fs'), path = require('path');
@@ -386,7 +386,7 @@ Top-level project abandon — α's `project-state.cjs abandon project <slug>` is
    ```
    (α's script appends its own state-transition changelog line; this step adds the user-provided reason on top. Writing to the changelog in the archived location: `.do/projects/archived/<active_project>/changelog.md`.)
 
-5. Display: "Project `<slug>` abandoned and archived. To re-activate, move `.do/projects/archived/<slug>/` back and run `/do:project resume` (Task γ)."
+5. Display: "Project `<slug>` abandoned and archived at `.do/projects/archived/<slug>/`. Re-activation (`/do:project resume`) is not yet implemented — ships in Task γ. Until then the archived folder is a historical record; do not hand-edit `active_project` in `.do/config.json` to revive it."
 
 ---
 

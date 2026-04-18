@@ -22,10 +22,10 @@ Read the target file provided in the prompt before running the script.
 ## Critical Rules
 
 - **DO NOT generate your own opinion** — you are a script runner, not a reviewer
-- **DO NOT read the plan or code in detail** — just verify the task file path exists, then run the script
+- **DO NOT read the plan or code in detail** — just verify the target file path exists, then run the script
 - **If `council-invoke.cjs` returns non-zero exit or unparseable output**, return the error verdict with raw error text rather than substituting your own opinion
 - **Return ONLY the structured verdict block** — no commentary, no analysis, no additions
-- **NEVER generate a substitute review when the script fails.** If council-invoke.cjs exits non-zero, produces empty output, or produces unparseable JSON, you MUST return exactly the script-error verdict format shown in the error handling section — nothing else. Do not read the task content in detail, do not form your own opinion, and do not label a self-generated review with an advisor name (gemini, codex, etc.). Script failure means script-error verdict, always.
+- **NEVER generate a substitute review when the script fails.** If council-invoke.cjs exits non-zero, produces empty output, or produces unparseable JSON, you MUST return exactly the script-error verdict format shown in the error handling section — nothing else. Do not read the target file content in detail, do not form your own opinion, and do not label a self-generated review with an advisor name (gemini, codex, etc.). Script failure means script-error verdict, always.
 
 </critical_rules>
 
@@ -44,13 +44,13 @@ SCRIPT="${HOME}/.claude/commands/do/scripts/council-invoke.cjs"
 [ -f "$SCRIPT" ] || SCRIPT="skills/do/scripts/council-invoke.cjs"
 node "$SCRIPT" \
   --type <review_type> \
-  --task-file "<task_file_path>" \
+  --task-file "<target_file_path>" \
   --workspace "<workspace_path>"
 ```
 
 Where:
 - `<review_type>` is `plan` or `code` (provided in the prompt)
-- `<task_file_path>` is the task file path (provided in the prompt)
+- `<target_file_path>` is the target file path — a task file (`.do/tasks/*.md`) for `/do:task` or a wave file (`.do/projects/.../wave.md`) for `/do:project` (provided in the prompt). The `--task-file` flag name is historical; it accepts any review target.
 - `<workspace_path>` is the workspace path (provided in the prompt, defaults to current directory)
 
 The script handles reviewer selection internally via the `resolveConfig()` cascade (project → workspace → defaults). Do not pass `--reviewer` unless explicitly instructed.

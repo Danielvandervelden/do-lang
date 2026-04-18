@@ -559,3 +559,17 @@ What this smoke test does NOT cover: a live end-to-end `/do:task` spawn through 
 - **Scope-of-fix stance:** Option B (β-only) required 5 content-changes and one new doc section. Option A would have required modifying α's `project-state.cjs` to sync parent indexes atomically on every transition — new logic, new failure modes (mid-flight index corruption if sync fails after leaf write), new tests. Option B keeps β self-contained and adds no α risk. If a future iteration wants real parent-index sync, it's an isolated α extension with clear scope, not coupled to β shipping.
 - **Tests:** 50/50 β-relevant suite pass. Tests operate on leaf files via `project-state.cjs`, so they're unaffected by the parent-index reinterpretation.
 - **Files changed (6):** `skills/do/project.md` (3 sites + new §Authoritative state reads), `skills/do/references/stage-project-complete.md` (PC-1, PC-2), `skills/do/references/stage-wave-verify.md` (Option 4 simplified), `skills/do/references/stage-wave-exec.md` (BLOCKED path simplified), `skills/do/references/init-health-check.md` (drift severity), `skills/do/references/stage-project-intake.md` (stale prose), this iteration log.
+
+### Iteration 17 (2026-04-18)
+- **Self-review:** CHANGES_REQUESTED — three directional errors introduced in iter-16's new §Authoritative state reads cross-references. Lines 137, 186, 279 of `skills/do/project.md` said "see §Authoritative state reads below" but the section is above those lines (it sits near the top of the skill). Minor but points readers the wrong way.
+- **Council (codex):** NITPICKS_ONLY — first convergence signal after 6 iterations of CHANGES_REQUESTED. Three small findings:
+  1. `agents/do-council-reviewer.md:25,47-53` still uses task-pipeline-specific terminology ("task file", `<task_file_path>`) after β's shared-agent generalisation pass. The agent now serves both `/do:task` and `/do:project`, so it should say "target file".
+  2. `agents/do-verifier.md:158` says "Update the task markdown file" — same issue, same fix.
+  3. `skills/do/project.md:389-395` abandon recovery tells the user to run `/do:project resume`, but the same file states `resume` is not implemented in β. Self-contradicting instruction.
+- **Action:**
+  1. `sed "below" → "above"` on the three §Authoritative state reads cross-references at `skills/do/project.md:137,186,279`.
+  2. `agents/do-council-reviewer.md`: renamed `<task_file_path>` → `<target_file_path>`, added explainer that `--task-file` flag name is historical and accepts any review target (task or wave). Updated two critical-rules bullets that said "task file" / "task content".
+  3. `agents/do-verifier.md:158`: "Update the task markdown file" → "Update the target file".
+  4. `skills/do/project.md:389-395`: rewrote abandon recovery display string. Now tells the user the project is archived, that `/do:project resume` ships in γ, and explicitly warns not to hand-edit `active_project` in `.do/config.json` to revive it. No broken command reference.
+- **Tests:** No code changes; test suite not re-run (doc-only iteration). 50/50 from iter 16 remains current.
+- **Files changed (4):** `skills/do/project.md` (3 "below"→"above" + abandon recovery rewrite), `agents/do-council-reviewer.md` (task-file → target-file terminology), `agents/do-verifier.md` (step 4.2 terminology), this iteration log.

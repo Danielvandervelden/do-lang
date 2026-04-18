@@ -87,14 +87,20 @@ Missing handoff.md for phases:
 
 In β, `/do:project phase complete` marks the phase complete but does NOT
 render handoff.md (that rendering is Task γ — project-gamma-resume-handoff).
-So on β alone, `/do:project complete` is blocked whenever any phase is
-missing its handoff artefact.
+`/do:project phase complete` has no phase argument — it operates only on
+`project.md.active_phase`, which has already been cleared on every completed
+phase in this project. So on β alone, there is no skill invocation that can
+retroactively render handoff.md for an already-completed phase, and
+`/do:project complete` is blocked whenever any phase is missing its handoff
+artefact.
 
-To proceed on β without γ: either (a) wait for Task γ to be deployed, then
-re-run `/do:project phase complete` on each phase (γ will render the
-handoff files) and re-run `/do:project complete`; or (b) author the
-handoff.md files manually for each listed phase using the structure in
-@references/handoff-template.md, then re-run `/do:project complete`.
+To proceed on β without γ: author the handoff.md files manually for each
+listed phase using the structure in `@references/handoff-template.md`, then
+re-run `/do:project complete`. Once Task γ ships it will define the
+authoritative CLI for regenerating handoff artefacts from completed-phase
+state (likely via `/do:project resume` or a dedicated `rehydrate` op); β's
+BLOCKED message cannot prescribe that CLI because the γ contract is not yet
+defined. Manual authoring is the only path available on β alone.
 ```
 
 Return BLOCKED. Stop.

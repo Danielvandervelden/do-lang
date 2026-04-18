@@ -35,7 +35,7 @@ Orchestrate a large multi-phase project: intake grilling → project plan → ph
 /do:project status                        Display project/phase/wave status summary
 /do:project complete                      Finalise and archive the project
 /do:project abandon                       Abandon the active project
-/do:project resume                        Resume not yet implemented (Task γ)
+/do:project resume                        Resume from cold start (reload context + route to active stage)
 ```
 
 ## Authoritative state reads
@@ -183,7 +183,9 @@ Run Phase-Complete State Transition:
 
 4. **Backlog cleanup:** read `phase.md` `backlog_item`. If non-null, invoke `/do:backlog done <id>`. Log: "Removed backlog item `<id>` from BACKLOG.md."
 
-5. **Identify next phase (planning-gate preserved):** find the next in-scope phase with `status: planning` by walking the `phases/` folder and reading each `phase.md` leaf file directly (NOT `project.md.phases[]`, which is seeded once by scaffold and not synced by `project-state.cjs` — see §Authoritative state reads above):
+5. **Render handoff artefact:** invoke `@references/stage-phase-exit.md` with `<active_project>` and `<completed_phase_slug>`. The `<completed_phase_slug>` value was captured from `activePhase` in step 1's precondition check — use that captured value here (step 3 has already cleared `active_phase` on `project.md` so reading `active_phase` again would return null). This writes `handoff.md` for the just-completed phase. `stage-phase-exit.md` is read-only — all state transitions are already complete from steps 2–4.
+
+6. **Identify next phase (planning-gate preserved):** find the next in-scope phase with `status: planning` by walking the `phases/` folder and reading each `phase.md` leaf file directly (NOT `project.md.phases[]`, which is seeded once by scaffold and not synced by `project-state.cjs` — see §Authoritative state reads above):
    ```bash
    NEXT_PHASE=$(node -e "
    const fm = require('gray-matter'), fs = require('fs'), path = require('path');
@@ -202,9 +204,9 @@ Run Phase-Complete State Transition:
    process.stdout.write(next ? next.slug : '');
    ")
    ```
-   If no such phase remains (terminal): set `active_phase: null` on `project.md` (atomic temp-file + rename), do NOT auto-complete the project — user runs `/do:project complete`. If found (non-terminal): do **NOT** write `active_phase` here — that pointer is owned by `stage-phase-plan-review.md` step 6 and is written only after the next phase's plan review approves. Leave the phase's `status` at `planning` and let the re-grill + plan review gate in step 6 below drive the transitions. This preserves the planning gate per `project-state-machine.md` §(c) and the orchestrator contract (§6) and keeps `active_phase` single-owner in `stage-phase-plan-review.md`.
+   If no such phase remains (terminal): set `active_phase: null` on `project.md` (atomic temp-file + rename), do NOT auto-complete the project — user runs `/do:project complete`. If found (non-terminal): do **NOT** write `active_phase` here — that pointer is owned by `stage-phase-plan-review.md` step 6 and is written only after the next phase's plan review approves. Leave the phase's `status` at `planning` and let the re-grill + plan review gate in step 7 below drive the transitions. This preserves the planning gate per `project-state-machine.md` §(c) and the orchestrator contract (§6) and keeps `active_phase` single-owner in `stage-phase-plan-review.md`.
 
-6. **Per-phase re-grill (Pass 3):** if a next phase was found, read its `phase.md` confidence score. If below `project_intake_threshold`, spawn `do-griller` against next phase's `phase.md`; the `Threshold:` field in the prompt MUST be the project threshold (the fallback in `do-griller` is task-safe, so callers who want `project_intake_threshold` must pass it explicitly):
+7. **Per-phase re-grill (Pass 3):** if a next phase was found, read its `phase.md` confidence score. If below `project_intake_threshold`, spawn `do-griller` against next phase's `phase.md`; the `Threshold:` field in the prompt MUST be the project threshold (the fallback in `do-griller` is task-safe, so callers who want `project_intake_threshold` must pass it explicitly):
 
    ```javascript
    Agent({
@@ -226,11 +228,10 @@ Run Phase-Complete State Transition:
 
    After re-grill returns (or immediately if already at/above threshold), invoke `@references/stage-phase-plan-review.md` for the next phase. Both paths run with the phase at `planning` — that stage reference is the single owner of (a) the phase `planning → in_progress` promotion after plan approval, (b) the idempotent project-level `planning → in_progress` promotion on first-phase-approval, and (c) setting `project.md.active_phase = <next_phase_slug>`.
 
-7. Print:
-   ```
-   Phase complete. Handoff artefact pending (Task γ).
-   ```
-   (Do NOT invoke `stage-phase-exit.md` — that is Task γ's scope.)
+8. **Print handoff result:** read the rendered `handoff.md`:
+   - Non-terminal phase: print the `## Next Phase Entry Prompt` block and suggest:
+     "Phase `<completed_phase_slug>` complete. Consider `/clear` and paste the prompt above into a fresh session."
+   - Terminal phase: print the `## Project Completion Hint` line.
 
 ---
 
@@ -386,17 +387,19 @@ Top-level project abandon — α's `project-state.cjs abandon project <slug>` is
    ```
    (α's script appends its own state-transition changelog line; this step adds the user-provided reason on top. Writing to the changelog in the archived location: `.do/projects/archived/<active_project>/changelog.md`.)
 
-5. Display: "Project `<slug>` abandoned and archived at `.do/projects/archived/<slug>/`. Re-activation (`/do:project resume`) is not yet implemented — ships in Task γ. Until then the archived folder is a historical record; do not hand-edit `active_project` in `.do/config.json` to revive it."
+5. Display: "Project `<slug>` abandoned and archived at `.do/projects/archived/<slug>/`. To re-activate: move `.do/projects/archived/<slug>/` back to `.do/projects/<slug>/`, set `active_project: <slug>` in `.do/config.json`, then run `/do:project resume`. Note: archived-project restore is not yet implemented as a first-class command and may ship in a future iteration."
 
 ---
 
 ### `resume`
 
-Not yet implemented (Task γ).
+Resume the active project from cold start. Delegates all routing to `stage-project-resume.md`.
 
-```
-/do:project resume is not yet implemented. See Task γ (project-gamma-resume-handoff).
-```
+1. Invoke `@references/stage-project-resume.md`.
+   The stage reference handles: config read, state computation via `project-resume.cjs`,
+   preamble loading per target file (project.md → phase.md → wave.md), resume summary
+   display, and routing to the correct stage reference.
+2. Return whatever the stage reference returns (COMPLETE or STOP propagates to user).
 
 ---
 
@@ -407,7 +410,7 @@ Display usage and stop:
 ```
 Unknown subcommand: <argv[0]>
 
-Usage: /do:project <new|phase|wave|status|complete|abandon>
+Usage: /do:project <new|phase|wave|status|complete|abandon|resume>
 Run /do:project without arguments to see this help.
 ```
 
@@ -431,6 +434,7 @@ No automatic retries. User decides next step.
   - `@scripts/project-scaffold.cjs` — Creates project/phase/wave folders and files
   - `@scripts/project-state.cjs` — State transitions, abandon cascade, status reads
   - `@scripts/project-health.cjs` — Health checks (used by `/do:init`)
+  - `@scripts/project-resume.cjs` — State reader, returns next-action JSON for resume routing
 - **Stage references (called inline via `@references/...`):**
   - `@references/stage-project-intake.md` — Pass 1 + 2 grilling flow
   - `@references/stage-project-plan-review.md` — PR-0..PR-5, targets `project.md`
@@ -440,6 +444,9 @@ No automatic retries. User decides next step.
   - `@references/stage-wave-code-review.md` — Spawns `do-code-reviewer` + council
   - `@references/stage-wave-verify.md` — Spawns `do-verifier` against `wave.md`
   - `@references/stage-project-complete.md` — Renders `completion-summary.md`
+  - `@references/stage-project-resume.md` — Cold-start resume orchestrator
+  - `@references/stage-phase-exit.md` — Render-only handoff artefact writer
+  - `@references/resume-preamble-project.md` — Per-file context reload (project pipeline sibling)
 - **Templates (α artefacts):**
   - `@references/project-master-template.md`
   - `@references/phase-template.md`

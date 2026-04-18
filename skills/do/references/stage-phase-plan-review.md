@@ -7,7 +7,7 @@ description: "Phase plan review block for /do:project. Council gate check, paral
 
 This reference file is loaded by `skills/do/project.md` when a phase enters planning (after `phase new` or after the per-phase re-grill). It encodes the full plan review logic for `phase.md` including wave-seeding on approval.
 
-**Caller contract:** The caller provides `<phase_path>` = abs path to `phase.md`, `<active_project>` slug, and `<phase_slug>`. When this stage returns APPROVED, four writes have landed: (1) `council_review_ran.plan: true` in `phase.md`'s frontmatter, (2) all in-scope wave folders seeded via `project-scaffold.cjs wave`, (3) phase `status: planning → in_progress` via `project-state.cjs set phase ... status=in_progress`, and (4) `active_phase: <phase_slug>` set atomically on `project.md`. Return control to caller. If ESCALATE or MAX_ITERATIONS, stop and present to the user.
+**Caller contract:** The caller provides `<phase_path>` = abs path to `phase.md`, `<active_project>` slug, and `<phase_slug>`. When this stage returns APPROVED, up to five writes have landed: (1) `council_review_ran.plan: true` in `phase.md`'s frontmatter, (2) all in-scope wave folders seeded via `project-scaffold.cjs wave`, (3) **idempotent project-level promotion** `project: planning → in_progress` via `project-state.cjs set project ... status=in_progress` IFF `project.md.status === 'planning'` (skipped on subsequent phase approvals since it's already `in_progress`), (4) phase `status: planning → in_progress` via `project-state.cjs set phase ... status=in_progress`, and (5) `active_phase: <phase_slug>` set atomically on `project.md`. Write (3) is the single authoritative project activation point — without it `/do:project complete` would hard-fail because α's state machine only allows `project: in_progress → completed`. Return control to caller. If ESCALATE or MAX_ITERATIONS, stop and present to the user.
 
 ---
 
@@ -165,7 +165,22 @@ Apply single-review fallback in PR-4b (skip PR-4a).
    ```
    Skip any wave that already has a folder. Append changelog entry per wave seeded.
 
-3. **Promote phase to `in_progress` (planning → in_progress gate):** now that the plan is approved and the in-scope wave folders are seeded, transition the phase status so execution can begin:
+3. **Promote project to `in_progress` (first-phase-approval gate, idempotent):** read `project.md` status. If it is still `planning`, promote it now — this is the single authoritative place the project transitions out of `planning`, without which `/do:project complete` will hard-fail later (α's state machine only allows `project: in_progress → completed`).
+
+   ```bash
+   node -e "
+   const fm = require('gray-matter'), fs = require('fs');
+   const proj = fm(fs.readFileSync('.do/projects/<active_project>/project.md', 'utf8'));
+   process.exit(proj.data.status === 'planning' ? 0 : 1);
+   " && node ~/.claude/commands/do/scripts/project-state.cjs set project <active_project> status=in_progress
+   ```
+
+   The exit-1 branch (project already `in_progress` from a prior phase approval) is intentional — this step is a no-op on the 2nd, 3rd, Nth phase approval. Append changelog only when the transition actually fired:
+   ```
+   <ISO> status-change:project:<active_project>: planning -> in_progress (reason: first phase approved — stage-phase-plan-review)
+   ```
+
+4. **Promote phase to `in_progress` (planning → in_progress gate):** now that the plan is approved and the in-scope wave folders are seeded, transition the phase status so execution can begin:
    ```bash
    node ~/.claude/commands/do/scripts/project-state.cjs set phase <phase_slug> status=in_progress --project <active_project>
    ```
@@ -174,7 +189,7 @@ Apply single-review fallback in PR-4b (skip PR-4a).
    <ISO> status-change:phase:<phase_slug>: planning -> in_progress (stage-phase-plan-review approved)
    ```
 
-4. **Activate phase pointer on project.md:** `/do:project wave new` and `/do:project wave next` both read `active_phase` from `project.md` to know which phase to target. After this approval is the moment that pointer becomes authoritative. Atomic temp-file + rename on `project.md`:
+5. **Activate phase pointer on project.md:** `/do:project wave new` and `/do:project wave next` both read `active_phase` from `project.md` to know which phase to target. After this approval is the moment that pointer becomes authoritative. Atomic temp-file + rename on `project.md`:
    ```javascript
    const fm = require('gray-matter'), fs = require('fs'), os = require('os'), path = require('path');
    const projPath = '.do/projects/<active_project>/project.md';
@@ -191,7 +206,7 @@ Apply single-review fallback in PR-4b (skip PR-4a).
    ```
    This closes the otherwise-silent gap where `project-scaffold.cjs project` initialises `active_phase: null` and no earlier step in the phase new → plan review flow sets it. Without this write, `wave new` and `wave next` would find `active_phase: null` and fail.
 
-5. Return control to caller.
+6. Return control to caller.
 
 ### If ITERATE (and review_iterations < 3)
 

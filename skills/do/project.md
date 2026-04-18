@@ -162,7 +162,7 @@ Run Phase-Complete State Transition:
 
 4. **Backlog cleanup:** read `phase.md` `backlog_item`. If non-null, invoke `/do:backlog done <id>`. Log: "Removed backlog item `<id>` from BACKLOG.md."
 
-5. **Promote next phase (planning-gate preserved):** find next in-scope phase in `project.md`'s `phases[]` with `status: planning`. If found (non-terminal): set `active_phase: <next_phase_slug>` in `project.md` but **leave the phase's `status` at `planning`**. The phase transitions to `in_progress` only after `stage-phase-plan-review.md` approves the plan and the user explicitly starts a wave under it. This preserves the planning gate per `project-state-machine.md` §(c) and the orchestrator contract (§6). If no planning phase remains (terminal): set `active_phase: null` (do NOT auto-complete project — user runs `/do:project complete`).
+5. **Identify next phase (planning-gate preserved):** find the next in-scope phase in `project.md`'s `phases[]` with `status: planning`. If no such phase remains (terminal): set `active_phase: null` on `project.md` (atomic temp-file + rename), do NOT auto-complete the project — user runs `/do:project complete`. If found (non-terminal): do **NOT** write `active_phase` here — that pointer is owned by `stage-phase-plan-review.md` step 5 and is written only after the next phase's plan review approves. Leave the phase's `status` at `planning` and let the re-grill + plan review gate in step 6 below drive the transitions. This preserves the planning gate per `project-state-machine.md` §(c) and the orchestrator contract (§6) and keeps `active_phase` single-owner in `stage-phase-plan-review.md`.
 
 6. **Per-phase re-grill (Pass 3):** if a next phase was found, read its `phase.md` confidence score. If below `project_intake_threshold`, spawn `do-griller` against next phase's `phase.md`; the `Threshold:` field in the prompt MUST be the project threshold (the fallback in `do-griller` is task-safe, so callers who want `project_intake_threshold` must pass it explicitly):
 
@@ -184,7 +184,7 @@ Run Phase-Complete State Transition:
    })
    ```
 
-   After re-grill returns (or immediately if already at/above threshold), invoke `@references/stage-phase-plan-review.md` for the next phase. Both paths run with the phase at `planning` — that stage reference is what promotes it to `in_progress` after plan approval **and** sets `project.md.active_phase = <next_phase_slug>`.
+   After re-grill returns (or immediately if already at/above threshold), invoke `@references/stage-phase-plan-review.md` for the next phase. Both paths run with the phase at `planning` — that stage reference is the single owner of (a) the phase `planning → in_progress` promotion after plan approval, (b) the idempotent project-level `planning → in_progress` promotion on first-phase-approval, and (c) setting `project.md.active_phase = <next_phase_slug>`.
 
 7. Print:
    ```
@@ -308,35 +308,25 @@ Invoke `@references/stage-project-complete.md`.
 
 ### `abandon`
 
-Top-level project abandon:
+Top-level project abandon — α's `project-state.cjs abandon project <slug>` is the single owner of all side effects (cascade abandon of in-scope phases + waves, rename to `.do/projects/archived/<slug>/`, clear `active_project` in config). Do NOT re-implement these inline; following this step after the script runs would attempt to move a folder that no longer exists.
 
 1. If `active_project` null, error: "No active project to abandon."
 2. Prompt for one-line abandon reason (inline text prompt).
-3. Call:
+3. Call α's single-owner abandon operation:
    ```bash
    node ~/.claude/commands/do/scripts/project-state.cjs abandon project <active_project>
 
    # Note: `abandon project` does NOT take --project (project slug is the path arg).
    ```
-   Cascades `status: abandoned` on project + every in-scope phase + wave (records `pre_abandon_status`; out-of-scope untouched).
-4. Append changelog: `<ISO> abandon:project:<slug>: <reason>`.
-5. Move project folder to archived:
-   ```bash
-   mv .do/projects/<active_project>/ .do/projects/archived/<active_project>/
+   This cascades `status: abandoned` on project + every in-scope phase + wave (records `pre_abandon_status`; out-of-scope untouched), renames the project folder into `.do/projects/archived/<slug>/`, and clears `active_project` in `.do/config.json` — all atomic, all in one script invocation.
+
+4. Append abandon-reason changelog:
    ```
-   (Use `fs.renameSync` via node for atomicity if bash `mv` crosses device boundaries.)
-6. Clear `active_project` in config:
-   ```bash
-   node -e "
-   const fs = require('fs'), os = require('os'), path = require('path');
-   const cfg = JSON.parse(fs.readFileSync('.do/config.json', 'utf8'));
-   cfg.active_project = null;
-   const tmp = path.join(os.tmpdir(), 'config-' + Date.now() + '.json');
-   fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2));
-   fs.renameSync(tmp, '.do/config.json');
-   "
+   <ISO> abandon:project:<slug>: <reason>
    ```
-7. Display: "Project `<slug>` abandoned and archived. To re-activate, move `.do/projects/archived/<slug>/` back and run `/do:project resume` (Task γ)."
+   (α's script appends its own state-transition changelog line; this step adds the user-provided reason on top. Writing to the changelog in the archived location: `.do/projects/archived/<active_project>/changelog.md`.)
+
+5. Display: "Project `<slug>` abandoned and archived. To re-activate, move `.do/projects/archived/<slug>/` back and run `/do:project resume` (Task γ)."
 
 ---
 

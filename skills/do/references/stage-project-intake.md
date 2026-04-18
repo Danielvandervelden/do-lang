@@ -234,27 +234,61 @@ Return summary of sections populated.
 
 ## PI-6b: Verify Planner Output
 
-After the PI-6 spawn returns, confirm the curated sections actually landed. This is a cheap sanity gate that catches silent-failure cases (planner returned summary but didn't Edit the file, or Edit partially failed):
+After the PI-6 spawn returns, confirm the curated sections actually landed. **Header-presence alone is insufficient** — the scaffold template (`skills/do/references/project-master-template.md`) already ships with all 7 headers and placeholder markers like `{{VISION}}` under each one, and `project-scaffold.cjs` initialises `title: <slug>`. A fresh uncurated `project.md` would pass a header-only check. This gate must verify that the planner actually **replaced** the placeholders with real content:
 
 ```bash
 node -e "
 const fm = require('gray-matter'), fs = require('fs');
 const doc = fm(fs.readFileSync('<project_path>', 'utf8'));
+
+// Check 1: all 7 required headers present (catches agent deleted a section)
 const required = ['## Vision', '## Target Users', '## Non-Goals', '## Success Criteria', '## Constraints', '## Risks', '## Phase Plan'];
-const missing = required.filter(h => !doc.content.includes(h));
-if (missing.length > 0) {
-  console.error('Planner did not populate: ' + missing.join(', '));
+const missingHeaders = required.filter(h => !doc.content.includes(h));
+if (missingHeaders.length > 0) {
+  console.error('Missing headers: ' + missingHeaders.join(', '));
   process.exit(1);
 }
+
+// Check 2: no unreplaced {{PLACEHOLDER}} markers remain (catches scaffold-leftovers)
+const placeholderMatch = doc.content.match(/\{\{[A-Z_]+\}\}/g);
+if (placeholderMatch) {
+  console.error('Scaffold placeholders still present (planner did not curate): ' + [...new Set(placeholderMatch)].join(', '));
+  process.exit(1);
+}
+
+// Check 3: title is not just the slug (scaffold default) — planner should have set a human-readable title
 if (!doc.data.title) {
   console.error('Planner did not set frontmatter title');
   process.exit(1);
 }
+const slug = doc.data.slug || doc.data.project_slug;
+if (slug && doc.data.title === slug) {
+  console.error('title is still the raw slug (\"' + slug + '\") — planner did not customise');
+  process.exit(1);
+}
+
+// Check 4: section bodies are substantive (catches empty headers). We do a minimum
+// byte-length check per section — each must have > 40 non-whitespace chars of content
+// between its header and the next ## / end-of-file. Threshold is loose on purpose;
+// the plan-review stage is the authoritative quality gate for body content.
+const sections = doc.content.split(/^## /m).slice(1); // first split is pre-first-header
+const MIN_BODY = 40;
+for (const sec of sections) {
+  const [header, ...rest] = sec.split('\n');
+  const body = rest.join('\n')
+    .replace(/<!--[\s\S]*?-->/g, '')   // strip template guide comments
+    .replace(/\s+/g, '');              // strip whitespace for length
+  if (body.length < MIN_BODY) {
+    console.error('Section \"## ' + header.trim() + '\" has insufficient content (' + body.length + ' < ' + MIN_BODY + ' non-whitespace chars)');
+    process.exit(1);
+  }
+}
+
 console.log('planner-output-ok');
 "
 ```
 
-If this check fails, stop and surface the missing sections to the user. Do NOT proceed to PI-7 — the project must not advance to `planning` with incomplete curation. The user can then: re-spawn the planner, fill sections manually, or abandon.
+If this check fails, stop and surface the specific failure to the user (missing header / unreplaced placeholder / slug-as-title / empty section). Do NOT proceed to PI-7 — the project must not advance to `planning` with incomplete curation. The user can then: re-spawn the planner with the specific failure, fill sections manually, or abandon.
 
 ---
 

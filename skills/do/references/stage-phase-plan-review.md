@@ -9,6 +9,8 @@ This reference file is loaded by `skills/do/project.md` when a phase enters plan
 
 **Caller contract:** The caller provides `<phase_path>` = abs path to `phase.md`, `<active_project>` slug, and `<phase_slug>`. When this stage returns APPROVED, up to five writes have landed: (1) `council_review_ran.plan: true` in `phase.md`'s frontmatter, (2) all in-scope wave folders seeded via `project-scaffold.cjs wave`, (3) **idempotent project-level promotion** `project: planning → in_progress` via `project-state.cjs set project ... status=in_progress` IFF `project.md.status === 'planning'` (skipped on subsequent phase approvals since it's already `in_progress`), (4) phase `status: planning → in_progress` via `project-state.cjs set phase ... status=in_progress`, and (5) `active_phase: <phase_slug>` set atomically on `project.md`. Write (3) is the single authoritative project activation point — without it `/do:project complete` would hard-fail because α's state machine only allows `project: in_progress → completed`. Return control to caller. If ESCALATE or MAX_ITERATIONS, stop and present to the user.
 
+**Non-hijack skip path (iter 11/12):** If another phase already owns `project.md.active_phase` when this stage runs (triggered by `/do:project phase new` planning a future phase during an in-progress phase), PR-5 step 1's guard is the FIRST step in the APPROVED branch and exits immediately — NONE of writes (1)-(5) land (including `council_review_ran.plan` and wave seeding). All writes are deferred until `/do:project phase complete` on the currently-active phase later clears `active_phase` and re-invokes this stage for the now-becoming-active phase. On re-entry: PR-0's resume guard passes (flag still false), review re-runs idempotently, the non-hijack guard passes (pointer is null after phase-complete cleared it), and writes (1)-(5) land. The cost is one redundant review pass per deferred phase.
+
 ---
 
 ## PR-0: Resume Guard
@@ -152,20 +154,44 @@ Apply single-review fallback in PR-4b (skip PR-4a).
 
 ### If APPROVED
 
-1. Update `phase.md` frontmatter:
+1. **Phase-pointer non-hijack guard (FIRST — gates all subsequent writes):** This must be the very first step so that none of writes 2-6 leak onto a future phase whose promotion is deferred. Read `project.md.active_phase`. If another phase is already active (`active_phase` is set to a different, non-null slug), this plan-review was triggered by `/do:project phase new` during an in-progress phase (planning a future phase while the current one is still active). In that case log to changelog, `exit 0`, and let `/do:project phase complete` on the currently-active phase be what re-invokes this stage for the now-becoming-active phase. On re-entry: PR-0 passes (flag still false because we wrote nothing), review re-runs idempotently, this guard passes (pointer is null after phase-complete cleared it), and steps 2-7 land. Cost: one redundant review pass per deferred phase. Benefit: no state leaks and no complex resume guard.
+
+   ```bash
+   CURRENT_ACTIVE_PHASE=$(node -e "
+   const fm = require('gray-matter'), fs = require('fs');
+   const doc = fm(fs.readFileSync('.do/projects/<active_project>/project.md', 'utf8'));
+   process.stdout.write(doc.data.active_phase || '');
+   ")
+
+   if [ -n "$CURRENT_ACTIVE_PHASE" ] && [ "$CURRENT_ACTIVE_PHASE" != "<phase_slug>" ]; then
+     # Another phase is currently active — this is a future-phase-plan-review
+     # from `phase new` during an in-progress phase. Skip ALL subsequent writes
+     # (including council_review_ran.plan, wave seeding, project+phase promotion,
+     # active_phase pointer). Waves will be seeded when phase-complete re-invokes.
+     echo "$(date -Iseconds) plan-approved-for-future-phase:<phase_slug>  active_phase=$CURRENT_ACTIVE_PHASE remains (no hijack; all writes deferred until phase-complete re-invokes stage)" \
+       >> .do/projects/<active_project>/changelog.md
+     # Return control to caller without executing steps 2-7.
+     exit 0
+   fi
+   # Else: active_phase is null (first phase approval, or phase-complete just cleared it)
+   # or equals <phase_slug> (idempotent re-approval on the currently-owned phase).
+   # Proceed to steps 2-7.
+   ```
+
+2. Update `phase.md` frontmatter:
    ```yaml
    council_review_ran:
      plan: true
    ```
 
-2. **Wave-seeding hook (§6 step 1a):** for each wave listed in `phase.md`'s `## Wave Plan` section (or `waves[]` frontmatter), call `project-scaffold.cjs wave` to create the wave folder and `wave.md` if it does not already exist:
+3. **Wave-seeding hook (§6 step 1a):** for each wave listed in `phase.md`'s `## Wave Plan` section (or `waves[]` frontmatter), call `project-scaffold.cjs wave` to create the wave folder and `wave.md` if it does not already exist:
    ```bash
    # For each wave slug in the phase plan:
    node ~/.claude/commands/do/scripts/project-scaffold.cjs wave <active_project> <phase_slug> <wave_slug>
    ```
    Skip any wave that already has a folder. Append changelog entry per wave seeded.
 
-3. **Promote project to `in_progress` (first-phase-approval gate, idempotent):** read `project.md` status. If it is still `planning`, promote it now — this is the single authoritative place the project transitions out of `planning`, without which `/do:project complete` will hard-fail later (α's state machine only allows `project: in_progress → completed`). On the 2nd, 3rd, Nth phase approval the project is already `in_progress`, so this step **must be a true shell no-op** (exit 0, no promotion call, no changelog write).
+4. **Promote project to `in_progress` (first-phase-approval gate, idempotent):** read `project.md` status. If it is still `planning`, promote it now — this is the single authoritative place the project transitions out of `planning`, without which `/do:project complete` will hard-fail later (α's state machine only allows `project: in_progress → completed`). On the 2nd, 3rd, Nth phase approval the project is already `in_progress`, so this step **must be a true shell no-op** (exit 0, no promotion call, no changelog write).
 
    ```bash
    CURRENT_STATUS=$(node -e "
@@ -185,28 +211,6 @@ Apply single-review fallback in PR-4b (skip PR-4a).
    # phase approvals.
    ```
 
-4. **Phase-pointer non-hijack guard (read `project.md.active_phase`):** If another phase is already active (`active_phase` is set to a different, non-null slug), this plan-review was triggered by `/do:project phase new` during an in-progress phase (planning a future phase while the current one is still active). In that case, **do NOT proceed to steps 5 and 6 below** (do not promote the phase to `in_progress`, do not rewrite `active_phase`). Write only the `council_review_ran.plan: true` frontmatter field on this phase, return control to caller, and let `/do:project phase complete` on the currently-active phase be what transitions the pointer to this one.
-
-   ```bash
-   CURRENT_ACTIVE_PHASE=$(node -e "
-   const fm = require('gray-matter'), fs = require('fs');
-   const doc = fm(fs.readFileSync('.do/projects/<active_project>/project.md', 'utf8'));
-   process.stdout.write(doc.data.active_phase || '');
-   ")
-
-   if [ -n "$CURRENT_ACTIVE_PHASE" ] && [ "$CURRENT_ACTIVE_PHASE" != "<phase_slug>" ]; then
-     # Another phase is currently active — this is a future-phase-plan-review
-     # from `phase new` during an in-progress phase. Do NOT promote or hijack.
-     echo "$(date -Iseconds) plan-approved-for-future-phase:<phase_slug>  active_phase=$CURRENT_ACTIVE_PHASE remains (no hijack)" \
-       >> .do/projects/<active_project>/changelog.md
-     # Return control to caller without executing steps 5–6.
-     exit 0
-   fi
-   # Else: active_phase is null (first phase approval, or phase-complete just cleared it)
-   # or equals <phase_slug> (idempotent re-approval on the currently-owned phase).
-   # Proceed to steps 5 + 6.
-   ```
-
 5. **Promote phase to `in_progress` (planning → in_progress gate):** now that the plan is approved, the in-scope wave folders are seeded, AND the phase-pointer guard confirmed no other phase currently owns the pointer, transition the phase status so execution can begin:
    ```bash
    node ~/.claude/commands/do/scripts/project-state.cjs set phase <phase_slug> status=in_progress --project <active_project>
@@ -216,7 +220,7 @@ Apply single-review fallback in PR-4b (skip PR-4a).
    <ISO> status-change:phase:<phase_slug>: planning -> in_progress (stage-phase-plan-review approved)
    ```
 
-5. **Activate phase pointer on project.md:** `/do:project wave new` and `/do:project wave next` both read `active_phase` from `project.md` to know which phase to target. After this approval is the moment that pointer becomes authoritative. Atomic temp-file + rename on `project.md`:
+6. **Activate phase pointer on project.md:** `/do:project wave new` and `/do:project wave next` both read `active_phase` from `project.md` to know which phase to target. After this approval is the moment that pointer becomes authoritative. Atomic temp-file + rename on `project.md`:
    ```javascript
    const fm = require('gray-matter'), fs = require('fs'), os = require('os'), path = require('path');
    const projPath = '.do/projects/<active_project>/project.md';
@@ -233,7 +237,7 @@ Apply single-review fallback in PR-4b (skip PR-4a).
    ```
    This closes the otherwise-silent gap where `project-scaffold.cjs project` initialises `active_phase: null` and no earlier step in the phase new → plan review flow sets it. Without this write, `wave new` and `wave next` would find `active_phase: null` and fail.
 
-6. Return control to caller.
+7. Return control to caller.
 
 ### If ITERATE (and review_iterations < 3)
 

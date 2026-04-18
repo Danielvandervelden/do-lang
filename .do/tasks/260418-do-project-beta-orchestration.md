@@ -1,7 +1,7 @@
 ---
 id: 260418-do-project-beta-orchestration
 created: 2026-04-18T13:53:57.000Z
-updated: '2026-04-18T14:51:59.160Z'
+updated: '2026-04-18T17:30:00.000Z'
 description: >-
   Implement Task β (project-orchestration) for /do:project — ship the skill +
   stage references + subcommand routing that sit on top of Task α's contract.
@@ -24,16 +24,16 @@ description: >-
 related:
   - 260418-do-project-orchestrator
   - 260418-do-project-alpha-contract
-stage: execution
+stage: complete
 stages:
   refinement: complete
   grilling: skipped
   execution: complete
-  verification: pending
+  verification: complete
   abandoned: false
 council_review_ran:
   plan: true
-  code: false
+  code: true
 confidence:
   score: 0.88
   factors:
@@ -339,6 +339,31 @@ Quoting orchestrator §14 L899-909 verbatim as spec:
 
 ## Verification Results
 
+### Approach Checklist
+
+- [x] Group 1: Branch setup — `skills/do/project.md` created with all subcommand routing; `skills/do/do.md` updated with `/do:project` table row and routing example
+- [x] Group 2: Plan-review stage references — `stage-project-plan-review.md`, `stage-phase-plan-review.md`, `stage-wave-plan-review.md` created with PR-0..PR-5 pattern and correct target files
+- [x] Group 3: Wave execution stage references — `stage-wave-exec.md`, `stage-wave-code-review.md`, `stage-wave-verify.md` created with project-aware failure paths and backlog cleanup on success
+- [x] Group 4: Agent-spec generalisation — `do-verifier.md` + `do-executioner.md` received terminological substitutions AND behavioural edit #6 (frontmatter-presence-gated writes); five terminological-only agents edited; `do-debugger.md` unchanged; smoke test passed
+- [x] Group 5: Intake flow — `stage-project-intake.md` created with Pass 1 (10 questions), Pass 2 (3 phase-seed questions), PI-5b threshold gate, PI-6b verification, and transcript persistence
+- [x] Groups 6+7: Confidence gates + subcommand contracts embedded in `skills/do/project.md` — per-phase re-grill with concrete `Agent()` block; per-wave confidence rescue; all 8 subcommand contracts present
+- [x] Group 8: Project completion — `stage-project-complete.md` created with γ-gate check, leaf-file state reads, and manual handoff fallback path documented
+- [x] Test suites — 63 β-authored tests across 4 files: `agent-frontmatter-gates.test.cjs` (13), `project-lifecycle-roundtrip.test.cjs` (4), `beta-skill-structural.test.cjs` (37), `beta-backlog-integration.test.cjs` (9); all 63 pass
+- [x] Templates — `## Clarifications` section added to `project-master-template.md`, `phase-template.md`, `wave-template.md`
+- [x] `resume` stub present in `skills/do/project.md` returning "not yet implemented (Task γ)" message
+- [x] Single-owner invariants: `project-state.cjs abandon project` delegates archive + config-clear; `stage-project-complete.md` delegates to `project-state.cjs set project ... status=completed`; parent-index advisory semantics documented with leaf-file reads at 5 control-flow sites
+- [x] State machine fixes: `planning → in_progress` project activation in `stage-phase-plan-review.md` step 4 (idempotent, first-phase-approval only); non-hijack guard at step 1 prevents future-phase plan review from hijacking `active_phase`
+
+### Quality Checks
+
+- **Tests:** PASS (npm test) — 451/453 pass; 2 pre-existing failures in `council-invoke.test.cjs` (unrelated to β, not touched by β per `git diff main`)
+- **Lint:** N/A (no lint script in package.json)
+- **Types:** N/A (no typecheck script in package.json)
+
+### Result: PASS
+- Checklist: 12/12 complete
+- Quality: Tests pass (β-relevant 63/63; full suite 451/453 with pre-existing failures)
+- 21 council review iterations; converged at NITPICKS_ONLY in iteration 21
 
 ## Code Review Iterations
 
@@ -609,3 +634,16 @@ What this smoke test does NOT cover: a live end-to-end `/do:task` spawn through 
   3. `wave-template.md` — between `## Concerns` and `## Review Notes`
 - **Tests:** Doc-only template additions. 50/50 from iter 16 remains current.
 - **Files changed (4):** `project-master-template.md`, `phase-template.md`, `wave-template.md`, this iteration log.
+
+### Iteration 21 (2026-04-18) — VERIFIED
+- **Self-review:** APPROVED
+- **Council (codex):** NITPICKS_ONLY — 4 non-blocking documentation items logged below
+- **Combined verdict:** VERIFIED (APPROVED × NITPICKS_ONLY)
+
+**Council nitpicks (logged, not actioned — implementation-deferrable):**
+1. `agents/do-council-reviewer.md:53` only documents wave.md targets for `/do:project`, not project.md/phase.md plan reviews
+2. `agents/do-planner.md:3,17-18` frames `/do:project` usage as ITERATE-oriented only, doesn't mention initial curation (PR-2b) call sites
+3. `agents/do-verifier.md:230-233` "Update task frontmatter" leftover from pre-β wording
+4. `skills/do/project.md:403-411` help text doesn't list `resume` stub as recognized-but-unimplemented subcommand
+
+**Stage advanced:** execution → verification, council_review_ran.code: true

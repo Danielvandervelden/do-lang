@@ -151,7 +151,14 @@ Run Phase-Complete State Transition:
    node ~/.claude/commands/do/scripts/project-state.cjs set phase <active_phase> status=completed --project <active_project>
    ```
 
-3. **Clear `active_phase` and `active_wave` in project.md**, append changelog.
+3. **Clear active pointers (schema-correct: `active_wave` lives on `phase.md`, not `project.md`):**
+   - In the completing phase's `phase.md`: set `active_wave: null` (atomic temp-file + rename).
+   - In `project.md`: set `active_phase: null` (atomic temp-file + rename). Step 5 below may re-populate `active_phase` if a next planning phase exists.
+   - Append changelog:
+     ```
+     <ISO> clear:active_wave:phase:<active_phase>  reason: phase complete
+     <ISO> clear:active_phase:project:<active_project>  reason: phase complete
+     ```
 
 4. **Backlog cleanup:** read `phase.md` `backlog_item`. If non-null, invoke `/do:backlog done <id>`. Log: "Removed backlog item `<id>` from BACKLOG.md."
 

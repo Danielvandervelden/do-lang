@@ -1,15 +1,30 @@
 #!/usr/bin/env node
 
 /**
- * Tests for agent-spec β edits: frontmatter-presence-gated writes
+ * Spec-tests for agent frontmatter-presence-gated writes (β contract).
  *
- * Validates the behavioural contract added to do-executioner and do-verifier:
- * - modified_files[] write in do-executioner → only when key exists in frontmatter
- * - discovered_followups[] append in do-executioner → only when key exists
- * - unresolved_concerns[] write in do-verifier → only when key exists
- * - discovered_followups[] append in do-verifier → only when key exists
- * - wave_summary write in do-verifier → only when key exists
- * - active_task clear in do-verifier → only when target is in .do/tasks/
+ * **Scope and honest framing.** These tests do NOT exercise the agent markdown
+ * specs directly (agents are prose, not executable code). They test helper
+ * functions below that *reimplement* the documented gate logic from
+ * agents/do-executioner.md and agents/do-verifier.md. They serve two purposes:
+ *   1. Document the gate contract in executable form so regressions to the
+ *      helper (or a future port to a real gate module) are caught.
+ *   2. Provide a drift-check against the spec: if agent docs are edited to
+ *      say something different, these tests still encode the β-contract
+ *      expectation, surfacing the divergence at review time.
+ *
+ * They do NOT substitute for end-to-end agent integration testing. A real
+ * agent-behavior harness would need to spawn `do-executioner`/`do-verifier`
+ * against fixture target files and diff the result, which is out of β scope
+ * and arguably belongs in γ or a later test-infrastructure task.
+ *
+ * Gate contracts validated:
+ *   - modified_files[] write in do-executioner → only when key exists
+ *   - discovered_followups[] append in do-executioner → only when key exists
+ *   - unresolved_concerns[] write in do-verifier → only when key exists
+ *   - discovered_followups[] append in do-verifier → only when key exists
+ *   - wave_summary write in do-verifier → only when key exists
+ *   - active_task clear in do-verifier → only when target is in .do/tasks/
  *
  * Run: node --test skills/do/scripts/__tests__/agent-frontmatter-gates.test.cjs
  */

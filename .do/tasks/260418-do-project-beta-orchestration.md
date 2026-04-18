@@ -1,7 +1,7 @@
 ---
 id: 260418-do-project-beta-orchestration
 created: 2026-04-18T13:53:57.000Z
-updated: '2026-04-18T14:34:31.826Z'
+updated: '2026-04-18T14:38:39.184Z'
 description: >-
   Implement Task β (project-orchestration) for /do:project — ship the skill +
   stage references + subcommand routing that sit on top of Task α's contract.
@@ -348,3 +348,15 @@ Quoting orchestrator §14 L899-909 verbatim as spec:
 - **Council (codex):** CHANGES_REQUESTED - same 2 blockers, broadened: **every** project-state.cjs invocation in beta docs uses wrong CLI contract (12 call sites across 5 files). Authoritative form is `set <node-type> <path> <status=X|scope=X> [--project <slug>]` and `abandon <node-type> <path> [--project <slug>]`.
 - **Action:** Normalized all 12 CLI invocations across 5 files (project.md x6, stage-project-intake.md, stage-project-complete.md, stage-wave-verify.md x4, stage-phase-plan-review.md x1 new). Added explicit `set phase ... status=in_progress` call to stage-phase-plan-review.md APPROVED path step 3 + updated caller contract line 10. Fixed inline rationale reference from transient task path to stable spec citation.
 - **Tests:** 241/241 project-side tests still pass.
+
+### Iteration 3 (2026-04-18)
+- **Self-review:** APPROVED (all 6 checks from iter-1/iter-2 fixes verified; no regressions)
+- **Council (codex):** CHANGES_REQUESTED - 3 new findings:
+  1. project.md:154 (phase complete step 3) clears active_wave on project.md, but active_wave lives on phase.md per alpha schema
+  2. stage-project-intake.md:94 griller prompt ambiguity around stop condition (risk of stopping below threshold)
+  3. agent-frontmatter-gates.test.cjs tests helper reimplementations not real agent code; claim of behavioral safeguards is overstated
+- **Action:**
+  1. project.md phase complete step 3 now clears active_wave on the phase.md and active_phase on project.md separately, with an explicit per-file changelog entry.
+  2. stage-project-intake.md Pass-1 griller prompt rewritten to enumerate the three stop conditions explicitly (>= threshold OR 10 questions asked OR user override), removing the ambiguous "reaches" phrasing.
+  3. agent-frontmatter-gates.test.cjs header updated with honest framing: these are spec-tests documenting the gate contract in code form, not agent-behavior integration tests. Real agent-behavior harness deferred to later task.
+- **Tests:** 13/13 still pass after framing update (no test logic changed).

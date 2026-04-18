@@ -91,8 +91,7 @@ For each question:
 3. Log Q&A to the target file's Clarifications section
 4. Update confidence score in frontmatter after each answer
 
-After all 10 questions (or if confidence reaches <threshold>), return GRILLING_COMPLETE.
-User may type "proceed anyway" to override at any time.
+Stop and return GRILLING_COMPLETE ONLY when confidence score in the target file's frontmatter is >= <threshold>, OR when all 10 questions have been asked, OR when the user types "proceed anyway". Do NOT stop while confidence is below <threshold> unless one of the other two stop conditions fires. Continue asking questions until one of those three conditions holds.
 `
 })
 ```

@@ -125,6 +125,13 @@ Target file: <project_path>
 Read the target file, evaluate the project plan against the 5 criteria
 (Clarity, Completeness, Feasibility, Atomicity, Risks), and return PASS,
 CONCERNS, or RETHINK with evidence.
+
+If the target file's frontmatter has \`intake_override: true\`, intake
+exited below the configured confidence threshold via an explicit user
+override (recorded in the session transcript). Weigh this in your
+review: apply stricter scrutiny to Vision, Target Users, and Phase
+Plan sections, and be prepared to return CONCERNS or RETHINK if the
+plan inherits the intake uncertainty the override carried forward.
 `
 })
 ```

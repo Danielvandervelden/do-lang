@@ -527,3 +527,15 @@ What this smoke test does NOT cover: a live end-to-end `/do:task` spawn through 
 - **Stance on convergence:** Council's full-surface sweep continues but findings are getting progressively narrower — iter-13 findings in 2 files, iter-14 findings in the same 2 files but different lines, iter-13's own fix generated iter-14's second finding. If iter-15 surfaces findings on files iter-14 touched (correction regression), fix. If iter-15 surfaces new findings on files iter-14 didn't touch, judge real-contradiction vs implementation-phase and route accordingly. At some point the sweep should converge to APPROVED/NITPICKS_ONLY; when it does, β is complete.
 - **Tests:** 50/50 β-relevant suite pass (markdown-only edits; no test impact expected).
 - **Files changed (3):** `skills/do/references/stage-project-plan-review.md` (intake_override consumer), `skills/do/references/stage-project-complete.md` (BLOCKED path — manual-only), this iteration log.
+
+### Iteration 15 (2026-04-18)
+- **Self-review:** APPROVED — iter 14's two hunks correctly closed iter-13 contradictions.
+- **Council (codex):** CHANGES_REQUESTED — 2 narrow findings, both real:
+  1. iter 14's intake_override consumer clause was only added to PR-3a (council-enabled path), not PR-3b (council-disabled, single-reviewer). In workspaces with council off, the plan reviewer still ignores the override. Partial fix.
+  2. PI-6b check 3 rejects any project where `title === slug`. But `do-lang`, `foo`, `my-app`, `acme-api` are all legitimate human-readable titles that happen to equal their slug. The check would fail intake on valid curated projects for an arbitrary naming choice. Checks 2 (no `{{PLACEHOLDER}}`) and 4 (body length >= 40) are the authoritative uncuration signals — check 3 as written is overreach.
+- **Action:**
+  1. Mirrored the intake_override clause from PR-3a into PR-3b of `stage-project-plan-review.md`. Single-reviewer path now enforces the same stricter-scrutiny guidance. Override is now honoured in both council-enabled and council-disabled workspaces.
+  2. Removed the `title === slug` check from PI-6b. Check 3 now only asserts `title` is set (the case where a planner Edit accidentally blanks the field). Inline comment explicitly documents that a slug-matching title is legitimate and must pass.
+- **Convergence note:** Iter 15 findings directly traced to imperfect iter-14 edits — intake_override consumer was mirrored only to one of two code paths, and PI-6b's slug-title check was an iter-12 overreach that survived because the reviewer hadn't specifically named it until now. This is the "each iter finds bugs in the prior iter's edits" convergence pattern, and findings are now narrow enough that I expect iter 16 to return APPROVED or NITPICKS_ONLY. If it doesn't, I'll judge each finding case-by-case against the "real contradiction vs implementation-phase" split.
+- **Tests:** 50/50 β-relevant suite pass.
+- **Files changed (3):** `skills/do/references/stage-project-plan-review.md` (mirrored clause to PR-3b), `skills/do/references/stage-project-intake.md` (dropped slug-title check), this iteration log.

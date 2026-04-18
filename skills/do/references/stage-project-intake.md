@@ -256,14 +256,13 @@ if (placeholderMatch) {
   process.exit(1);
 }
 
-// Check 3: title is not just the slug (scaffold default) — planner should have set a human-readable title
+// Check 3: title is set (the scaffold initialises title=slug, so this only catches
+// the case where the planner actively blanked the field). A human-readable title
+// that happens to equal the slug (e.g. 'do-lang', 'foo', 'my-app') is legitimate
+// and must pass — the placeholder + body-length checks are the authoritative
+// signals that the body was actually curated.
 if (!doc.data.title) {
   console.error('Planner did not set frontmatter title');
-  process.exit(1);
-}
-const slug = doc.data.slug || doc.data.project_slug;
-if (slug && doc.data.title === slug) {
-  console.error('title is still the raw slug (\"' + slug + '\") — planner did not customise');
   process.exit(1);
 }
 

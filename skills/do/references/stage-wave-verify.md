@@ -1,0 +1,139 @@
+---
+name: stage-wave-verify
+description: "Wave verification block for /do:project. Spawns do-verifier against wave.md. Project-aware failure paths (retry/debug/abandon wave/out_of_scope). Does NOT reference /do:task or active_task."
+---
+
+# Wave Verification Stage
+
+This reference file is loaded by `skills/do/project.md` `wave next` after `stage-wave-code-review.md` returns VERIFIED. It spawns `do-verifier` against the wave's `wave.md` file and handles project-aware failure paths.
+
+**Caller contract:** The caller provides `<wave_path>` = abs path to `wave.md`, `<active_project>` slug, `<phase_slug>`, and `<wave_slug>`. When this stage returns PASS + UAT confirmed, wave status is set to `completed` via `project-state.cjs`, `active_wave` is cleared from `phase.md`, changelog is appended, and backlog cleanup fires if applicable. On failure, the stage presents four project-aware options — retry / debug / abandon wave / mark out_of_scope — and surfaces them to the user. This stage does NOT use `/do:task` or `/do:continue`.
+
+---
+
+## WV-0: Resume Guard
+
+Check if wave verification already completed:
+
+```bash
+node -e "
+const fm = require('gray-matter');
+const t = fm(require('fs').readFileSync('<wave_path>', 'utf8'));
+const stage = t.data.stage;
+// If stage is 'verified', skip straight to UAT (do-verifier handles this via entry condition)
+// If status is 'completed', skip entirely
+const done = t.data.status === 'completed';
+process.exit(done ? 1 : 0)
+"
+```
+
+**If wave already `completed` (exit 1):** Skip this stage. Return control to caller.
+
+---
+
+## WV-1: Spawn do-verifier
+
+```javascript
+Agent({
+  description: "Verify wave implementation",
+  subagent_type: "do-verifier",
+  model: "<models.overrides.verifier || models.overrides.code_reviewer || models.default>",
+  prompt: `
+Run verification flow for this wave.
+
+Target file: <wave_path>
+
+The target file is a wave.md for a /do:project wave. It has the same Approach,
+Execution Log, and Verification Results sections as a task file. Run the full
+verification: approach checklist, quality checks, and UAT.
+
+At the end of verification, if the target file's frontmatter has an
+\`unresolved_concerns: []\` array, write any concerns you cannot close using the
+{title, body, severity} shape. If it has a \`discovered_followups: []\` array,
+append discoveries using the {title, body, promote} shape. If it has a
+\`wave_summary\` key, write a one-sentence summary of what shipped.
+
+These writes are frontmatter-presence-gated — only write if the arrays/keys exist.
+`
+})
+```
+
+Handle result:
+
+---
+
+## WV-2: Handle Verifier Result
+
+### If PASS (UAT confirmed)
+
+Proceed to WV-3 (success path).
+
+### If FAIL (quality check failure, incomplete checklist, or UAT failed)
+
+Present project-aware failure options:
+
+```
+Wave verification failed.
+
+Options:
+1. Retry — re-run do-verifier against the updated wave (describe what was fixed)
+2. Debug — spawn /do:debug to investigate the failure
+3. Abandon wave — mark wave abandoned (`/do:project wave abandon <slug>`)
+4. Mark out of scope — set wave scope to out_of_scope (deferred, does not count toward phase completion)
+
+Choose option (1-4):
+```
+
+Wait for user response:
+
+- **Option 1 (Retry):** Ask "What was fixed?" — log answer in `wave.md` Execution Log as a deviation note, then return to WV-1 and re-spawn do-verifier.
+- **Option 2 (Debug):** Display: "Run `/do:debug` to investigate. After debugging, return to this wave by re-invoking `/do:project wave next`."
+- **Option 3 (Abandon wave):**
+  - Call `project-state.cjs abandon wave <active_project> <phase_slug> <wave_slug>`
+  - Append changelog: `<ISO> abandon:wave:<wave_slug>: verification-failed`
+  - Display: "Wave `<wave_slug>` abandoned. Run `/do:project wave next` to start the next planning wave, or `/do:project wave new <slug>` to create a replacement."
+- **Option 4 (Out of scope):**
+  - Update `wave.md` frontmatter: `scope: out_of_scope` (atomic)
+  - Append changelog: `<ISO> scope-change:wave:<wave_slug>: in_scope -> out_of_scope (verification-failed)`
+  - Display: "Wave `<wave_slug>` marked out of scope. It will not count toward phase completion. Run `/do:project wave next` to continue."
+
+---
+
+## WV-3: Success Path — Advance Wave State
+
+1. **Set wave `completed`:**
+   ```bash
+   node ~/.claude/commands/do/scripts/project-state.cjs set wave <active_project> <phase_slug> <wave_slug> completed
+   ```
+
+2. **Clear `active_wave` in `phase.md`** (atomic temp-file + rename):
+   ```bash
+   node -e "
+   const fm = require('gray-matter'), fs = require('fs'), os = require('os'), path = require('path');
+   const phasePath = '.do/projects/<active_project>/phases/<phase_slug>/phase.md';
+   const doc = fm(fs.readFileSync(phasePath, 'utf8'));
+   doc.data.active_wave = null;
+   doc.data.updated = new Date().toISOString();
+   const tmp = path.join(os.tmpdir(), 'phase-' + Date.now() + '.md');
+   fs.writeFileSync(tmp, fm.stringify(doc.content, doc.data));
+   fs.renameSync(tmp, phasePath);
+   "
+   ```
+
+3. **Append changelog:**
+   ```
+   <ISO> complete:wave:<wave_slug>  in_progress -> completed  reason: /do:project wave next verify pass
+   ```
+
+4. **Backlog cleanup:** read `wave.md` `backlog_item`. If non-null:
+   - Invoke `/do:backlog done <id>`. Log: "Removed backlog item `<id>` from BACKLOG.md."
+
+5. **Display completion:**
+   ```
+   Wave `<wave_slug>` complete.
+
+   Run `/do:project wave next` to start the next planning wave, or
+   `/do:project phase complete` if all in-scope waves are done.
+   ```
+
+6. Return control to caller.

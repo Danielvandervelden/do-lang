@@ -214,9 +214,9 @@ Escalate with MAX_ITERATIONS:
 <list remaining concerns from latest reviewer feedback>
 
 ### Options
-1. Proceed anyway (acknowledge risks)
-2. Revise plan manually and re-invoke `/do:project new <slug>`
-3. Abandon project
+1. Proceed anyway (acknowledge risks) — user explicitly accepts the outstanding concerns; caller records an override and advances to phase planning.
+2. Revise `project.md` manually (edit Vision / Phase Plan / etc. in place), then re-invoke this stage reference against the already-active project. Do NOT run `/do:project new` — the skill rejects `new` while `active_project` is set. The active project stays active throughout revision.
+3. Abandon project via `node ~/.claude/commands/do/scripts/project-state.cjs abandon project <active_project>` (cascade + archive + clear `active_project`).
 ```
 
 Stop and await user decision.

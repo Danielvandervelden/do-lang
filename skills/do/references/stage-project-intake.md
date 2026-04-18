@@ -268,7 +268,7 @@ if (slug && doc.data.title === slug) {
 }
 
 // Check 4: section bodies are substantive (catches empty headers). We do a minimum
-// byte-length check per section — each must have > 40 non-whitespace chars of content
+// byte-length check per section — each must have >= 40 non-whitespace chars of content
 // between its header and the next ## / end-of-file. Threshold is loose on purpose;
 // the plan-review stage is the authoritative quality gate for body content.
 const sections = doc.content.split(/^## /m).slice(1); // first split is pre-first-header

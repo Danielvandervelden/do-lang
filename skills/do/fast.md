@@ -79,24 +79,12 @@ If active task exists, offer options:
 
 ## Step 3: Validate Entry Criteria
 
-Display the 8 entry criteria as a checklist and ask the user to confirm the task qualifies:
+The entry criteria are listed above — the task must meet all of them.
+
+Ask the user:
 
 ```
-## Fast-path entry criteria check
-
-Does your task meet ALL of the following?
-
-- [ ] Single repo, single concern
-- [ ] Small surface area (1-3 files)
-- [ ] No new shared abstractions or shared component changes
-- [ ] No backend/API contract changes
-- [ ] No schema, auth, permissions, or state-machine changes
-- [ ] No Jira workflow complexity beyond basic execution
-- [ ] No unclear business logic
-- [ ] No need for deep debugging
-
-If any criterion does not apply, please use `/do:task` instead.
-Confirm all criteria are met? [Y/n]
+This looks like a fast-path task. Proceed? [Y/n]
 ```
 
 If user says no (or expresses doubt), redirect to `/do:task "description"` and stop.

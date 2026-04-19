@@ -2,19 +2,6 @@
 
 ## Ideas
 
-### /do:fast — replace 8-item criteria checklist with a declaration
-**id:** fast-entry-declaration
-
-**Problem:** `fast.md` Step 3 presents an 8-checkbox "entry criteria check" to the user before every fast-path task. This adds friction to what is supposed to be the quick path — anyone invoking `/do:fast "fix typo"` already knows it qualifies. The routing logic in `do.md` already filters tasks toward `/do:fast` only when they're clearly trivial; the checklist is a second gate on top of a gate that already ran.
-
-**Impact:** The fast path feels slower than it should for genuinely simple tasks. Users who are already familiar with the criteria still see the full checklist every time.
-
-**Fix:** Replace the interactive 8-item checklist with a concise declaration in the skill description (e.g., "Fast-path is for tasks touching 1-3 files with no schema/auth/API changes. If you're unsure, use `/do:task`."), then just ask a single confirmation: "This looks like a fast-path task — proceed? [Y/n]". If the user hesitates, redirect to `/do:task`. The criteria don't need to be enumerated every run — they should live in the skill header/description as permanent context.
-
-**Scope:** `skills/do/fast.md` Step 3 only. Single-file change.
-
----
-
 ### Git worktree isolation for do-executioner
 **id:** worktree-isolation
 

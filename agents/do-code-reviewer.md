@@ -56,6 +56,15 @@ Check the changes against these 6 criteria:
 5. **Security**: No obvious vulnerabilities introduced?
 6. **Completeness**: All steps from Approach implemented and logged?
 
+## Step 2.5: Classify Finding Severity (for CHANGES_REQUESTED only)
+
+When producing findings for CHANGES_REQUESTED, tag each finding with a severity:
+
+- **[blocker]** — incorrect behavior, missing test for changed logic, security issue, type unsafety, or any issue that affects a code path. Requires executioner re-spawn.
+- **[nitpick]** — style, naming, comment wording, missing doc-string. Does not affect correctness or behavior.
+
+**Rule:** NITPICKS_ONLY format is unchanged (already maps to VERIFIED; tagging those findings adds no value). Only CHANGES_REQUESTED findings receive severity tags.
+
 ## Step 3: Return Verdict
 
 Return exactly one of:
@@ -97,8 +106,8 @@ One or more criteria fail. Issues must be fixed before proceeding.
 ## CODE SELF-REVIEW: CHANGES_REQUESTED
 
 **Issues requiring changes:**
-1. <criterion>: `file:line` — <description>
-2. <criterion>: `file:line` — <description>
+1. [blocker|nitpick] <criterion>: `file:line` — <description>
+2. [blocker|nitpick] <criterion>: `file:line` — <description>
 
 **Required changes:**
 - <specific fix for issue 1>

@@ -204,9 +204,16 @@ Parse the returned summary for:
 
 Handle result:
 - **APPROVED** (council_review_ran.plan set to true by reference file): Continue to Step 7
-- **ITERATE**: stage-plan-review.md owns this loop — follow its PR-5 steps, which will re-spawn do-planner and reviewers (up to 3x). Do NOT handle plan revisions manually or edit the task file yourself.
+- **ITERATE**: stage-plan-review.md owns this loop — follow its PR-5 steps. ITERATE may resolve inline if all findings are nitpicks (see PR-4.5 in stage-plan-review.md). Do NOT handle plan revisions manually. stage-plan-review.md owns the ITERATE loop, including inline Edit tool calls for nitpick-only rounds. The caller must not bypass stage logic or edit the task file outside of the stage reference.
 - **MAX_ITERATIONS**: Show user the outstanding issues, ask to proceed or revise
 - **ESCALATE**: Show critical issues, require user decision
+
+<!--
+Schema note: When stage-plan-review.md applies nitpick-only rounds inline (PR-4.5 INLINE_NITPICKS path),
+it logs the changes in a "### Inline Patches" subsection under the relevant "### Iteration <N>" entry
+in the "## Review Iterations" section. This subsection lists each nitpick and the Edit applied.
+Orchestrators resuming via /do:continue should be aware this subsection may exist.
+-->
 
 ## Step 7: Check Confidence & Grill (if needed)
 
@@ -290,7 +297,7 @@ Handle result:
 
 Handle result:
 - **VERIFIED** (stage:verification + council_review_ran.code set by reference file): Continue to Step 11
-- **ITERATE**: stage-code-review.md owns this loop — follow its CR-5 steps, which will re-spawn do-executioner and reviewers (up to 3x). Do NOT fix code issues manually.
+- **ITERATE**: stage-code-review.md owns this loop — follow its CR-5 steps, which will re-spawn do-executioner and reviewers (up to 3x). ITERATE now passes classified findings to do-executioner as a prioritized brief (blockers first, nitpicks second — see CR-4.5 in stage-code-review.md). Do NOT fix code issues manually.
 - **MAX_ITERATIONS**: Show outstanding issues to user, ask to proceed or fix manually
 
 ## Step 11: Spawn do-verifier

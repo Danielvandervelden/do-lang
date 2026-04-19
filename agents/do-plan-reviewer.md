@@ -46,6 +46,15 @@ Check the plan against these 5 criteria:
 4. **Atomicity**: Is each step a single, clear action? Or are steps compound/vague?
 5. **Risks**: Are concerns realistic? Are mitigations adequate for the stated risks?
 
+## Step 2.5: Classify Finding Severity
+
+When producing findings for CONCERNS or RETHINK, tag each finding with a severity:
+
+- **[blocker]** — scope gap, unassigned responsibility, contradicts authoritative source, or a design-level ambiguity. Requires planner re-spawn.
+- **[nitpick]** — doc-text wording, missing example, typo, one-line clarification, or a fix that demonstrably changes no code path. Can be applied inline.
+
+**Rule:** RETHINK findings are always `[blocker]` by definition (fundamental problems that require significant revision).
+
 ## Step 3: Return Verdict
 
 Return exactly one of:
@@ -73,8 +82,8 @@ Plan has issues that should be addressed but are not fundamental blockers.
 ## PLAN SELF-REVIEW: CONCERNS
 
 **Issues found:**
-1. <criterion>: <specific issue — quote from plan>
-2. <criterion>: <specific issue — quote from plan>
+1. [blocker|nitpick] <criterion>: <specific issue — quote from plan>
+2. [blocker|nitpick] <criterion>: <specific issue — quote from plan>
 
 **Recommendations:**
 - <specific change to address issue 1>
@@ -88,7 +97,7 @@ Plan has fundamental problems that require significant revision before execution
 ## PLAN SELF-REVIEW: RETHINK
 
 **Fundamental issues:**
-1. <criterion>: <specific issue — quote from plan>
+1. [blocker] <criterion>: <specific issue — quote from plan>
 
 **Why this is blocking:**
 <explanation of why this cannot be fixed incrementally>

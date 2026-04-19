@@ -66,9 +66,15 @@ Return ONLY this structured response — no additional commentary:
 ```
 VERDICT: <verdict from JSON>
 Advisor: <advisor from JSON>
-Findings: <findings from JSON>
-Recommendations: <recommendations from JSON>
+Findings:
+- <finding 1 from JSON>
+- <finding 2 from JSON>
+Recommendations:
+- <recommendation 1 from JSON>
+- <recommendation 2 from JSON>
 ```
+
+Each element of the JSON `findings[]` array becomes one `- ` prefixed line. Same treatment for `recommendations[]`. The `Findings:` and `Recommendations:` labels are section headers on their own line, followed by bulleted items on subsequent lines.
 
 ### Error Handling
 
@@ -78,16 +84,20 @@ If the script fails (non-zero exit) or output is not valid JSON:
 ```
 VERDICT: CONCERNS
 Advisor: script-error
-Findings: council-invoke.cjs failed -- <raw error output>
-Recommendations: Check script path and config, then retry
+Findings:
+- council-invoke.cjs failed -- <raw error output>
+Recommendations:
+- Check script path and config, then retry
 ```
 
 **For code reviews (`--type code`):**
 ```
 VERDICT: CHANGES_REQUESTED
 Advisor: script-error
-Findings: council-invoke.cjs failed -- <raw error output>
-Recommendations: Check script path and config, then retry
+Findings:
+- council-invoke.cjs failed -- <raw error output>
+Recommendations:
+- Check script path and config, then retry
 ```
 
 </execution_flow>

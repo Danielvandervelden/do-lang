@@ -57,6 +57,47 @@ If any criterion fails, redirect to `/do:task`.
 
 ---
 
+## Step 0: Parse Delivery Contract
+
+Check if `$ARGUMENTS` contains `--delivery=...`.
+
+### If `--delivery=...` is present
+
+1. Extract the value: everything after `--delivery=` up to the next unquoted space (or end of string).
+2. Call `parseDeliveryArg(value)` from `@scripts/validate-delivery-contract.cjs`. If it returns `{ error }`, stop with:
+   ```
+   Delivery contract parse error: <error>
+   Fix the --delivery argument and retry. See skills/do/references/delivery-contract.md for the expected format.
+   ```
+3. Call `validateDeliveryContract(delivery)` from the same module. If `{ valid: false }`, stop with:
+   ```
+   Delivery contract validation failed:
+   <errors, one per line>
+   Fix the --delivery argument and retry.
+   ```
+4. Call `applyDefaults(delivery)` and store the result as in-session variable `delivery_contract`.
+5. Strip the `--delivery=...` flag from `$ARGUMENTS` so the remaining string is the clean task description.
+
+### If `--delivery=...` is absent
+
+Read the project config:
+
+```bash
+node -e "
+const c = require('./.do/config.json');
+const dc = c.delivery_contract || {};
+console.log(JSON.stringify({ onboarded: dc.onboarded || false, dismissed: dc.dismissed || false }));
+"
+```
+
+- **`onboarded: false`**: Trigger the onboarding flow. Load `@references/delivery-onboarding.md` and follow its instructions.
+- **`onboarded: true, dismissed: true`**: Set `delivery_contract = null`. Executioner uses project defaults.
+- **`onboarded: true, dismissed: false`**: Set `delivery_contract = null`. Log warning: `"Warning: onboarded but --delivery not passed. Executioner will use project defaults."`.
+
+Pass `delivery_contract` as an in-session variable to `@references/stage-fast-exec.md` alongside `<description>` and `models`.
+
+---
+
 ## Step 1: Check Prerequisites
 
 ```bash

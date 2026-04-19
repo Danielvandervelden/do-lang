@@ -33,6 +33,14 @@ modified_files: []
 unresolved_concerns: []
 discovered_followups: []
 wave_summary: null
+# Delivery contract (inherited from parent task or populated by project pipeline)
+# delivery:
+#   branch: null
+#   commit_prefix: null
+#   push_policy: "push"
+#   pr_policy: "create"
+#   stop_after_push: true
+#   exclude_paths: [".do/"]
 ---
 
 # {{TITLE}}
@@ -46,6 +54,17 @@ Per D-01: Comprehensive problem statement for session resumption.
 Include: symptoms, impact, related context, any prior attempts.
 This section should have enough detail that /do:project resume can
 fully understand the wave without additional context.
+-->
+
+## Delivery Contract
+
+<!--
+Inherited from parent task or populated by the project pipeline.
+The executioner reads ONLY this section for branch, commit, and push rules.
+
+If empty, the executioner follows project defaults from project.md
+(only when the user explicitly dismissed the onboarding flow).
+Population of this section by the project pipeline is deferred.
 -->
 
 ## Approach

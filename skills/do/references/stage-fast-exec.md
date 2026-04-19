@@ -7,7 +7,7 @@ description: Fast-path execution block. Task-file creation, quick context scan, 
 
 This reference file is loaded by `do:fast` (after entry-criteria confirmation) and by `do:task` (when Step 0 routes to `fast`). It encodes the full fast-path execution logic from task-file creation through completion.
 
-**Caller contract:** Caller has already validated prerequisites, checked for an active task, and confirmed the entry criteria (or selected "fast" via the Step 0 router). Caller passes `<description>` as an in-session variable (the `$ARGUMENTS` value or the router's description argument) substituted into the prompt at load time. No scratch files, no config mutation by the caller. Model config (`models` object) is also passed as an in-session variable having been read in the caller's model-config step. Working directory is the project root at invocation time; this reference assumes relative paths from there.
+**Caller contract:** Caller has already validated prerequisites, checked for an active task, and confirmed the entry criteria (or selected "fast" via the Step 0 router). Caller passes `<description>` as an in-session variable (the `$ARGUMENTS` value or the router's description argument) substituted into the prompt at load time. No scratch files, no config mutation by the caller. Model config (`models` object) is also passed as an in-session variable having been read in the caller's model-config step. An optional `delivery_contract` in-session variable may be passed — if present, it is a fully validated and defaults-applied delivery object produced by `validate-delivery-contract.cjs`; if absent or null, delivery sections are left empty. Working directory is the project root at invocation time; this reference assumes relative paths from there.
 
 When this stage returns, the task is complete (or escalation has been printed and execution has stopped).
 
@@ -38,6 +38,21 @@ council_review_ran:
   code: false
 fast_path: true
 ```
+
+**Delivery contract threading:** If `delivery_contract` in-session variable is non-null, populate the `delivery:` frontmatter fields and render the `## Delivery Contract` markdown section (between `## Problem Statement` and `## Clarifications`) with the contract data:
+
+```markdown
+## Delivery Contract
+
+- **Branch:** <delivery_contract.branch>
+- **Commit prefix:** <delivery_contract.commit_prefix>
+- **Push policy:** <delivery_contract.push_policy>
+- **PR policy:** <delivery_contract.pr_policy>
+- **Stop after push:** <delivery_contract.stop_after_push>
+- **Exclude paths:** <delivery_contract.exclude_paths.join(', ')>
+```
+
+If `delivery_contract` is null or absent, leave both sections empty (commented-out defaults in frontmatter, empty comment block in markdown section).
 
 **Critical: Write a minimal Approach section (2-4 numbered bullets) derived inline from the user's description.** Both `do-executioner` and `do-code-reviewer` depend on the Approach section as their source of truth — the executioner uses it as the step-by-step guide and the code reviewer checks completeness against it.
 

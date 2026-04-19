@@ -27,6 +27,7 @@ Read the target file and extract:
 - **Approach**: Numbered steps to execute
 - **Concerns**: What to watch for
 - **Context Loaded**: Relevant docs (re-read if needed)
+- **Delivery Contract**: If the `## Delivery Contract` section exists and is populated, read it. This is your authoritative source for branch name, commit prefix, push policy, and exclude paths. Do NOT read `CLAUDE.md`, `AGENTS.md`, or `project.md` for these rules — the task file is self-contained. If the section is empty or absent, fall back to project defaults from `project.md`.
 
 Also load any clarifications from do-griller if present.
 
@@ -93,6 +94,7 @@ Reality differs from the plan. Here's how to handle it:
 - API/function has different signature than expected
 - Dependency is missing or incompatible
 - Plan step is ambiguous or impossible
+- **Branch mismatch**: Current git branch does not match `delivery.branch` from the Delivery Contract. Do not auto-switch branches — stop and report the mismatch.
 
 **Action:** Stop execution, return to user:
 ```markdown
@@ -132,6 +134,12 @@ Stay focused on the plan. Don't scope creep.
 <completion>
 
 ## Step 4: Complete Execution
+
+**Delivery contract enforcement (before committing):**
+- If the Delivery Contract section is populated, verify you are on the branch specified in `delivery.branch`. If not, stop — do not auto-switch (see Blocking Deviations below).
+- Use the commit prefix from `delivery.commit_prefix` for all commits in this task.
+- Before staging: check `delivery.exclude_paths`. Never stage or commit any path that starts with an entry in `exclude_paths`. `.do/` is always excluded unless the contract explicitly overrides it with an empty array.
+- If `delivery.stop_after_push` is `true`: push commits and return control to the orchestrator. Do not create a PR — the user reviews before any further action.
 
 Update target file:
 

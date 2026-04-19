@@ -24,5 +24,10 @@
   "models": {
     "default": "sonnet",
     "overrides": {}
+  },
+  "delivery_contract": {
+    "onboarded": false,
+    "dismissed": false,
+    "entry_commands": []
   }
 }

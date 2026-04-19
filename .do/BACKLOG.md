@@ -2,15 +2,6 @@
 
 ## Ideas
 
-### Git worktree isolation for do-executioner
-**id:** worktree-isolation
-
-**Problem:** do-executioner operates directly on the current working tree and branch. A failed or partial execution leaves the tree dirty with no safe rollback path. Claude Code natively supports `isolation: "worktree"` on Agent spawns, but do-lang doesn't use it. Competitors like Composio give each agent its own git worktree + branch + PR.
-
-**Fix:** Add `isolation: "worktree"` to executioner Agent spawns in `task.md` Step 9 and `continue.md` Step 6. Merge worktree back on success, discard on failure. Also update `stage-fast-exec.md` and `stage-wave-exec.md` executioner spawns. Gives free rollback at near-zero cost.
-
----
-
 ### Auto-invoke /do:debug from do-executioner when bugs are encountered
 **id:** auto-debug-executioner
 

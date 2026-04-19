@@ -49,6 +49,65 @@ do-planner (cyan) → do-plan-reviewer (green)  ┐ (parallel) → do-griller (y
 
 ---
 
+## Step -1: Parse Delivery Contract
+
+Check if `$ARGUMENTS` contains `--delivery=...`.
+
+### If `--delivery=...` is present
+
+1. Extract the value: everything after `--delivery=` up to the next unquoted space (or end of string).
+2. Call `parseDeliveryArg(value)` from `@scripts/validate-delivery-contract.cjs`. If it returns `{ error }`, stop with:
+   ```
+   Delivery contract parse error: <error>
+   Fix the --delivery argument and retry. See skills/do/references/delivery-contract.md for the expected format.
+   ```
+3. Call `validateDeliveryContract(delivery)` from the same module. If `{ valid: false }`, stop with:
+   ```
+   Delivery contract validation failed:
+   <errors, one per line>
+   Fix the --delivery argument and retry.
+   ```
+4. Call `applyDefaults(delivery)` and store the result as in-session variable `delivery_contract`.
+5. Strip the `--delivery=...` flag from `$ARGUMENTS` so the remaining string is the clean task description for Step 0's routing heuristic.
+6. Never touch `delivery_contract.onboarded` — pre-passed invocations skip onboarding entirely.
+
+### If `--delivery=...` is absent
+
+Read the project config:
+
+```bash
+node -e "
+const c = require('./.do/config.json');
+const dc = c.delivery_contract || {};
+console.log(JSON.stringify({ onboarded: dc.onboarded || false, dismissed: dc.dismissed || false }));
+"
+```
+
+- **`onboarded: false`**: Trigger the onboarding flow. Load `@references/delivery-onboarding.md` and follow its instructions. After onboarding completes, set `delivery_contract` to whatever contract was established (or `null` if dismissed).
+- **`onboarded: true, dismissed: true`**: Set `delivery_contract = null`. The executioner will use project defaults from `project.md`. This is the only path where implicit behavior is permitted — because the user explicitly opted in.
+- **`onboarded: true, dismissed: false`**: Set `delivery_contract = null`. The entry command was previously wired but `--delivery` was not passed — this may be an error in the caller. Log a one-line warning but proceed: `"Warning: onboarded but --delivery not passed. Executioner will use project defaults."`.
+
+### Thread delivery_contract into task file
+
+At Step 4 (task file creation) and when invoking `@references/stage-fast-exec.md` (fast path):
+
+- If `delivery_contract` is non-null, populate the `delivery:` frontmatter fields and render the `## Delivery Contract` markdown section with the contract data.
+- If `delivery_contract` is null, leave both sections empty (commented-out defaults in frontmatter, empty comment block in markdown section).
+
+Rendered `## Delivery Contract` format (when non-null):
+```markdown
+## Delivery Contract
+
+- **Branch:** <delivery_contract.branch>
+- **Commit prefix:** <delivery_contract.commit_prefix>
+- **Push policy:** <delivery_contract.push_policy>
+- **PR policy:** <delivery_contract.pr_policy>
+- **Stop after push:** <delivery_contract.stop_after_push>
+- **Exclude paths:** <delivery_contract.exclude_paths.join(', ')>
+```
+
+---
+
 ## Step 0: Smart Routing
 
 **Manual entry via `/do:quick` or `/do:fast` skips this step entirely.** This router only chooses between `fast` and the full task pipeline — `/do:quick` is manual-only and never auto-recommended here (see design rationale: entry criteria for quick-path are "vibes-based" and not reliably automatable without judgment).

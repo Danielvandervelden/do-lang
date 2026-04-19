@@ -53,6 +53,15 @@ confidence:
 # Backlog item this task was started from (set by /do:backlog start)
 backlog_item: null
 
+# Delivery contract (populated by entry commands or onboarding flow)
+# delivery:
+#   branch: null
+#   commit_prefix: null
+#   push_policy: "push"
+#   pr_policy: "create"
+#   stop_after_push: true
+#   exclude_paths: [".do/"]
+
 # Wave breakdown (only added when user confirms complex task - per D-03)
 # waves:
 #   - name: <wave-name>
@@ -71,6 +80,16 @@ Per D-01: Comprehensive problem statement for session resumption.
 Include: symptoms, impact, related context, any prior attempts.
 This section should have enough detail that /do:continue can
 fully understand the task without additional context.
+-->
+
+## Delivery Contract
+
+<!--
+Populated by entry commands (e.g., /jira:start) or the onboarding flow.
+The executioner reads ONLY this section for branch, commit, and push rules.
+
+If empty, the executioner follows project defaults from project.md
+(only when the user explicitly dismissed the onboarding flow).
 -->
 
 ## Clarifications

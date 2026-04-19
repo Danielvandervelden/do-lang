@@ -2,24 +2,6 @@
 
 ## Ideas
 
-### do-griller — ask all questions upfront instead of one at a time
-**id:** griller-ask-all-at-once
-
-**Problem:** `do-griller` currently asks one question per spawn — the orchestrator relays Q1, the user answers, the orchestrator re-spawns the griller for Q2, etc. Each round costs ~16k tokens and ~40s. For 3 questions that's ~48k tokens and ~2 minutes wasted in back-and-forth.
-
-**Fix:** `agents/do-griller.md` `<grilling_philosophy>` explicitly says "**One question at a time.**" — change this to "**Ask all questions at once.**" and update Step 3 (`Ask Questions`) to present all questions in a single numbered list. The user answers all in one message. If answers raise new questions, ask all new questions in the next spawn (again, all at once). Never present one question and wait — always batch everything you have.
-
----
-
-### do-griller — include project root in spawn prompt so it doesn't search for task files
-**id:** griller-missing-project-root
-
-**Problem:** `do-griller` was observed running `find /Users/globalorange -name "260416-do-backlog-skill.md"` because it didn't know where to find the task file. The orchestrator passes `Task file: .do/tasks/<filename>` (relative path) without a project root, so the griller can't resolve it and falls back to a filesystem search.
-
-**Fix:** Two changes: (1) All griller spawn prompts in `task.md`, `continue.md`, and any reference files must include `Project root: <cwd>` alongside the task file path. (2) Add an instruction to `agents/do-griller.md` to always read the task file using the path provided — never search for it with `find`.
-
----
-
 ### /do:fast — replace 8-item criteria checklist with a declaration
 **id:** fast-entry-declaration
 

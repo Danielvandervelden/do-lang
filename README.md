@@ -152,7 +152,9 @@ do-planner → orchestrator spawns in parallel:
                ├── do-plan-reviewer  (PASS / CONCERNS / RETHINK)
                └── do-council-reviewer  (LOOKS_GOOD / CONCERNS / RETHINK)
              Combined verdict → APPROVED / ITERATE / ESCALATE
-             (ITERATE: re-plan + re-review, up to 3×)
+             (ITERATE: classify findings as blocker/nitpick;
+              nitpick-only → inline fix + PASS, no re-spawn;
+              any blocker → re-plan + re-review, up to 3×)
                      ↓
              do-griller  (if confidence < threshold)
                      ↓
@@ -164,7 +166,8 @@ do-planner → orchestrator spawns in parallel:
                ├── do-code-reviewer  (APPROVED / NITPICKS_ONLY / CHANGES_REQUESTED)
                └── do-council-reviewer  (APPROVED / NITPICKS_ONLY / CHANGES_REQUESTED)
              Combined verdict → VERIFIED / ITERATE
-             (ITERATE: fix → re-review, up to 3×)
+             (ITERATE: classify findings, prioritized brief
+              [blockers first, nitpicks second] → fix → re-review, up to 3×)
                      ↓
              do-verifier
                      ↓

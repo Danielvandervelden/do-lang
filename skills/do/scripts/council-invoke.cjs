@@ -346,6 +346,150 @@ function parseFindings(response) {
 }
 
 /**
+ * Parse findings from self-review agent freeform markdown.
+ *
+ * Handles three known section headers:
+ *   - "**Issues found:**"       (do-plan-reviewer CONCERNS)
+ *   - "**Fundamental issues:**" (do-plan-reviewer RETHINK)
+ *   - "**Issues requiring changes:**" (do-code-reviewer CHANGES_REQUESTED)
+ *
+ * Section-boundary slicing: captures text from the line after the matched
+ * header up to (but NOT including) the next bold subsection header.
+ * The boundary pattern matches lines starting with `**SectionName:**`.
+ * This prevents Recommendations, Required changes, Why this is blocking,
+ * etc. from being captured as findings.
+ *
+ * Handles both numbered (1. item) and bulleted (- item or * item) list formats.
+ *
+ * @param {string} markdown - Self-review agent output text
+ * @returns {string[]} Extracted finding strings (tags preserved)
+ */
+function parseSelfReviewFindings(markdown) {
+  if (!markdown) return [];
+
+  const FINDINGS_HEADER = /\*\*Issues found:\*\*|\*\*Fundamental issues:\*\*|\*\*Issues requiring changes:\*\*/;
+  const BOLD_SECTION = /^\*\*[^*]+:\*\*/m;
+
+  // Find the findings header
+  const headerMatch = FINDINGS_HEADER.exec(markdown);
+  if (!headerMatch) return [];
+
+  // Slice from just after the header line to end of string
+  const afterHeader = markdown.slice(headerMatch.index + headerMatch[0].length);
+
+  // Find the next bold section boundary (if any)
+  const boundaryMatch = BOLD_SECTION.exec(afterHeader);
+  const slice = boundaryMatch ? afterHeader.slice(0, boundaryMatch.index) : afterHeader;
+
+  // Extract list items (numbered or bulleted)
+  const findings = [];
+  for (const line of slice.split('\n')) {
+    const trimmed = line.trim();
+    // Numbered: "1. text", "2. text", etc.
+    const numberedMatch = trimmed.match(/^\d+\.\s+(.+)/);
+    if (numberedMatch) {
+      findings.push(numberedMatch[1].trim());
+      continue;
+    }
+    // Bulleted: "- text" or "* text"
+    const bulletedMatch = trimmed.match(/^[-*]\s+(.+)/);
+    if (bulletedMatch) {
+      findings.push(bulletedMatch[1].trim());
+    }
+  }
+
+  return findings;
+}
+
+/**
+ * Parse findings from do-council-reviewer agent's flattened text output.
+ *
+ * The do-council-reviewer agent (Step 3.5 updated) emits findings as:
+ *   Findings:
+ *   - <finding 1>
+ *   - <finding 2>
+ *   Recommendations:
+ *   - ...
+ *
+ * This function extracts bullet lines only from the Findings section.
+ * Fallback: if no bullet lines are found (pre-contract legacy format),
+ * the entire captured Findings text is returned as a single-element array
+ * (untagged, defaults to blocker via classifyFindings — safe degradation).
+ *
+ * NOTE: Do NOT use parseFindings() for council runner output — parseFindings()
+ * parses raw advisor markdown (### Key Findings sections) and will return
+ * empty results against the council runner's flattened format.
+ *
+ * @param {string} agentText - do-council-reviewer agent output text
+ * @returns {string[]} Extracted finding strings (tags preserved)
+ */
+function parseCouncilRunnerOutput(agentText) {
+  if (!agentText) return [];
+
+  // Find the Findings: section header.
+  // Strategy: locate "^Findings:" in the text, then capture everything after it
+  // up to "^Recommendations:" (if present) or end of text.
+  // We avoid multiline regex lookaheads with $ because $ matches end-of-line
+  // in multiline mode, causing premature capture termination.
+  const findingsStart = agentText.match(/^Findings:\s*/m);
+  if (!findingsStart) return [];
+
+  const afterFindings = agentText.slice(findingsStart.index + findingsStart[0].length);
+  const recsIndex = afterFindings.search(/^Recommendations:/m);
+  const sectionText = recsIndex !== -1 ? afterFindings.slice(0, recsIndex) : afterFindings;
+
+  // Extract bullet lines from the section
+  const findings = [];
+  for (const line of sectionText.split('\n')) {
+    const trimmed = line.trim();
+    const bulletMatch = trimmed.match(/^[-*]\s+(.+)/);
+    if (bulletMatch) {
+      findings.push(bulletMatch[1].trim());
+    }
+  }
+
+  // Fallback: no bullets found — legacy format, wrap entire text as single finding
+  // (untagged, defaults to blocker via classifyFindings — safe degradation)
+  if (findings.length === 0) {
+    const rawText = sectionText.trim();
+    if (rawText) {
+      return [rawText];
+    }
+    return [];
+  }
+
+  return findings;
+}
+
+/**
+ * Classify an array of finding strings into blockers and nitpicks.
+ *
+ * Classification rules:
+ *   - Finding starts with "[blocker]" -> blocker
+ *   - Finding starts with "[nitpick]" -> nitpick
+ *   - Untagged -> blocker (safe fallback: prevents silent skips)
+ *
+ * @param {string[]} findings - Array of finding strings from any parser
+ * @returns {{ blockers: string[], nitpicks: string[] }} Classified findings
+ */
+function classifyFindings(findings) {
+  const blockers = [];
+  const nitpicks = [];
+
+  for (const finding of findings) {
+    const trimmed = finding.trim();
+    if (trimmed.startsWith('[nitpick]')) {
+      nitpicks.push(trimmed);
+    } else {
+      // [blocker] prefix or untagged — defaults to blocker
+      blockers.push(trimmed);
+    }
+  }
+
+  return { blockers, nitpicks };
+}
+
+/**
  * Parse recommendations from advisor response
  * @param {string} response - Advisor response text
  * @returns {string[]} Extracted recommendations
@@ -892,6 +1036,10 @@ module.exports = {
   parseVerdict,
   parseFindings,
   parseRecommendations,
+  // Finding extraction and classification helpers (review-findings-classifier)
+  parseSelfReviewFindings,
+  parseCouncilRunnerOutput,
+  classifyFindings,
   // Invocation functions
   invokeCodex,
   invokeGemini,

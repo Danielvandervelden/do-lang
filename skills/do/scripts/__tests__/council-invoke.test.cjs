@@ -32,6 +32,9 @@ let detectRuntime,
   findWorkspaceConfig,
   loadWorkspaceConfig,
   resolveConfig,
+  parseSelfReviewFindings,
+  parseCouncilRunnerOutput,
+  classifyFindings,
   PLUGIN_ROOT,
   CODEX_COMPANION,
   DEFAULT_TIMEOUT;
@@ -48,6 +51,9 @@ try {
   findWorkspaceConfig = mod.findWorkspaceConfig;
   loadWorkspaceConfig = mod.loadWorkspaceConfig;
   resolveConfig = mod.resolveConfig;
+  parseSelfReviewFindings = mod.parseSelfReviewFindings;
+  parseCouncilRunnerOutput = mod.parseCouncilRunnerOutput;
+  classifyFindings = mod.classifyFindings;
   PLUGIN_ROOT = mod.PLUGIN_ROOT;
   CODEX_COMPANION = mod.CODEX_COMPANION;
   DEFAULT_TIMEOUT = mod.DEFAULT_TIMEOUT;
@@ -66,6 +72,9 @@ try {
   findWorkspaceConfig = notImplemented;
   loadWorkspaceConfig = notImplemented;
   resolveConfig = notImplemented;
+  parseSelfReviewFindings = notImplemented;
+  parseCouncilRunnerOutput = notImplemented;
+  classifyFindings = notImplemented;
 }
 
 // ============================================================================
@@ -731,5 +740,318 @@ describe("findWorkspaceConfig", () => {
 
     const result = findWorkspaceConfig(subdir);
     assert.strictEqual(result, configPath, "should find config in parent");
+  });
+});
+
+// ============================================================================
+// classifyFindings Tests
+// ============================================================================
+
+describe("classifyFindings", () => {
+  test("all [blocker] tagged findings go to blockers, nitpicks empty", () => {
+    const findings = ["[blocker] scope gap in Step 3", "[blocker] missing responsibility"];
+    const result = classifyFindings(findings);
+    assert.deepStrictEqual(result.blockers, findings);
+    assert.deepStrictEqual(result.nitpicks, []);
+  });
+
+  test("all [nitpick] tagged findings go to nitpicks, blockers empty", () => {
+    const findings = ["[nitpick] wording fix in intro", "[nitpick] missing example"];
+    const result = classifyFindings(findings);
+    assert.deepStrictEqual(result.blockers, []);
+    assert.deepStrictEqual(result.nitpicks, findings);
+  });
+
+  test("mixed tagged findings split correctly", () => {
+    const findings = ["[blocker] scope gap", "[nitpick] typo in Step 2", "[blocker] design flaw"];
+    const result = classifyFindings(findings);
+    assert.deepStrictEqual(result.blockers, ["[blocker] scope gap", "[blocker] design flaw"]);
+    assert.deepStrictEqual(result.nitpicks, ["[nitpick] typo in Step 2"]);
+  });
+
+  test("untagged findings default to blockers (safe fallback)", () => {
+    const findings = ["some untagged concern without tag"];
+    const result = classifyFindings(findings);
+    assert.deepStrictEqual(result.blockers, findings);
+    assert.deepStrictEqual(result.nitpicks, []);
+  });
+
+  test("empty findings array returns both arrays empty", () => {
+    const result = classifyFindings([]);
+    assert.deepStrictEqual(result.blockers, []);
+    assert.deepStrictEqual(result.nitpicks, []);
+  });
+});
+
+// ============================================================================
+// parseSelfReviewFindings Tests
+// ============================================================================
+
+describe("parseSelfReviewFindings", () => {
+  test("CONCERNS format with numbered items (current do-plan-reviewer template)", () => {
+    const markdown = `## PLAN SELF-REVIEW: CONCERNS
+
+**Issues found:**
+1. Clarity: Step 3 is ambiguous — "update the file" is underspecified
+2. Completeness: Missing edge case for empty input
+
+**Recommendations:**
+- Clarify Step 3
+- Add edge case handling
+`;
+    const result = parseSelfReviewFindings(markdown);
+    assert.deepStrictEqual(result, [
+      "Clarity: Step 3 is ambiguous — \"update the file\" is underspecified",
+      "Completeness: Missing edge case for empty input",
+    ]);
+  });
+
+  test("CONCERNS format with bulleted items (backward-compatible)", () => {
+    const markdown = `## PLAN SELF-REVIEW: CONCERNS
+
+**Issues found:**
+- Clarity: vague wording in Step 2
+- Risks: no mitigation for network failure
+
+**Recommendations:**
+- Fix wording
+`;
+    const result = parseSelfReviewFindings(markdown);
+    assert.deepStrictEqual(result, [
+      "Clarity: vague wording in Step 2",
+      "Risks: no mitigation for network failure",
+    ]);
+  });
+
+  test("RETHINK format with numbered items", () => {
+    const markdown = `## PLAN SELF-REVIEW: RETHINK
+
+**Fundamental issues:**
+1. Feasibility: The referenced API does not exist
+
+**Why this is blocking:**
+Cannot proceed without a working API.
+
+**Suggested direction:**
+Use the alternative approach.
+`;
+    const result = parseSelfReviewFindings(markdown);
+    assert.deepStrictEqual(result, ["Feasibility: The referenced API does not exist"]);
+  });
+
+  test("RETHINK format with bulleted items", () => {
+    const markdown = `## PLAN SELF-REVIEW: RETHINK
+
+**Fundamental issues:**
+- Atomicity: Three steps bundled into one
+
+**Why this is blocking:**
+Cannot be addressed incrementally.
+`;
+    const result = parseSelfReviewFindings(markdown);
+    assert.deepStrictEqual(result, ["Atomicity: Three steps bundled into one"]);
+  });
+
+  test("CHANGES_REQUESTED format (code reviewer) with numbered items", () => {
+    const markdown = `## CODE SELF-REVIEW: CHANGES_REQUESTED
+
+**Issues requiring changes:**
+1. [blocker] Correctness: \`council-invoke.cjs:45\` — incorrect return type
+2. [nitpick] Quality: \`council-invoke.cjs:12\` — missing JSDoc comment
+
+**Required changes:**
+- Fix the return type
+`;
+    const result = parseSelfReviewFindings(markdown);
+    assert.deepStrictEqual(result, [
+      "[blocker] Correctness: `council-invoke.cjs:45` — incorrect return type",
+      "[nitpick] Quality: `council-invoke.cjs:12` — missing JSDoc comment",
+    ]);
+  });
+
+  test("PASS format (no findings section) returns empty array", () => {
+    const markdown = `## PLAN SELF-REVIEW: PASS
+
+All 5 criteria met.
+
+**Evidence:**
+- Clarity: Problem statement is specific
+- Completeness: All edge cases addressed
+`;
+    const result = parseSelfReviewFindings(markdown);
+    assert.deepStrictEqual(result, []);
+  });
+
+  test("mixed content with non-list lines in findings section", () => {
+    const markdown = `## PLAN SELF-REVIEW: CONCERNS
+
+**Issues found:**
+Some introductory prose here.
+1. Clarity: vague wording
+Not a list item.
+2. Completeness: missing step
+
+**Recommendations:**
+- Fix it
+`;
+    const result = parseSelfReviewFindings(markdown);
+    assert.deepStrictEqual(result, ["Clarity: vague wording", "Completeness: missing step"]);
+  });
+
+  test("mixed list markers within same section: some numbered, some bulleted", () => {
+    const markdown = `**Issues found:**
+1. Clarity: vague
+- Risks: no mitigation
+2. Completeness: missing
+
+**Recommendations:**
+- Fix
+`;
+    const result = parseSelfReviewFindings(markdown);
+    assert.deepStrictEqual(result, [
+      "Clarity: vague",
+      "Risks: no mitigation",
+      "Completeness: missing",
+    ]);
+  });
+
+  test("[blocker]/[nitpick] tags are preserved in output (not stripped)", () => {
+    const markdown = `**Issues found:**
+1. [blocker] Clarity: scope gap in Step 3
+2. [nitpick] Risks: wording could be clearer
+
+**Recommendations:**
+- Fix scope gap
+`;
+    const result = parseSelfReviewFindings(markdown);
+    assert.ok(result[0].startsWith("[blocker]"), "blocker tag should be preserved");
+    assert.ok(result[1].startsWith("[nitpick]"), "nitpick tag should be preserved");
+  });
+
+  // Section boundary tests (per plan Concern 6)
+  test("CONCERNS with Recommendations section following: only findings extracted, recommendations excluded", () => {
+    const markdown = `**Issues found:**
+1. [blocker] Clarity: Step 3 ambiguous
+2. [nitpick] Risks: minor wording
+
+**Recommendations:**
+- Rewrite Step 3
+- Improve wording
+`;
+    const result = parseSelfReviewFindings(markdown);
+    assert.strictEqual(result.length, 2, "should extract exactly 2 findings");
+    assert.ok(result[0].includes("Clarity"), "first finding should be Clarity");
+    assert.ok(result[1].includes("Risks"), "second finding should be Risks");
+    assert.ok(!result.some(f => f.includes("Rewrite")), "Recommendations items must be excluded");
+  });
+
+  test("RETHINK with Why-this-is-blocking section following: only finding extracted", () => {
+    const markdown = `**Fundamental issues:**
+1. [blocker] Feasibility: no working API exists
+
+**Why this is blocking:**
+Cannot proceed — the API is required for all steps.
+`;
+    const result = parseSelfReviewFindings(markdown);
+    assert.strictEqual(result.length, 1, "should extract exactly 1 finding");
+    assert.ok(result[0].includes("Feasibility"), "finding should be the Feasibility issue");
+    assert.ok(!result.some(f => f.includes("Cannot proceed")), "Why-blocking content must be excluded");
+  });
+
+  test("CHANGES_REQUESTED with Required-changes section following: only findings extracted", () => {
+    const markdown = `**Issues requiring changes:**
+1. [blocker] Correctness: wrong return value at line 42
+2. [nitpick] Quality: missing comment at line 10
+
+**Required changes:**
+- Fix return value
+- Add comment
+`;
+    const result = parseSelfReviewFindings(markdown);
+    assert.strictEqual(result.length, 2, "should extract exactly 2 findings");
+    assert.ok(!result.some(f => f.includes("Fix return")), "Required-changes items must be excluded");
+  });
+
+  test("back-to-back bold sections with no findings: empty array", () => {
+    const markdown = `**Issues found:**
+**Recommendations:**
+- Some recommendation
+`;
+    const result = parseSelfReviewFindings(markdown);
+    assert.deepStrictEqual(result, [], "should return empty when no list items between headers");
+  });
+});
+
+// ============================================================================
+// parseCouncilRunnerOutput Tests
+// ============================================================================
+
+describe("parseCouncilRunnerOutput", () => {
+  test("standard bulleted format (canonical tightened contract)", () => {
+    const agentText = `VERDICT: CONCERNS
+Advisor: codex
+Findings:
+- [blocker] scope gap in Step 3
+- [nitpick] typo in intro
+Recommendations:
+- Fix scope gap and typo`;
+    const result = parseCouncilRunnerOutput(agentText);
+    assert.deepStrictEqual(result, ["[blocker] scope gap in Step 3", "[nitpick] typo in intro"]);
+  });
+
+  test("single finding with commas preserved (no comma-splitting)", () => {
+    const agentText = `VERDICT: CONCERNS
+Advisor: gemini
+Findings:
+- [blocker] scope gap in modules A, B, and C
+Recommendations:
+- Fix the gap`;
+    const result = parseCouncilRunnerOutput(agentText);
+    assert.deepStrictEqual(result, ["[blocker] scope gap in modules A, B, and C"]);
+  });
+
+  test("empty findings section returns empty array", () => {
+    const agentText = `VERDICT: LOOKS_GOOD
+Advisor: codex
+Findings:
+Recommendations:
+- No changes needed`;
+    const result = parseCouncilRunnerOutput(agentText);
+    assert.deepStrictEqual(result, []);
+  });
+
+  test("script-error bulleted format extracted correctly", () => {
+    const agentText = `VERDICT: CONCERNS
+Advisor: script-error
+Findings:
+- council-invoke.cjs failed -- timeout
+Recommendations:
+- Check script path and config, then retry`;
+    const result = parseCouncilRunnerOutput(agentText);
+    assert.deepStrictEqual(result, ["council-invoke.cjs failed -- timeout"]);
+  });
+
+  test("fallback — pre-contract legacy format (no bullets): entire text as single element", () => {
+    const agentText = `VERDICT: CONCERNS
+Advisor: codex
+Findings: [blocker] scope gap, [nitpick] typo
+Recommendations: fix both`;
+    const result = parseCouncilRunnerOutput(agentText);
+    // No bullet lines found — fallback wraps entire captured text
+    assert.strictEqual(result.length, 1, "should return single-element array for legacy format");
+    assert.ok(result[0].includes("scope gap"), "legacy text should be preserved");
+  });
+
+  test("tags are preserved in output (not stripped by parser)", () => {
+    const agentText = `VERDICT: CONCERNS
+Advisor: gemini
+Findings:
+- [blocker] design-level issue in approach
+- [nitpick] minor clarification needed
+Recommendations:
+- Fix design issue`;
+    const result = parseCouncilRunnerOutput(agentText);
+    assert.ok(result[0].startsWith("[blocker]"), "blocker tag should be preserved");
+    assert.ok(result[1].startsWith("[nitpick]"), "nitpick tag should be preserved");
   });
 });

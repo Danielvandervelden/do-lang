@@ -140,6 +140,53 @@ Map self-reviewer verdict directly:
 
 ---
 
+## PR-4.5: Classify Findings (when combined verdict is ITERATE)
+
+When the combined verdict from PR-4 is ITERATE, classify findings before deciding the action.
+
+**The orchestrator constructs the actual invocation — this is not a copy-paste script.** The inputs (`self_review_output` and `council_agent_output`) are multiline markdown/text from agent responses. They may contain apostrophes, double quotes, and newlines that would break any shell string literal. The orchestrator must write the agent output to a temporary file or use a heredoc to pass it safely to Node.js.
+
+**Instructions for the orchestrator:**
+
+1. Resolve the `council-invoke.cjs` path (installed or dev):
+   - Installed: `~/.claude/commands/do/scripts/council-invoke.cjs`
+   - Dev: `<cwd>/skills/do/scripts/council-invoke.cjs`
+2. Write the self-reviewer output to a temp file (e.g. `/tmp/do-self-review.txt`) and the council agent output to another (e.g. `/tmp/do-council-review.txt`). If council is disabled, write an empty file for the council path.
+3. Run `parseSelfReviewFindings()` on the self-review agent's output text (the full CONCERNS or RETHINK markdown response from do-plan-reviewer).
+4. Run `parseCouncilRunnerOutput()` on the council agent's output text (the flattened `VERDICT: ...\nAdvisor: ...\nFindings:\n- ...\nRecommendations:\n- ...` block from do-council-reviewer). Do NOT use `parseFindings()` — that function parses raw advisor markdown with `### Key Findings` headers, not council runner output.
+5. Merge the results into a single `allFindings` array.
+6. Run `classifyFindings()` on the merged array to produce `{ blockers: [...], nitpicks: [...] }`.
+7. Write the JSON result to stdout (via `JSON.stringify`) so it can be captured as `classified_findings_json`.
+
+Example invocation using temp files (the orchestrator adapts this to its actual tool — Bash with heredoc, Write tool + Bash, etc.):
+
+```bash
+# Step 1: write agent outputs to temp files (orchestrator does this via Write tool or heredoc)
+# /tmp/do-self-review.txt   <- full text of do-plan-reviewer agent response
+# /tmp/do-council-review.txt <- full text of do-council-reviewer agent response (or empty)
+
+# Step 2: invoke the classifier
+node -e "
+const path = require('path');
+const fs = require('fs');
+const installedPath = path.join(require('os').homedir(), '.claude/commands/do/scripts/council-invoke.cjs');
+const devPath = path.join(process.cwd(), 'skills/do/scripts/council-invoke.cjs');
+const scriptPath = fs.existsSync(installedPath) ? installedPath : devPath;
+const { parseSelfReviewFindings, parseCouncilRunnerOutput, classifyFindings } = require(scriptPath);
+const selfText = fs.readFileSync('/tmp/do-self-review.txt', 'utf8');
+const councilText = fs.readFileSync('/tmp/do-council-review.txt', 'utf8');
+const selfFindings = parseSelfReviewFindings(selfText);
+const councilFindings = parseCouncilRunnerOutput(councilText);
+const allFindings = [...selfFindings, ...councilFindings];
+const classified = classifyFindings(allFindings);
+console.log(JSON.stringify(classified));
+"
+```
+
+Store the stdout as `classified_findings_json` (a JSON string, e.g. `{"blockers":[...],"nitpicks":[...]}`).
+
+---
+
 ## PR-5: Handle Combined Verdict
 
 ### If APPROVED
@@ -152,11 +199,70 @@ council_review_ran:
 
 Return control to caller (continue to next step).
 
-### If ITERATE (and review_iterations < 3)
+### If ITERATE
 
-1. Increment `review_iterations`
-2. Compile combined findings from both reviewers (or single reviewer if council disabled)
-3. Log the iteration in the task file:
+**Step 1: Increment the iteration counter.**
+
+Increment `review_iterations` BEFORE calling `planReviewDecisionMatrix()`. This ensures the matrix sees the count for the current round, not the previous round. Nitpick-only rounds also increment the counter, but since `planReviewDecisionMatrix()` returns `INLINE_NITPICKS` regardless of count, the cap only applies to blocker rounds. The effective cap is:
+- Round 1 calls matrix with `reviewIterations=1`
+- Round 2 calls matrix with `reviewIterations=2`
+- Round 3 calls matrix with `reviewIterations=3` → MAX_ITERATIONS
+
+**Step 2: Call `planReviewDecisionMatrix(classifiedFindings, reviewIterations)`** from `stage-decision.cjs` to determine the action.
+
+**The orchestrator constructs the actual invocation — this is not a copy-paste script.** The `classified_findings_json` produced by PR-4.5 is safe JSON (no unescaped shell metacharacters in the structure), but finding text may contain apostrophes that would break a single-quoted shell string. Use the temp-file approach or write the JSON to a file first.
+
+**Instructions for the orchestrator:**
+
+1. Take the `classified_findings_json` string captured from PR-4.5 stdout (e.g. `{"blockers":["[blocker] scope gap"],"nitpicks":["[nitpick] typo"]}`).
+2. Write it to a temp file (e.g. `/tmp/do-classified.json`) to avoid shell quoting issues with apostrophes in finding text.
+3. Resolve the `stage-decision.cjs` path (installed or dev):
+   - Installed: `~/.claude/commands/do/scripts/stage-decision.cjs`
+   - Dev: `<cwd>/skills/do/scripts/stage-decision.cjs`
+4. Run `planReviewDecisionMatrix(classifiedFindings, reviewIterations)` where `classifiedFindings` is the parsed JSON object and `reviewIterations` is the already-incremented integer iteration count.
+5. Capture the JSON result and branch on `result.action`.
+
+Example invocation using the temp file from step 2 (the orchestrator adapts this):
+
+```bash
+# /tmp/do-classified.json was written in step 2 with the classified_findings_json content
+# review_iterations has already been incremented before this call (e.g. 1 for round 1)
+node -e "
+const path = require('path');
+const fs = require('fs');
+const installedPath = path.join(require('os').homedir(), '.claude/commands/do/scripts/stage-decision.cjs');
+const devPath = path.join(process.cwd(), 'skills/do/scripts/stage-decision.cjs');
+const scriptPath = fs.existsSync(installedPath) ? installedPath : devPath;
+const { planReviewDecisionMatrix } = require(scriptPath);
+const classified = JSON.parse(fs.readFileSync('/tmp/do-classified.json', 'utf8'));
+const result = planReviewDecisionMatrix(classified, <review_iterations>);
+console.log(JSON.stringify(result));
+"
+```
+
+Note: `<review_iterations>` is a bare integer (e.g. `1`, `2`, `3`) — it contains no special characters and is safe to substitute directly into the script. The value used here must already be incremented (see Step 1 above).
+
+Branch on `result.action`:
+
+#### If `INLINE_NITPICKS` (all findings are nitpicks)
+
+Apply each nitpick inline using Edit tool calls — the orchestrator does this directly, no agent spawn. Log the inline patches in the task file:
+
+```markdown
+### Iteration <N>
+- **Self-review:** <verdict> - <summary of findings>
+- **Council:** <verdict> - <summary> (or "disabled")
+- **Changes made:** Inline nitpick edits applied (see Inline Patches below)
+
+#### Inline Patches
+- Nitpick: <description> — Applied: <what was changed>
+```
+
+Then convert to APPROVED for the caller: set `council_review_ran.plan: true` and return APPROVED. The caller contract only exposes APPROVED as a success branch — INLINE_NITPICKS never surfaces beyond this stage. No re-review loop. **Nitpick-only rounds do NOT count against the 3-iteration cap.**
+
+#### If `RESPAWN` (any finding is a blocker)
+
+1. Log the iteration in the task file (iteration counter was already incremented before the matrix call):
    ```markdown
    ## Review Iterations
 
@@ -165,7 +271,7 @@ Return control to caller (continue to next step).
    - **Council:** <verdict> - <summary> (or "disabled")
    - **Changes made:** (pending — do-planner will revise)
    ```
-4. Spawn do-planner with reviewer feedback as revision instructions:
+2. Spawn do-planner with ALL findings (blockers + nitpicks bundled):
    ```javascript
    Agent({
      description: "Revise plan based on review feedback",
@@ -175,19 +281,22 @@ Return control to caller (continue to next step).
    Revise the plan based on review feedback.
 
    Task file: .do/tasks/<active_task>
-   Reviewer feedback: <combined findings from self-review and council>
+   Reviewer feedback (blockers — must fix):
+   <result.blockers joined with newlines>
+   Reviewer feedback (nitpicks — should fix):
+   <result.nitpicks joined with newlines>
 
-   Update the Approach and/or Concerns sections to address the issues listed.
+   Update the Approach and/or Concerns sections to address all issues.
    Do not change the Problem Statement unless a reviewer explicitly flagged it.
    Return a summary of changes made.
    `
    })
    ```
-5. Wait for do-planner to complete
-6. Update the iteration log entry with "Changes made: <planner summary>"
-7. Return to PR-3 and re-spawn both reviewers
+3. Wait for do-planner to complete
+4. Update the iteration log entry with "Changes made: <planner summary>"
+5. Return to PR-3 and re-spawn both reviewers
 
-### If ITERATE (and review_iterations = 3)
+#### If `MAX_ITERATIONS`
 
 Escalate with MAX_ITERATIONS:
 
@@ -207,6 +316,10 @@ Escalate with MAX_ITERATIONS:
 ```
 
 Stop and await user decision.
+
+#### If `APPROVED` (empty findings — handled gracefully)
+
+Update task frontmatter and return APPROVED (same as the APPROVED branch above).
 
 ### If ESCALATE
 

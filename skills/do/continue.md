@@ -204,7 +204,7 @@ Return structured summary when done.
 
 The resume guard (PR-0) handles the `council_review_ran.plan` skip-entirely check. If already ran, stage-plan-review returns immediately. Result handling:
 - **APPROVED**: Continue to griller check / approval checkpoint
-- **ITERATE**: stage-plan-review.md owns this loop — follow its PR-5 steps, which will re-spawn do-planner and reviewers (up to 3x). Do NOT handle plan revisions manually.
+- **ITERATE**: stage-plan-review.md owns this loop — follow its PR-5 steps. ITERATE may resolve inline if all findings are nitpicks (see PR-4.5 in stage-plan-review.md). Do NOT handle plan revisions manually. stage-plan-review.md owns the ITERATE loop, including inline Edit tool calls for nitpick-only rounds. The caller must not bypass stage logic or edit the task file outside of the stage reference.
 - **MAX_ITERATIONS** or **ESCALATE**: Show to user, stop
 
 ### Spawn do-griller
@@ -246,7 +246,7 @@ Continue from where it left off.
 
 The resume guard (CR-0) handles the `council_review_ran.code` skip-entirely check. If already ran, stage-code-review returns immediately (proceed to do-verifier). Result handling:
 - **VERIFIED**: Task file updated with stage:verification — spawn do-verifier
-- **ITERATE**: stage-code-review.md owns this loop — follow its CR-5 steps, which will re-spawn do-executioner and reviewers (up to 3x). Do NOT fix code issues manually.
+- **ITERATE**: stage-code-review.md owns this loop — follow its CR-5 steps, which will re-spawn do-executioner and reviewers (up to 3x). ITERATE now passes classified findings to do-executioner as a prioritized brief (blockers first, nitpicks second — see CR-4.5 in stage-code-review.md). Do NOT fix code issues manually.
 - **MAX_ITERATIONS**: Show to user, stop
 
 ### Spawn do-verifier

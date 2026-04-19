@@ -54,8 +54,9 @@ Return ONE of:
 [Your verdict — EXACTLY one of the options above]
 
 ### Key Findings
-- [Finding 1 — cite file:line or pattern]
-- [Finding 2 — cite evidence]
+Tag each finding as [blocker] or [nitpick]. blocker = design-level issue, scope gap, correctness bug. nitpick = wording, style, minor clarification.
+- [blocker|nitpick] Finding 1 -- cite file:line or pattern
+- [blocker|nitpick] Finding 2 -- cite evidence
 
 ### Recommendations
 - [Specific, actionable recommendation]

@@ -40,15 +40,15 @@ If `stages.grilling` is `pending`:
 - Update `updated` timestamp
 - Continue to Step G2
 
-**Step G2: Identify weakest factor (per D-13)**
+**Step G2: Identify all factors needing clarification (per D-13)**
 
 Read `confidence.factors` from task frontmatter.
-Find factor with largest deduction (most negative value).
-If multiple tied, use priority order: context > scope > complexity > familiarity.
+Find all factors with significant deductions (any negative value).
+Use priority order for presentation: context > scope > complexity > familiarity.
 
-**Step G3: Generate targeted question (per D-14)**
+**Step G3: Generate questions for all low factors (per D-14)**
 
-Based on the weakest factor, generate a specific question. Use inline text prompt (NOT AskUserQuestion - documented bug).
+For each factor with a deduction, generate a specific question. Use inline text prompt (NOT AskUserQuestion - documented bug).
 
 | Factor | Question Pattern |
 |--------|------------------|
@@ -57,17 +57,20 @@ Based on the weakest factor, generate a specific question. Use inline text promp
 | complexity | "How do these systems interact? Any dependencies or edge cases I should know about?" |
 | familiarity | "Has similar work been done before in this codebase? Any reference implementations to follow?" |
 
-Display to user:
+**Step G4: Present all questions at once and wait for combined answer**
+
+Display all questions to user in a single numbered list:
 ```
 Confidence: <score> (threshold: <threshold>)
-Weakest factor: <factor> (<value>)
 
-<targeted question>
+Please answer each question by number.
 
-Enter your answer, or type "Proceed anyway" to skip remaining questions:
+1. [<factor> (<value>)] <question for factor 1>
+2. [<factor> (<value>)] <question for factor 2>
+...
+
+Enter your answers (numbered to match), or type "Proceed anyway" to skip:
 ```
-
-**Step G4: Process user response (per D-15)**
 
 If user types "Proceed anyway" (case-insensitive):
 - Add to Clarifications section: `User override at confidence <score>`
@@ -78,30 +81,28 @@ If user types "Proceed anyway" (case-insensitive):
 - Display: "Proceeding with confidence <score>. Ready for implementation. Run /do:continue to start execution."
 - Stop grill-me flow
 
-Otherwise, process the answer.
+**Step G5: Process all answers and update all factors (per D-16)**
 
-**Step G5: Update task markdown (per D-16)**
-
-Add to Clarifications section:
+For each Q&A pair independently, add to Clarifications section:
 
 ```markdown
 ### <Factor> (was: <old_value> -> now: <new_value>)
 **Q:** <question asked>
-**A:** <user's answer>
+**A:** <user's answer for this question>
 ```
 
-Calculate confidence boost based on answer specificity:
+Calculate confidence boost per Q&A pair independently based on answer specificity:
 - Contains file path (e.g., `src/`, `.ts`, `.md`): +0.03
 - Contains PascalCase component name: +0.02
 - Contains specific term (src, lib, utils, hooks, components, api, endpoint): +0.02
 - Base boost for any non-skip answer: +0.03
 - Maximum boost per answer: 0.10
 
-Update confidence.factors.<factor> with new value (old + boost, capped at 0.00).
-Recalculate confidence.score = 1.0 + sum(all factors).
+Apply boost to each factor independently. Update confidence.factors.<factor> with new value (old + boost, capped at 0.00).
+After all factors are updated, recalculate confidence.score = 1.0 + sum(all factors).
 Update `updated` timestamp to current ISO-8601.
 
-**Step G6: Check threshold or loop (per D-15)**
+**Step G6: Check threshold or ask follow-ups (per D-15)**
 
 If confidence.score >= auto_grill_threshold:
 - Update task frontmatter:
@@ -110,7 +111,7 @@ If confidence.score >= auto_grill_threshold:
 - Display:
   ```
   Confidence: <old_score> -> <new_score> (+<delta>)
-  <factor> improved.
+  All factors improved.
   
   Confidence threshold met. Ready for implementation. Run /do:continue to start execution.
   ```
@@ -120,9 +121,9 @@ Else:
 - Display:
   ```
   Confidence: <old_score> -> <new_score> (+<delta>)
-  <factor> improved. Next weakest: <next_factor>
+  Still below threshold. Generating follow-up questions.
   ```
-- Return to Step G2 with the next weakest factor
+- Return to Step G2 to identify remaining gaps and present all follow-up questions at once in the next round
 
 ### Files
 

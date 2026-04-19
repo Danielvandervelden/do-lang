@@ -243,8 +243,7 @@ Current confidence: <score>
 Threshold: <threshold>
 
 Ask targeted questions for lowest-scoring factors.
-Update confidence after each answer.
-Stop when threshold reached or user overrides.
+Present all questions at once. After receiving combined answer, update confidence for each Q&A pair independently. Check threshold after processing the full batch. If below threshold, batch any follow-up questions into the next round.
 `
 })
 ```

@@ -209,6 +209,14 @@ The resume guard (PR-0) handles the `council_review_ran.plan` skip-entirely chec
 
 ### Spawn do-griller
 
+Before spawning, read the threshold from config:
+
+```bash
+node -e "const c=require('./.do/config.json'); console.log(c.auto_grill_threshold || 0.9)"
+```
+
+Use this value as `<threshold>` in the spawn prompt below.
+
 ```javascript
 Agent({
   description: "Grill for clarity",
@@ -218,6 +226,8 @@ Agent({
 Task confidence is below threshold. Ask clarifying questions.
 
 Task file: .do/tasks/<active_task>
+Current confidence: <score>
+Threshold: <threshold>
 `
 })
 ```

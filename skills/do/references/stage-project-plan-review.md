@@ -32,20 +32,7 @@ process.exit(t.data.council_review_ran?.project_plan === true ? 1 : 0)
 Resolve config using the cascade (project → workspace → defaults):
 
 ```bash
-node -e "
-const path = require('path');
-const fs = require('fs');
-const installedPath = path.join(require('os').homedir(), '.claude/commands/do/scripts/council-invoke.cjs');
-const devPath = path.join(process.cwd(), 'skills/do/scripts/council-invoke.cjs');
-const scriptPath = fs.existsSync(installedPath) ? installedPath : devPath;
-const { resolveConfig } = require(scriptPath);
-const cfg = resolveConfig('.do/config.json', process.cwd());
-// Prefer project-specific key; fall back to planning key
-const enabled = cfg.council_reviews?.project?.plan !== undefined
-  ? cfg.council_reviews.project.plan === true
-  : cfg.council_reviews?.planning === true;
-console.log(enabled ? 'enabled' : 'disabled');
-"
+node @scripts/council-gate.cjs project.plan planning
 ```
 
 Store result as `council_enabled` (enabled/disabled).

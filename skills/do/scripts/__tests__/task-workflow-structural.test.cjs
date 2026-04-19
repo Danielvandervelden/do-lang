@@ -80,23 +80,30 @@ describe('stage-plan-review.md: classification step', () => {
   });
 
   it('uses parseCouncilRunnerOutput (not parseFindings) for council output', () => {
+    // parseCouncilRunnerOutput may be inline or in referenced classify-findings.md
+    const classifyPath = path.join(path.dirname(TASK_STAGE_FILES[0]), 'classify-findings.md');
+    const combined = fs.existsSync(classifyPath)
+      ? content + read(classifyPath)
+      : content;
     assert.ok(
-      content.includes('parseCouncilRunnerOutput'),
-      'stage-plan-review.md must use parseCouncilRunnerOutput for council runner output'
+      combined.includes('parseCouncilRunnerOutput'),
+      'stage-plan-review.md (or its classify-findings.md reference) must use parseCouncilRunnerOutput'
     );
-    // Verify it does NOT use parseFindings() for council output (see plan concern 5)
-    // We just verify parseCouncilRunnerOutput is present; parseFindings may appear in comments
     assert.ok(
-      !content.includes('parseFindings(council_output)') &&
-      !content.includes('parseFindings(council_agent_output)'),
-      'stage-plan-review.md must not use parseFindings() on council agent output'
+      !combined.includes('parseFindings(council_output)') &&
+      !combined.includes('parseFindings(council_agent_output)'),
+      'must not use parseFindings() on council agent output'
     );
   });
 
   it('references parseSelfReviewFindings for self-review output', () => {
+    const classifyPath = path.join(path.dirname(TASK_STAGE_FILES[0]), 'classify-findings.md');
+    const combined = fs.existsSync(classifyPath)
+      ? content + read(classifyPath)
+      : content;
     assert.ok(
-      content.includes('parseSelfReviewFindings'),
-      'stage-plan-review.md must use parseSelfReviewFindings for self-review output'
+      combined.includes('parseSelfReviewFindings'),
+      'stage-plan-review.md (or its classify-findings.md reference) must use parseSelfReviewFindings'
     );
   });
 });

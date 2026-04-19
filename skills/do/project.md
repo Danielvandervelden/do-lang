@@ -19,7 +19,7 @@ Orchestrate a large multi-phase project: intake grilling → project plan → ph
 
 ## Why this exists
 
-`/do:task` handles single tasks well. Large initiatives (greenfield apps, massive refactors) span dozens of tasks across multiple phases and sessions. `/do:project` manages the full lifecycle: structured intake, phase-boundary confidence checks, per-wave execution pipelines, and state tracking across cold-start resume sessions. Phases and waves each go through the full plan-review → execute → code-review → verify pipeline via `wave.md` as the execution target — not task files.
+Large initiatives span dozens of tasks across multiple phases and sessions. `/do:project` manages the full lifecycle: intake, phase-boundary confidence checks, per-wave execution pipelines, and state tracking across cold-start resumes. Waves use `wave.md` as the execution target — not task files.
 
 ## Usage
 
@@ -57,11 +57,7 @@ All control-flow decisions read state from **leaf files**, never from parent ind
 ## Step 0: Read Config
 
 ```bash
-node -e "
-const c = require('./.do/config.json');
-const models = c.models || { default: 'sonnet', overrides: {} };
-console.log(JSON.stringify({ active_project: c.active_project || null, models, project_intake_threshold: c.project_intake_threshold || c.auto_grill_threshold || 0.85 }));
-"
+node ~/.claude/commands/do/scripts/read-config.cjs project-config
 ```
 
 Store `active_project`, `models`, and `project_intake_threshold` for downstream steps.
@@ -109,13 +105,7 @@ Parse `argv[1]` ∈ `{new, abandon, complete}`:
    ```bash
    node ~/.claude/commands/do/scripts/project-scaffold.cjs phase <active_project> <slug>
    ```
-2. If `--from-backlog <id>` flag present:
-   - Read `BACKLOG.md` and find entry with `id: <id>`.
-   - If not found: error loudly before any mutation — "Backlog entry `<id>` not found. Run `/do:backlog` to verify."
-   - If found but `status: done`: warn "Backlog entry `<id>` is already done — seeding anyway."
-   - Write backlog entry's problem/fix content into `phase.md` `## Goal` body section.
-   - Set `backlog_item: <id>` in `phase.md` frontmatter (atomic temp-file + rename).
-   - Append changelog entry: `<ISO> backlog-seed:phase:<slug>:<id>`.
+2. If `--from-backlog <id>` flag present: invoke `@references/backlog-seed.md` with target_type=`phase`, target_file=`phase.md`.
 3. Append changelog entry for scaffold: `<ISO> scaffold:phase:<slug>`.
 4. Invoke `@references/stage-phase-plan-review.md` targeting the new phase.
 
@@ -130,7 +120,7 @@ Parse `argv[1]` ∈ `{new, abandon, complete}`:
 
 #### `phase complete`
 
-Completes the active phase and advances to the next one. The multi-step sequence here exists because phase transitions involve a handoff artefact, backlog cleanup, and a planning gate for the next phase — these can't be collapsed into a single script call without losing the grilling and plan review stages.
+Completes the active phase and advances to the next one.
 
 1. **Read active phase** from `project.md` frontmatter (`active_phase`). Error if null.
 
@@ -152,35 +142,7 @@ Completes the active phase and advances to the next one. The multi-step sequence
 
 5. **Backlog cleanup:** read `phase.md` `backlog_item`. If non-null, invoke `/do:backlog done <id>`.
 
-6. **Render handoff artefact:** invoke `@references/stage-phase-exit.md` with `<active_project>` and `<completed_phase_slug>`. Use the slug captured in step 1 — step 4 has already cleared `active_phase` so re-reading it would return null. This stage is read-only (all state transitions are done).
-
-7. **Find next phase:**
-   ```bash
-   node ~/.claude/commands/do/scripts/project-state.cjs check next-planning-phase --project <active_project>
-   ```
-   - If `found: false` (terminal): do NOT auto-complete — user runs `/do:project complete`.
-   - If `found: true`: do NOT write `active_phase` here. That pointer is single-owner in `stage-phase-plan-review.md` and is written only after the next phase's plan review approves. This preserves the planning gate.
-
-8. **Per-phase re-grill (Pass 3):** if a next phase was found, read its `phase.md` confidence score. If below `project_intake_threshold`, spawn `do-griller` (pass the project threshold explicitly — `do-griller`'s default is task-safe):
-
-   ```javascript
-   Agent({
-     description: "Per-phase re-grill (Pass 3)",
-     subagent_type: "do-griller",
-     model: "<models.overrides.griller || models.default>",
-     prompt: `Phase confidence is below threshold. Ask clarifying questions.
-   Target file: .do/projects/<active_project>/phases/<next_phase_slug>/phase.md
-   Current confidence: <score>
-   Threshold: <project_intake_threshold>
-   Ask targeted questions for lowest-scoring factors. Stop when threshold reached, 10 questions asked, or user overrides.`
-   })
-   ```
-
-   After re-grill (or immediately if at threshold), invoke `@references/stage-phase-plan-review.md` for the next phase.
-
-9. **Print handoff result:** read `handoff.md`:
-   - Non-terminal: print the `## Next Phase Entry Prompt` block, suggest `/clear` + fresh session.
-   - Terminal: print the `## Project Completion Hint` line.
+6. **Phase transition:** invoke `@references/stage-phase-transition.md` with `<active_project>`, `<completed_phase_slug>` (captured in step 1), `<models>`, and `<project_intake_threshold>`. This handles: handoff artefact rendering, next-phase discovery, optional re-grill, plan review routing, and handoff result display.
 
 ---
 
@@ -195,13 +157,7 @@ Parse `argv[1]` ∈ `{new, complete, abandon, next}`:
    ```bash
    node ~/.claude/commands/do/scripts/project-scaffold.cjs wave <active_project> <active_phase> <slug>
    ```
-3. If `--from-backlog <id>` flag present:
-   - Read `BACKLOG.md` and find entry with `id: <id>`.
-   - If not found: error loudly — "Backlog entry `<id>` not found."
-   - If found but `status: done`: warn "Backlog entry `<id>` is already done — seeding anyway."
-   - Write backlog entry's problem/fix content into `wave.md` `## Problem Statement` body section.
-   - Set `backlog_item: <id>` in `wave.md` frontmatter (atomic).
-   - Append changelog: `<ISO> backlog-seed:wave:<slug>:<id>`.
+3. If `--from-backlog <id>` flag present: invoke `@references/backlog-seed.md` with target_type=`wave`, target_file=`wave.md`.
 4. Append changelog: `<ISO> scaffold:wave:<active_phase>:<slug>`.
 
 #### `wave complete <slug>`
@@ -225,7 +181,7 @@ Parse `argv[1]` ∈ `{new, complete, abandon, next}`:
 
 #### `wave next`
 
-Activates the next planning wave and runs it through the full execution pipeline. This is the inner loop of project execution — each wave goes through plan → review → execute → code review → verify.
+Activates the next planning wave and runs it through plan → review → execute → code review → verify.
 
 1. Read `active_project` + `active_phase` from config and `project.md`.
 2. Find the next planning wave:
@@ -309,7 +265,7 @@ Top-level project abandon — α's `project-state.cjs abandon project <slug>` is
    ```
    (α's script appends its own state-transition changelog line; this step adds the user-provided reason on top. Writing to the changelog in the archived location: `.do/projects/archived/<active_project>/changelog.md`.)
 
-5. Display: "Project `<slug>` abandoned and archived at `.do/projects/archived/<slug>/`. To re-activate: move `.do/projects/archived/<slug>/` back to `.do/projects/<slug>/`, set `active_project: <slug>` in `.do/config.json`, then run `/do:project resume`. Note: archived-project restore is not yet implemented as a first-class command and may ship in a future iteration."
+5. Display: "Project `<slug>` abandoned and archived at `.do/projects/archived/<slug>/`. To re-activate: move it back to `.do/projects/<slug>/`, set `active_project: <slug>` in `.do/config.json`, then run `/do:project resume`."
 
 ---
 
@@ -362,6 +318,8 @@ On any failure: report which subcommand/step failed, the last known good state, 
   - `@references/stage-project-complete.md` — Renders `completion-summary.md`
   - `@references/stage-project-resume.md` — Cold-start resume orchestrator
   - `@references/stage-phase-exit.md` — Render-only handoff artefact writer
+  - `@references/stage-phase-transition.md` — Post-completion phase transition (handoff → next phase → re-grill → plan review)
+  - `@references/backlog-seed.md` — Shared `--from-backlog` handler for phase/wave creation
   - `@references/resume-preamble-project.md` — Per-file context reload (project pipeline sibling)
 - **Templates (α artefacts):**
   - `@references/project-master-template.md`

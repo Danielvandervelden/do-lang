@@ -19,7 +19,7 @@ Orchestrate a complete task workflow using specialized agents.
 
 ## Why this exists
 
-Skills are markdown prompts that get skipped when context is long. Agents can't skip steps — they own their full loop. This skill orchestrates 5 agents to ensure every task gets proper planning, review, execution, and verification.
+Orchestrates 5 agents to ensure every task gets proper planning, review, execution, and verification.
 
 ## Usage
 
@@ -76,11 +76,7 @@ Check if `$ARGUMENTS` contains `--delivery=...`.
 Read the project config:
 
 ```bash
-node -e "
-const c = require('./.do/config.json');
-const dc = c.delivery_contract || {};
-console.log(JSON.stringify({ onboarded: dc.onboarded || false, dismissed: dc.dismissed || false }));
-"
+node ~/.claude/commands/do/scripts/read-config.cjs delivery
 ```
 
 - **`onboarded: false`**: Trigger the onboarding flow. Load `@references/delivery-onboarding.md` and follow its instructions. After onboarding completes, set `delivery_contract` to whatever contract was established (or `null` if dismissed).
@@ -191,11 +187,7 @@ If active task exists, offer options:
 ## Step 3: Read Model Config
 
 ```bash
-node -e "
-const c = require('./.do/config.json');
-const models = c.models || { default: 'sonnet', overrides: {} };
-console.log(JSON.stringify(models));
-"
+node ~/.claude/commands/do/scripts/read-config.cjs models
 ```
 
 Store result for agent spawning. Default to sonnet if not configured.
@@ -416,3 +408,4 @@ No automatic retries. User decides next step.
 - **Task template:** @references/task-template.md
 - **Gate script:** @scripts/check-database-entry.cjs
 - **Abandon script:** @scripts/task-abandon.cjs
+- **Config reader:** @scripts/read-config.cjs

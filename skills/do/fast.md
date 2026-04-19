@@ -19,19 +19,13 @@ Lightweight fast path for low-risk, small-surface tasks. Skips plan review, gril
 
 ## Why this exists
 
-The full `/do:task` workflow is optimized for correctness — 5-7 agent spawns plus multiple review rounds. For trivial changes (single-file fixes, small tweaks, obvious additions that touch 1-3 files), that overhead is disproportionate. `/do:fast` removes the ceremony while keeping just enough structure for session continuity and quality: quick context scan, execute, validate, single code review.
+The full `/do:task` workflow (5-7 agent spawns + review rounds) is disproportionate for trivial 1-3 file changes. `/do:fast` removes ceremony while keeping context scan, execution, validation, and single code review.
 
 ## Usage
 
 ```
 /do:fast "description of the small change to make"
 ```
-
-**Examples:**
-
-- `/do:fast "fix the typo in the header component"`
-- `/do:fast "add a missing null check in UserService.parseToken"`
-- `/do:fast "update the button color in the theme config"`
 
 ---
 
@@ -83,11 +77,7 @@ Check if `$ARGUMENTS` contains `--delivery=...`.
 Read the project config:
 
 ```bash
-node -e "
-const c = require('./.do/config.json');
-const dc = c.delivery_contract || {};
-console.log(JSON.stringify({ onboarded: dc.onboarded || false, dismissed: dc.dismissed || false }));
-"
+node ~/.claude/commands/do/scripts/read-config.cjs delivery
 ```
 
 - **`onboarded: false`**: Trigger the onboarding flow. Load `@references/delivery-onboarding.md` and follow its instructions.
@@ -133,11 +123,7 @@ If user says no (or expresses doubt), redirect to `/do:task "description"` and s
 ## Step 3b: Read Model Config
 
 ```bash
-node -e "
-const c = require('./.do/config.json');
-const models = c.models || { default: 'sonnet', overrides: {} };
-console.log(JSON.stringify(models));
-"
+node ~/.claude/commands/do/scripts/read-config.cjs models
 ```
 
 Store result for agent spawning. Default to sonnet if not configured.

@@ -215,8 +215,8 @@ describe('β backlog integration: skill-documented patterns present in project.m
     const section = content.slice(idx, end);
     assert.ok(/--from-backlog/.test(section),
       'phase new must document --from-backlog flag');
-    assert.ok(/backlog_item/.test(section),
-      'phase new must reference backlog_item frontmatter field');
+    assert.ok(/backlog_item/.test(section) || /backlog-seed/.test(section),
+      'phase new must reference backlog_item field or backlog-seed reference');
   });
 
   it('wave new documents --from-backlog flag', () => {
@@ -225,8 +225,8 @@ describe('β backlog integration: skill-documented patterns present in project.m
     const section = content.slice(idx, end);
     assert.ok(/--from-backlog/.test(section),
       'wave new must document --from-backlog flag');
-    assert.ok(/backlog_item/.test(section),
-      'wave new must reference backlog_item frontmatter field');
+    assert.ok(/backlog_item/.test(section) || /backlog-seed/.test(section),
+      'wave new must reference backlog_item field or backlog-seed reference');
   });
 
   it('phase complete documents /do:backlog done cleanup trigger', () => {

@@ -1,8 +1,8 @@
 ---
 status: gathering
 trigger: "Login form validation shows wrong error message"
-created: 2026-04-19T10:51:34.972Z
-updated: 2026-04-19T10:51:34.972Z
+created: 2026-04-19T11:31:37.256Z
+updated: 2026-04-19T11:31:37.256Z
 current_hypothesis: null
 task_ref: null
 ---

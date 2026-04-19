@@ -11,6 +11,8 @@ This reference file is loaded by /do:debug for the structured debugging workflow
 - Active debug session exists in `.do/debug/`
 - Debug file loaded via `active_debug` in config.json
 
+**Global rule — timestamp updates:** Every state transition in this workflow updates `updated: <ISO timestamp>` in the debug file frontmatter. This applies to ALL steps below — individual steps do not repeat this instruction.
+
 Before running debug logic, execute Step D0 (Resume Check).
 
 ---
@@ -122,8 +124,6 @@ expecting:
 next_action: form initial hypothesis
 ```
 
-Update frontmatter: `updated: <ISO timestamp>`
-
 Continue to **Step D2**.
 
 ---
@@ -159,7 +159,6 @@ next_action: run test
 
 Update frontmatter:
 - `current_hypothesis: <user's hypothesis>`
-- `updated: <ISO timestamp>`
 
 Continue to **Step D3**.
 
@@ -240,7 +239,6 @@ next_action: apply fix
 
 Update frontmatter:
 - `status: fixing`
-- `updated: <ISO timestamp>`
 
 Display:
 ```
@@ -268,7 +266,6 @@ Clear `current_hypothesis` in frontmatter (set to null).
 
 Update frontmatter:
 - `current_hypothesis: null`
-- `updated: <ISO timestamp>`
 
 Display:
 ```
@@ -299,8 +296,6 @@ Wait for user response.
 Update Current Focus:
 - `test: <user's new test suggestion>`
 - `expecting: <what the new test should reveal>`
-
-Update frontmatter: `updated: <ISO timestamp>`
 
 **LOOP BACK to Step D3** (Test Hypothesis) to run the additional test.
 
@@ -348,7 +343,6 @@ Transition: `fixing` -> `verifying`
 
 Update frontmatter:
 - `status: verifying`
-- `updated: <ISO timestamp>`
 
 Continue to **Step D6**.
 
@@ -390,7 +384,6 @@ Transition: `verifying` -> `investigating`
 Update frontmatter:
 - `status: investigating`
 - `current_hypothesis: null`
-- `updated: <ISO timestamp>`
 
 Display:
 ```
@@ -415,7 +408,6 @@ Transition: `verifying` -> `awaiting_human_verify`
 
 Update frontmatter:
 - `status: awaiting_human_verify`
-- `updated: <ISO timestamp>`
 
 Continue to **Step D7**.
 
@@ -460,7 +452,6 @@ Transition: `awaiting_human_verify` -> `investigating`
 Update frontmatter:
 - `status: investigating`
 - `current_hypothesis: null`
-- `updated: <ISO timestamp>`
 
 Display:
 ```
@@ -479,7 +470,6 @@ Transition: `awaiting_human_verify` -> `resolved`
 
 Update frontmatter:
 - `status: resolved`
-- `updated: <ISO timestamp>`
 
 Continue to **Step D8**.
 

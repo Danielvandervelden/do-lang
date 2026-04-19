@@ -30,20 +30,7 @@ process.exit(t.data.council_review_ran?.code === true ? 1 : 0)
 ## CR-1: Council Gate Check
 
 ```bash
-node -e "
-const path = require('path');
-const fs = require('fs');
-const installedPath = path.join(require('os').homedir(), '.claude/commands/do/scripts/council-invoke.cjs');
-const devPath = path.join(process.cwd(), 'skills/do/scripts/council-invoke.cjs');
-const scriptPath = fs.existsSync(installedPath) ? installedPath : devPath;
-const { resolveConfig } = require(scriptPath);
-const cfg = resolveConfig('.do/config.json', process.cwd());
-// Prefer project-specific code key; fall back to execution key
-const enabled = cfg.council_reviews?.project?.code !== undefined
-  ? cfg.council_reviews.project.code === true
-  : cfg.council_reviews?.execution === true;
-console.log(enabled ? 'enabled' : 'disabled');
-"
+node @scripts/council-gate.cjs project.code execution
 ```
 
 Store result as `council_enabled` (enabled/disabled).

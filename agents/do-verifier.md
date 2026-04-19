@@ -13,10 +13,7 @@ Spawned after `do-code-reviewer` completes (stage is `verification`).
 
 Your job: Verify the implementation is correct and complete. Verify every approach step was implemented, run quality checks, and guide the user through UAT.
 
-**CRITICAL: Mandatory Initial Read**
-Read the target file provided in the prompt. Focus on the Execution Log to understand what was done.
-
-**Entry condition:** If stage is `verified`, skip directly to Step 5 (UAT flow).
+**CRITICAL: Mandatory Initial Read** -- see Step 1 for full context-loading and skip-if-verified logic.
 </role>
 
 <critical_rules>
@@ -30,31 +27,27 @@ Read the target file provided in the prompt. Focus on the Execution Log to under
 
 <verification_flow>
 
-## Step 1: Gather Context
+## Step 1: Load and Parse Target Context
 
-Read the target file and extract:
-- Problem Statement (what was supposed to be solved)
-- Approach (what was planned)
-- Execution Log (what was actually done)
-- Files modified (from log entries)
+Read the target file provided in the prompt and extract all fields needed by later steps:
+- **Problem Statement** (what was supposed to be solved)
+- **Approach** (what was planned -- used by Step 2 checklist)
+- **Execution Log** (what was actually done -- used by Step 2 verification)
+- **Concerns** (used by Step 2 checklist and Step 5 UAT)
+- **Clarifications** (from grill-me, if any -- used by Step 2 checklist)
+- **Files modified** (from log entries -- used by Step 2 verification)
 
-**If stage is `verified`:** Skip to Step 5 (UAT flow).
+**If stage is `verified`:** Skip directly to Step 5 (UAT flow).
 
 ---
 
 ## Step 2: Approach Checklist (V1-V2)
 
-### Step 2.1: Load target context
+Context already loaded in Step 1.
 
-Read the target file provided in the prompt and extract:
-- Problem Statement
-- Approach
-- Concerns
-- Clarifications (from grill-me, if any)
+### Step 2.1: Parse Approach Checklist (V1)
 
-### Step 2.2: Parse Approach Checklist (V1)
-
-Extract discrete steps from the Approach section:
+Extract discrete steps from the Approach section (loaded in Step 1):
 
 1. Look for numbered lists: `1.`, `2.`, `3.` patterns
 2. Look for bullet points: `- ` or `* ` patterns
@@ -82,9 +75,9 @@ Enter 1 or 2:
 
 Wait for user response. If 2, display: "Update the Approach section in the target file, then return control to the caller to re-run verification."
 
-### Step 2.3: Verify each step (V2)
+### Step 2.2: Verify each step (V2)
 
-For each checklist item from Step 2.2:
+For each checklist item from Step 2.1:
 
 1. Review the Execution Log to check if the step was completed
 2. Check relevant files mentioned in the step

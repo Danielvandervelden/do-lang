@@ -115,12 +115,28 @@ This file is a temporary sentinel for council review. It will be deleted after r
 
 <quick_validation results>
 
+## Round-1 Review
+
+### Round-1 council findings
+
+(Populated after round-1 council review — absent on first write)
+
+### Round-2 diff (cumulative from baseline)
+
+(Populated after round-2 execution — absent on first write)
+
+### Validation results (round 2)
+
+(Populated after round-2 validation — absent on first write)
+
 ## Council Review
 
 (Pending — round 1)
 ```
 
 **Note:** The dot-prefix (`.quick-transient.md`) keeps this file out of normal task enumeration. It is not a real task file and must not be used with `/do:continue`.
+
+**Round-1 vs round-2:** On first write (round 1), the `## Round-1 Review` section is empty/absent. It is populated in QE-10 after round-1 findings are available.
 
 ---
 
@@ -185,82 +201,18 @@ The delta between `quick_diff_r1` and `quick_diff_r2` represents what changed in
 
 ## QE-10: Update Transient for Round-2 Council
 
-Overwrite `.do/tasks/.quick-transient.md` with updated content:
+Update the existing `.do/tasks/.quick-transient.md` — populate the `## Round-1 Review` section (defined in the QE-5 template) with:
+- **Round-1 council findings:** `quick_council_r1` findings
+- **Round-2 diff (cumulative from baseline):** `quick_diff_r2`
+- **Validation results (round 2):** re-run the QE-4 validation logic and store results here
 
-```markdown
----
-id: quick-transient
-description: "<description>"
-quick_path: true
-transient: true
----
-
-# Quick-path transient — do not resume
-
-This file is a temporary sentinel for council review. It will be deleted after review completes.
-
-## Problem Statement
-
-<description>
-
-## Approach
-
-(Inline execution — orchestrator made changes directly, round 2 of 2)
-
-## Execution Log
-
-### Round 1 diff
-
-```
-<quick_diff_r1>
-```
-
-### Round-1 council findings
-
-<quick_council_r1 findings>
-
-### Round-2 diff (cumulative from baseline)
-
-```
-<quick_diff_r2>
-```
-
-### Validation results (round 2)
-
-<re-run QE-4 logic and store results here>
-
-## Council Review
-
-### Round 1
-<quick_council_r1 full findings>
-
-(Round 2 pending)
-```
-
-Re-run the QE-4 validation logic and append the round-2 validation results above.
+Also update the `## Approach` line to `(Inline execution — orchestrator made changes directly, round 2 of 2)` and the `## Council Review` section to include the round-1 findings with `(Round 2 pending)` appended.
 
 ---
 
 ## QE-11: Spawn Round-2 Council Review
 
-Invoke `do-council-reviewer` again against the updated transient file:
-
-```javascript
-Agent({
-  description: "Quick-path council review (round 2 of 2)",
-  subagent_type: "do-council-reviewer",
-  model: "<models.overrides.code_reviewer || models.default>",
-  prompt: `
-Run council review for this quick-path execution (second and final round).
-
-Task file: .do/tasks/.quick-transient.md
-Review type: code
-Workspace: <pwd>
-
-The transient file contains the round-1 council findings and the updated diff. Run council-invoke.cjs --type code and return the structured verdict (APPROVED, NITPICKS_ONLY, or CHANGES_REQUESTED) with full findings.
-`,
-});
-```
+Spawn council review using the same Agent() pattern as QE-6, with description updated to `"Quick-path council review (round 2 of 2)"` and the prompt including round-1 findings as additional context (note: "second and final round", and that the transient file now contains the round-1 council findings and the updated diff).
 
 Store the returned verdict and findings as in-session `quick_council_r2`.
 

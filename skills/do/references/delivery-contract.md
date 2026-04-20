@@ -146,7 +146,7 @@ The validator script `skills/do/scripts/validate-delivery-contract.cjs` exports:
 
 - `validateDeliveryContract(obj)` — validates a parsed delivery object, returns `{ valid, errors, warnings }`
 - `applyDefaults(obj)` — returns new object with defaults merged for optional fields
-- `parseDeliveryArg(argString)` — parses the `--delivery='...'` string, returns `{ delivery }` or `{ error }`
+- `parseDeliveryArg(argString)` — parses the `--delivery='...'` string, returns the flat delivery object on success or `{ error }` on failure
 
 Entry commands and `/do:task` both use the same validator. Non-conforming contracts fail loudly with a list of validation errors rather than silently degrading.
 

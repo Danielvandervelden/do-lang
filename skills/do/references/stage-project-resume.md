@@ -101,27 +101,30 @@ Return control to the user. Do NOT auto-invoke `stage-project-complete.md`.
 **For all other actions**, read display fields from disk then display:
 
 ```bash
-node -e "
-const fm = require('gray-matter'), fs = require('fs'), path = require('path');
-const projPath = '.do/projects/<active_project>/project.md';
-const proj = fm(fs.readFileSync(projPath, 'utf8'));
-const activePhase = proj.data.active_phase || null;
-let activeWave = null;
-if (activePhase) {
-  const phPath = path.join('.do/projects/<active_project>/phases', activePhase, 'phase.md');
-  if (fs.existsSync(phPath)) {
-    const ph = fm(fs.readFileSync(phPath, 'utf8'));
-    activeWave = ph.data.active_wave || null;
-  }
-}
-const clPath = '.do/projects/<active_project>/changelog.md';
-const clLines = fs.existsSync(clPath) ? fs.readFileSync(clPath, 'utf8').split('\n').filter(l => l.trim()) : [];
-const lastAction = clLines.length > 0 ? clLines[clLines.length - 1] : '(none)';
-console.log('Project: <active_project>');
-console.log('Active phase: ' + (activePhase || '(none)'));
-console.log('Active wave: ' + (activeWave || '(none)'));
-console.log('Last action: ' + lastAction);
-"
+# Read active_phase from project.md
+PROJ_DATA=$(node @scripts/update-task-frontmatter.cjs read '.do/projects/<active_project>/project.md' active_phase)
+ACTIVE_PHASE=$(node -e "console.log(JSON.parse(process.argv[1]).active_phase || '')" "$PROJ_DATA")
+
+# Read active_wave from phase.md if active_phase is set
+if [ -n "$ACTIVE_PHASE" ] && [ -f ".do/projects/<active_project>/phases/$ACTIVE_PHASE/phase.md" ]; then
+  PHASE_DATA=$(node @scripts/update-task-frontmatter.cjs read ".do/projects/<active_project>/phases/$ACTIVE_PHASE/phase.md" active_wave)
+  ACTIVE_WAVE=$(node -e "console.log(JSON.parse(process.argv[1]).active_wave || '')" "$PHASE_DATA")
+else
+  ACTIVE_WAVE=""
+fi
+
+# Read last changelog action
+CHANGELOG=".do/projects/<active_project>/changelog.md"
+if [ -f "$CHANGELOG" ]; then
+  LAST_ACTION=$(tail -n 1 "$CHANGELOG")
+else
+  LAST_ACTION="(none)"
+fi
+
+echo "Project: <active_project>"
+echo "Active phase: ${ACTIVE_PHASE:-(none)}"
+echo "Active wave: ${ACTIVE_WAVE:-(none)}"
+echo "Last action: ${LAST_ACTION:-(none)}"
 ```
 
 Then display:

@@ -16,11 +16,7 @@ This reference file is loaded by `skills/do/project.md` `wave next` after `stage
 Check if wave code review already ran:
 
 ```bash
-node -e "
-const fm = require('gray-matter');
-const t = fm(require('fs').readFileSync('<wave_path>', 'utf8'));
-process.exit(t.data.council_review_ran?.code === true ? 1 : 0)
-"
+node @scripts/update-task-frontmatter.cjs check '<wave_path>' council_review_ran.code
 ```
 
 **If already ran (exit 1):** Skip this entire stage. Return control to caller (proceed to `stage-wave-verify.md`).

@@ -16,11 +16,7 @@ This reference file is loaded by `skills/do/project.md` `wave next` after `stage
 Check if wave execution already completed:
 
 ```bash
-node -e "
-const fm = require('gray-matter');
-const t = fm(require('fs').readFileSync('<wave_path>', 'utf8'));
-process.exit(t.data.stages?.execution === 'complete' ? 1 : 0)
-"
+node @scripts/update-task-frontmatter.cjs check '<wave_path>' stages.execution==complete
 ```
 
 **If already completed (exit 1):** Skip this stage. Return control to caller (proceed to `stage-wave-code-review.md`).
@@ -94,13 +90,10 @@ Handle result:
 ## WE-3: Verify Execution Complete
 
 ```bash
-node -e "
-const fm = require('gray-matter');
-const t = fm(require('fs').readFileSync('<wave_path>', 'utf8'));
-const s = t.data.stages?.execution;
-console.log(s === 'complete' ? 'complete' : 'incomplete (' + s + ')');
-"
+node @scripts/update-task-frontmatter.cjs read '<wave_path>' stages.execution
 ```
+
+If `stages.execution` is `complete`, proceed to WE-4. If not, the executioner may have stopped mid-run.
 
 If do-executioner set `stages.execution: complete`, proceed to WE-4.
 If execution stage is not `complete`, the executioner may have stopped mid-run — surface state to user and ask how to proceed.

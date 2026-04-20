@@ -327,33 +327,39 @@ describe('applyDefaults: correct default values', () => {
 // ============================================================================
 
 describe('parseDeliveryArg: valid JSON', () => {
-  it('parses a plain JSON string', () => {
+  it('parses a plain JSON string and returns the flat object', () => {
     const result = parseDeliveryArg('{"branch":"feat/X","commit_prefix":"feat"}');
-    assert.ok('delivery' in result, `expected delivery key, got: ${JSON.stringify(result)}`);
-    assert.strictEqual(result.delivery.branch, 'feat/X');
-    assert.strictEqual(result.delivery.commit_prefix, 'feat');
+    assert.ok(!('error' in result), `expected no error, got: ${JSON.stringify(result)}`);
+    assert.strictEqual(result.branch, 'feat/X');
+    assert.strictEqual(result.commit_prefix, 'feat');
   });
 
-  it('parses a fully explicit JSON string', () => {
+  it('parses a fully explicit JSON string and returns the flat object', () => {
     const result = parseDeliveryArg(
       '{"branch":"feat/LLDEV-851","commit_prefix":"feat","push_policy":"push","pr_policy":"create","stop_after_push":true,"exclude_paths":[".do/"]}'
     );
-    assert.ok('delivery' in result);
-    assert.strictEqual(result.delivery.push_policy, 'push');
-    assert.deepStrictEqual(result.delivery.exclude_paths, ['.do/']);
+    assert.ok(!('error' in result));
+    assert.strictEqual(result.push_policy, 'push');
+    assert.deepStrictEqual(result.exclude_paths, ['.do/']);
   });
 
   it('strips outer single quotes (shell literal passthrough)', () => {
     const result = parseDeliveryArg(`'{"branch":"feat/X","commit_prefix":"feat"}'`);
-    assert.ok('delivery' in result, `expected delivery, got: ${JSON.stringify(result)}`);
-    assert.strictEqual(result.delivery.branch, 'feat/X');
+    assert.ok(!('error' in result), `expected no error, got: ${JSON.stringify(result)}`);
+    assert.strictEqual(result.branch, 'feat/X');
   });
 
   it('handles single-quote-wrapped JSON (swap quotes fallback)', () => {
     // This simulates: --delivery={'branch':'feat/X','commit_prefix':'feat'}
     const result = parseDeliveryArg(`{'branch':'feat/X','commit_prefix':'feat'}`);
-    assert.ok('delivery' in result, `expected delivery, got: ${JSON.stringify(result)}`);
-    assert.strictEqual(result.delivery.branch, 'feat/X');
+    assert.ok(!('error' in result), `expected no error, got: ${JSON.stringify(result)}`);
+    assert.strictEqual(result.branch, 'feat/X');
+  });
+
+  it('returns an object directly consumable by validateDeliveryContract', () => {
+    const parsed = parseDeliveryArg('{"branch":"feat/X","commit_prefix":"feat"}');
+    const validation = validateDeliveryContract(parsed);
+    assert.strictEqual(validation.valid, true, `parse -> validate chain should work without unwrapping`);
   });
 });
 

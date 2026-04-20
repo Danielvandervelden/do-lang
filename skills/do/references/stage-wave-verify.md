@@ -16,15 +16,7 @@ This reference file is loaded by `skills/do/project.md` `wave next` after `stage
 Check if wave verification already completed:
 
 ```bash
-node -e "
-const fm = require('gray-matter');
-const t = fm(require('fs').readFileSync('<wave_path>', 'utf8'));
-const stage = t.data.stage;
-// If stage is 'verified', skip straight to UAT (do-verifier handles this via entry condition)
-// If status is 'completed', skip entirely
-const done = t.data.status === 'completed';
-process.exit(done ? 1 : 0)
-"
+node @scripts/update-task-frontmatter.cjs check '<wave_path>' status==completed
 ```
 
 **If wave already `completed` (exit 1):** Skip this stage. Return control to caller.
@@ -121,16 +113,7 @@ Wait for user response:
 
 2. **Clear `active_wave` in `phase.md`** (atomic temp-file + rename):
    ```bash
-   node -e "
-   const fm = require('gray-matter'), fs = require('fs'), os = require('os'), path = require('path');
-   const phasePath = '.do/projects/<active_project>/phases/<phase_slug>/phase.md';
-   const doc = fm(fs.readFileSync(phasePath, 'utf8'));
-   doc.data.active_wave = null;
-   doc.data.updated = new Date().toISOString();
-   const tmp = path.join(os.tmpdir(), 'phase-' + Date.now() + '.md');
-   fs.writeFileSync(tmp, fm.stringify(doc.content, doc.data));
-   fs.renameSync(tmp, phasePath);
-   "
+   node @scripts/update-task-frontmatter.cjs set '.do/projects/<active_project>/phases/<phase_slug>/phase.md' active_wave=null
    ```
 
 3. **Append changelog:**

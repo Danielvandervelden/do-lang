@@ -16,11 +16,7 @@ This reference file is loaded by `skills/do/project.md` `wave next` after the pe
 Check if wave plan review already ran:
 
 ```bash
-node -e "
-const fm = require('gray-matter');
-const t = fm(require('fs').readFileSync('<wave_path>', 'utf8'));
-process.exit(t.data.council_review_ran?.plan === true ? 1 : 0)
-"
+node @scripts/update-task-frontmatter.cjs check '<wave_path>' council_review_ran.plan
 ```
 
 **If already ran (exit 1):** Skip this entire stage. Return control to caller (proceed to `stage-wave-exec.md`).
@@ -48,12 +44,8 @@ Set `review_iterations = 0` (in-session variable, not persisted).
 Check if `wave.md` body still contains scaffold placeholders:
 
 ```bash
-node -e "
-const fm = require('gray-matter'), fs = require('fs');
-const doc = fm(fs.readFileSync('<wave_path>', 'utf8'));
-const hasPlaceholders = /\{\{[A-Z_]+\}\}/.test(doc.content);
-process.exit(hasPlaceholders ? 0 : 1);
-"
+node @scripts/update-task-frontmatter.cjs read-body '<wave_path>' | grep -q '{{[A-Z_]*}}'
+# exit 0 = placeholders found, exit 1 = no placeholders
 ```
 
 **If no placeholders (exit 1):** Skip to PR-3 — body is already curated (manual edit, re-entry, or `--from-backlog` already filled all sections).

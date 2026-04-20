@@ -29,16 +29,17 @@ Read phase state authoritatively from each `phase.md` leaf file, NOT from `proje
 
 ```bash
 node -e "
-const fm = require('gray-matter');
 const fs = require('fs'), path = require('path');
+const { execSync } = require('child_process');
 const phasesDir = '.do/projects/<active_project>/phases';
+const fmRead = (f) => JSON.parse(execSync('node @scripts/update-task-frontmatter.cjs read \"' + f + '\"', { encoding: 'utf8' }));
 const phases = fs.readdirSync(phasesDir)
   .filter(d => fs.statSync(path.join(phasesDir, d)).isDirectory())
   .map(slug => {
     const phPath = path.join(phasesDir, slug, 'phase.md');
     if (!fs.existsSync(phPath)) return null;
-    const ph = fm(fs.readFileSync(phPath, 'utf8'));
-    return { slug, status: ph.data.status, scope: ph.data.scope };
+    const data = fmRead(phPath);
+    return { slug, status: data.status, scope: data.scope };
   })
   .filter(Boolean)
   .sort((a, b) => a.slug.localeCompare(b.slug));
@@ -73,16 +74,17 @@ Enumerate phases authoritatively from leaf files (not `project.md.phases[]`):
 
 ```bash
 node -e "
-const fm = require('gray-matter');
 const fs = require('fs'), path = require('path');
+const { execSync } = require('child_process');
 const phasesDir = '.do/projects/<active_project>/phases';
+const fmRead = (f) => JSON.parse(execSync('node @scripts/update-task-frontmatter.cjs read \"' + f + '\"', { encoding: 'utf8' }));
 const phases = fs.readdirSync(phasesDir)
   .filter(d => fs.statSync(path.join(phasesDir, d)).isDirectory())
   .map(slug => {
     const phPath = path.join(phasesDir, slug, 'phase.md');
     if (!fs.existsSync(phPath)) return null;
-    const ph = fm(fs.readFileSync(phPath, 'utf8'));
-    return { slug, status: ph.data.status, scope: ph.data.scope };
+    const data = fmRead(phPath);
+    return { slug, status: data.status, scope: data.scope };
   })
   .filter(Boolean)
   .filter(p => p.scope === 'in_scope')
@@ -193,10 +195,10 @@ Deduplicate. Sort by path. Group by phase.
 
 ```bash
 node -e "
-const fm = require('gray-matter');
 const fs = require('fs'), path = require('path');
-// Collect modified_files from all wave.md files
+const { execSync } = require('child_process');
 const basePath = '.do/projects/<active_project>/phases';
+const fmRead = (f) => JSON.parse(execSync('node @scripts/update-task-frontmatter.cjs read \"' + f + '\"', { encoding: 'utf8' }));
 const phases = fs.readdirSync(basePath).filter(d => fs.statSync(path.join(basePath, d)).isDirectory());
 const allFiles = [];
 phases.forEach(phase => {
@@ -206,8 +208,8 @@ phases.forEach(phase => {
   waves.forEach(wave => {
     const waveMd = path.join(wavesPath, wave, 'wave.md');
     if (!fs.existsSync(waveMd)) return;
-    const wfm = fm(fs.readFileSync(waveMd, 'utf8'));
-    (wfm.data.modified_files || []).forEach(f => allFiles.push(f));
+    const data = fmRead(waveMd);
+    (data.modified_files || []).forEach(f => allFiles.push(f));
   });
 });
 const unique = [...new Set(allFiles)].sort();

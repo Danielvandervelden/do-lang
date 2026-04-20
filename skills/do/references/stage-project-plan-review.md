@@ -16,11 +16,7 @@ This reference file is loaded by `skills/do/project.md` after intake completes. 
 Check if project plan review already ran:
 
 ```bash
-node -e "
-const fm = require('gray-matter');
-const t = fm(require('fs').readFileSync('<project_path>', 'utf8'));
-process.exit(t.data.council_review_ran?.project_plan === true ? 1 : 0)
-"
+node @scripts/update-task-frontmatter.cjs check '<project_path>' council_review_ran.project_plan
 ```
 
 **If already ran (exit 1):** Skip this entire stage. Return control to caller immediately.

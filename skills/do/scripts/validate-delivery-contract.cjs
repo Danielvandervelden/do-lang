@@ -147,10 +147,12 @@ function applyDefaults(obj) {
  * 2. Replace outer single-quotes with nothing (in case shell left them in)
  * 3. Replace single quotes with double quotes (lenient shell-escaping fallback)
  *
- * Returns { delivery: object } on success or { error: string } on failure.
+ * Returns the flat parsed object on success (with `branch`, `commit_prefix`, etc.
+ * at the top level) or `{ error: string }` on failure. This allows direct piping
+ * into `validateDeliveryContract()` and `applyDefaults()` without unwrapping.
  *
  * @param {string} argString - The raw value of --delivery=<argString>
- * @returns {{ delivery: object } | { error: string }}
+ * @returns {object | { error: string }} Flat delivery object on success, { error } on failure
  */
 function parseDeliveryArg(argString) {
   if (typeof argString !== 'string' || argString.trim() === '') {
@@ -163,7 +165,7 @@ function parseDeliveryArg(argString) {
   try {
     const parsed = JSON.parse(raw);
     if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-      return { delivery: parsed };
+      return parsed;
     }
   } catch (_) {
     // fall through
@@ -175,7 +177,7 @@ function parseDeliveryArg(argString) {
     try {
       const parsed = JSON.parse(stripped);
       if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-        return { delivery: parsed };
+        return parsed;
       }
     } catch (_) {
       // fall through
@@ -187,7 +189,7 @@ function parseDeliveryArg(argString) {
   try {
     const parsed = JSON.parse(swapped);
     if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-      return { delivery: parsed };
+      return parsed;
     }
   } catch (_) {
     // fall through

@@ -115,15 +115,14 @@ Write transcript file `.do/projects/<active_project>/intake/session-${TIMESTAMP}
 ## PI-4: Check Pass 1 Threshold
 
 ```bash
-node -e "
-const fm = require('gray-matter');
-const c = require('./.do/config.json');
-const threshold = c.project_intake_threshold || c.auto_grill_threshold || 0.85;
-const t = fm(require('fs').readFileSync('<project_path>', 'utf8'));
-const score = t.data.confidence?.score;
-console.log(JSON.stringify({ score, threshold, above: score >= threshold }));
-"
+# Read confidence from frontmatter
+node @scripts/update-task-frontmatter.cjs read '<project_path>' confidence
+# Read threshold from config
+node -e "const c=require('./.do/config.json'); console.log(JSON.stringify({ threshold: c.project_intake_threshold || c.auto_grill_threshold || 0.85 }))"
 ```
+
+Combine the confidence score from the first command with the threshold from the second to determine `{ score, threshold, above }`.
+
 
 **If score >= threshold:** Proceed to PI-5 (Pass 2).
 **If score < threshold:** The griller stopped early (user override or context limit). Log override note to transcript. Proceed to PI-5 anyway — Pass 2 is always run.
@@ -171,15 +170,15 @@ After Pass 2 completes, `do-griller` has updated `project.md`'s confidence score
 This is the authoritative gate that controls exit from intake. Earlier PI-4 is informational only — it runs between Pass 1 and Pass 2 and logs the score but does NOT block progression (Pass 2 is always run regardless). After Pass 2, `project_intake_threshold` MUST be enforced before any body curation or status advance.
 
 ```bash
+# Read confidence from frontmatter and threshold from config, then compare
+CONFIDENCE=$(node @scripts/update-task-frontmatter.cjs read '<project_path>' confidence)
+THRESHOLD=$(node -e "const c=require('./.do/config.json'); console.log(c.project_intake_threshold || c.auto_grill_threshold || 0.85)")
 node -e "
-const fm = require('gray-matter'), fs = require('fs');
-const c = require('./.do/config.json');
-const threshold = c.project_intake_threshold || c.auto_grill_threshold || 0.85;
-const doc = fm(fs.readFileSync('<project_path>', 'utf8'));
-const score = doc.data.confidence?.score ?? 0;
+const score = JSON.parse(process.argv[1]).confidence?.score ?? 0;
+const threshold = parseFloat(process.argv[2]);
 console.log(JSON.stringify({ score, threshold, above: score >= threshold }));
 process.exit(score >= threshold ? 0 : 1);
-"
+" "$CONFIDENCE" "$THRESHOLD"
 ```
 
 **If score >= threshold (exit 0):** Proceed to PI-6.
@@ -242,54 +241,51 @@ Return summary of sections populated.
 After the PI-6 spawn returns, confirm the curated sections actually landed. **Header-presence alone is insufficient** — the scaffold template (`skills/do/references/project-master-template.md`) already ships with all 7 headers and placeholder markers like `{{VISION}}` under each one, and `project-scaffold.cjs` initialises `title: <slug>`. A fresh uncurated `project.md` would pass a header-only check. This gate must verify that the planner actually **replaced** the placeholders with real content:
 
 ```bash
+# Read title from frontmatter and body content separately
+TITLE=$(node @scripts/update-task-frontmatter.cjs read '<project_path>' title)
+BODY=$(node @scripts/update-task-frontmatter.cjs read-body '<project_path>')
+
 node -e "
-const fm = require('gray-matter'), fs = require('fs');
-const doc = fm(fs.readFileSync('<project_path>', 'utf8'));
+const title = JSON.parse(process.argv[1]).title;
+const body = process.argv[2];
 
 // Check 1: all 7 required headers present (catches agent deleted a section)
 const required = ['## Vision', '## Target Users', '## Non-Goals', '## Success Criteria', '## Constraints', '## Risks', '## Phase Plan'];
-const missingHeaders = required.filter(h => !doc.content.includes(h));
+const missingHeaders = required.filter(h => !body.includes(h));
 if (missingHeaders.length > 0) {
   console.error('Missing headers: ' + missingHeaders.join(', '));
   process.exit(1);
 }
 
 // Check 2: no unreplaced {{PLACEHOLDER}} markers remain (catches scaffold-leftovers)
-const placeholderMatch = doc.content.match(/\{\{[A-Z_]+\}\}/g);
+const placeholderMatch = body.match(/\{\{[A-Z_]+\}\}/g);
 if (placeholderMatch) {
   console.error('Scaffold placeholders still present (planner did not curate): ' + [...new Set(placeholderMatch)].join(', '));
   process.exit(1);
 }
 
-// Check 3: title is set (the scaffold initialises title=slug, so this only catches
-// the case where the planner actively blanked the field). A human-readable title
-// that happens to equal the slug (e.g. 'do-lang', 'foo', 'my-app') is legitimate
-// and must pass — the placeholder + body-length checks are the authoritative
-// signals that the body was actually curated.
-if (!doc.data.title) {
+// Check 3: title is set
+if (!title) {
   console.error('Planner did not set frontmatter title');
   process.exit(1);
 }
 
-// Check 4: section bodies are substantive (catches empty headers). We do a minimum
-// byte-length check per section — each must have >= 40 non-whitespace chars of content
-// between its header and the next ## / end-of-file. Threshold is loose on purpose;
-// the plan-review stage is the authoritative quality gate for body content.
-const sections = doc.content.split(/^## /m).slice(1); // first split is pre-first-header
+// Check 4: section bodies are substantive (>= 40 non-whitespace chars)
+const sections = body.split(/^## /m).slice(1);
 const MIN_BODY = 40;
 for (const sec of sections) {
   const [header, ...rest] = sec.split('\n');
-  const body = rest.join('\n')
-    .replace(/<!--[\s\S]*?-->/g, '')   // strip template guide comments
-    .replace(/\s+/g, '');              // strip whitespace for length
-  if (body.length < MIN_BODY) {
-    console.error('Section \"## ' + header.trim() + '\" has insufficient content (' + body.length + ' < ' + MIN_BODY + ' non-whitespace chars)');
+  const content = rest.join('\n')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\s+/g, '');
+  if (content.length < MIN_BODY) {
+    console.error('Section \"## ' + header.trim() + '\" has insufficient content (' + content.length + ' < ' + MIN_BODY + ' non-whitespace chars)');
     process.exit(1);
   }
 }
 
 console.log('planner-output-ok');
-"
+" "$TITLE" "$BODY"
 ```
 
 If this check fails, stop and surface the specific failure to the user (missing header / unreplaced placeholder / empty section). Do NOT proceed to PI-7 — the project must not advance to `planning` with incomplete curation. The user can then: re-spawn the planner with the specific failure, fill sections manually, or abandon.

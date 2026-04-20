@@ -52,16 +52,7 @@ Read the task file and extract:
 - Execution Log: Last action
 
 ```bash
-node -e "
-const fm = require('gray-matter');
-const t = fm(require('fs').readFileSync('.do/tasks/<active_task>', 'utf8'));
-console.log(JSON.stringify({
-  stage: t.data.stage,
-  stages: t.data.stages,
-  confidence: t.data.confidence,
-  council_review_ran: t.data.council_review_ran
-}));
-"
+node @scripts/update-task-frontmatter.cjs read '.do/tasks/<active_task>' stage stages confidence council_review_ran
 ```
 
 ## Step 3: Handle Abandoned Tasks
@@ -107,14 +98,10 @@ console.log(JSON.stringify(models));
 **Fast-path guard:** Before using the routing table below, check if `fast_path: true` is present in the task frontmatter, and also extract the `quick_path` discriminator:
 
 ```bash
-node -e "
-const fm = require('gray-matter');
-const t = fm(require('fs').readFileSync('.do/tasks/<active_task>', 'utf8'));
-const isFast = t.data.fast_path === true;
-const isQuick = t.data.quick_path === true;
-console.log(JSON.stringify({ path: isFast ? 'fast' : 'normal', quick_path: isQuick }));
-"
+node @scripts/update-task-frontmatter.cjs read '.do/tasks/<active_task>' fast_path quick_path
 ```
+
+Parse the output: if `fast_path` is `true`, the path is `fast`; otherwise `normal`. Extract `quick_path` as-is.
 
 ### Fast-path routing (fast_path: true)
 
@@ -138,21 +125,10 @@ Spawn do-code-reviewer only (no council, no parallel spawning). Follow FE-6 logi
 The escalated quick-path task file carries `council_review_ran.code: true` (preserving the two quick-path council rounds as history). Before invoking the full code-review stack, flip that flag back to `false` so the CR-0 resume guard in `stage-code-review.md` does not skip the review:
 
 ```bash
-node -e "
-const fm = require('gray-matter');
-const fs = require('fs');
-const filePath = '.do/tasks/<active_task>';
-const raw = fs.readFileSync(filePath, 'utf8');
-const parsed = fm(raw);
-// Flip council_review_ran.code to false so CR-0 allows a fresh full review.
-// The existing Council Review section with both quick-path rounds is preserved as history.
-parsed.data.council_review_ran = { ...parsed.data.council_review_ran, code: false };
-// Also override stage to execution:complete so stage-code-review.md picks it up correctly.
-parsed.data.stages = { ...parsed.data.stages, execution: 'complete' };
-const out = fm.stringify(parsed.content, parsed.data);
-fs.writeFileSync(filePath, out);
-console.log('Quick-path flag flipped: council_review_ran.code -> false, execution -> complete');
-"
+# Flip council_review_ran.code to false so CR-0 allows a fresh full review.
+# The existing Council Review section with both quick-path rounds is preserved as history.
+# Also override stage to execution:complete so stage-code-review.md picks it up correctly.
+node @scripts/update-task-frontmatter.cjs set '.do/tasks/<active_task>' council_review_ran.code=false stages.execution=complete
 ```
 
 Then invoke the full code-review stack via `@references/stage-code-review.md`. This brings in the full review stack (council + do-code-reviewer in parallel) rather than the single-reviewer tier that already failed twice.

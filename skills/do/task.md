@@ -271,13 +271,12 @@ Orchestrators resuming via /do:continue should be aware this subsection may exis
 Read confidence from task file:
 
 ```bash
-node -e "
-const fm = require('gray-matter');
-const t = fm(require('fs').readFileSync('.do/tasks/<active_task>', 'utf8'));
-const threshold = require('./.do/config.json').auto_grill_threshold || 0.9;
-console.log(JSON.stringify({ score: t.data.confidence.score, threshold }));
-"
+node @scripts/update-task-frontmatter.cjs read '.do/tasks/<active_task>' confidence
+# Then read threshold from config:
+node -e "const c=require('./.do/config.json'); console.log(JSON.stringify({ threshold: c.auto_grill_threshold || 0.9 }))"
 ```
+
+Combine the confidence score from the first command with the threshold from the second.
 
 If `score < threshold`:
 
@@ -379,7 +378,7 @@ Handle result:
 Read the task file to check final stage:
 
 ```bash
-node -e "const fm=require('gray-matter'); const t=fm(require('fs').readFileSync('.do/tasks/<active_task>','utf8')); console.log(t.data.stage)"
+node @scripts/update-task-frontmatter.cjs read '.do/tasks/<active_task>' stage
 ```
 
 - **If stage is `complete`**: Display brief confirmation:

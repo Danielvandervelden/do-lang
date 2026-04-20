@@ -110,3 +110,37 @@ Secondary: once the harness exists, back-fill coverage for the β frontmatter-pr
 Scope: new file `skills/do/scripts/lib/agent-harness.cjs` + a `__tests__/integration/` folder. Ship with one reference integration test exercising `do-executioner`'s `modified_files[]` write gate end-to-end. Flagged behind a CI env var so the unit-test suite stays fast.
 
 ---
+
+### Fix parseDeliveryArg / validateDeliveryContract API inconsistency
+**id:** fix-delivery-contract-api
+
+**Problem:** `parseDeliveryArg()` wraps its result in `{ delivery: parsed }` (line 166 of `validate-delivery-contract.cjs`), but `validateDeliveryContract()` expects the unwrapped object with `branch` and `commit_prefix` at the top level. The natural compose chain `parse → validate → applyDefaults` fails unless the caller manually unwraps `.delivery` between steps. The skill instructions (Step -1) say "Call `parseDeliveryArg(value)`. Call `validateDeliveryContract(delivery)`" — but "delivery" is ambiguous about whether it means the return value or `.delivery` on it.
+
+**Impact:** Every `/do:task` invocation with `--delivery=` hits a validation error on first attempt, wastes a retry, and burns context. The API looks broken to the LLM caller because the obvious pipeline doesn't work.
+
+**Fix:** Either:
+1. Make `parseDeliveryArg` return the flat object directly (use `{ error }` only for the error case, return the object itself on success), or
+2. Make `validateDeliveryContract` accept the wrapped `{ delivery: {...} }` format and auto-unwrap
+
+Option 1 is cleaner — the wrapping adds no value since the caller always needs to unwrap. Update the function, its JSDoc, and any tests.
+
+**Scope:** `skills/do/scripts/validate-delivery-contract.cjs` + `skills/do/scripts/__tests__/` (if tests exist for this module)
+
+---
+
+### Inline gray-matter snippets fail in target projects
+**id:** fix-inline-gray-matter
+
+**Problem:** `stage-fast-exec.md` FE-4 (and other reference files) provide inline `node -e` snippets that `require('gray-matter')` for frontmatter manipulation. gray-matter is a dev dependency of the do-lang package, but these snippets execute in the target project's working directory where only that project's node_modules exist. Any project that doesn't have gray-matter installed (i.e., all of them) hits `MODULE_NOT_FOUND`.
+
+**Impact:** Every fast-path task hits this error at the FE-4 stage override step. The orchestrator has to fall back to regex-based string replacement, which is fragile and wastes a retry.
+
+**Fix:** Either:
+1. Create a dedicated `.cjs` script under `scripts/` (e.g., `update-task-stage.cjs`) that resolves gray-matter from its own module path — same pattern as the existing scripts that work correctly
+2. Or replace the inline snippets with regex-based sed/node string replacement that doesn't depend on external packages
+
+Option 1 is cleaner and consistent with how `read-config.cjs`, `task-abandon.cjs`, etc. already work.
+
+**Scope:** `skills/do/references/stage-fast-exec.md` (FE-4), and any other reference files with inline `require('gray-matter')` snippets. Grep for `require('gray-matter')` across `skills/do/references/` to find all instances.
+
+---

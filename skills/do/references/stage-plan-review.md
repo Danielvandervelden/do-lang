@@ -16,7 +16,7 @@ This reference file is loaded by `do:task` (Step 6) and `do:continue` (stage rou
 Check if plan review already ran:
 
 ```bash
-node -e "const fm=require('gray-matter'); const t=fm(require('fs').readFileSync('.do/tasks/<active_task>','utf8')); process.exit(t.data.council_review_ran?.plan === true ? 1 : 0)"
+node @scripts/update-task-frontmatter.cjs check '.do/tasks/<active_task>' council_review_ran.plan
 ```
 
 **If already ran (exit 1):** Skip this entire stage. Return control to caller immediately.

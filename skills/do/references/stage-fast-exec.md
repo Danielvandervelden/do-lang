@@ -131,18 +131,7 @@ Handle result:
 **Immediately after do-executioner returns** — before any other action — override the stage:
 
 ```bash
-node -e "
-const fm = require('gray-matter');
-const fs = require('fs');
-const filePath = '.do/tasks/<active_task>';
-const raw = fs.readFileSync(filePath, 'utf8');
-const parsed = fm(raw);
-parsed.data.stage = 'execution';
-parsed.data.stages = { ...parsed.data.stages, execution: 'review_pending' };
-const out = fm.stringify(parsed.content, parsed.data);
-fs.writeFileSync(filePath, out);
-console.log('Stage overridden to execution/review_pending');
-"
+node @scripts/update-task-frontmatter.cjs set '.do/tasks/<active_task>' stage=execution stages.execution=review_pending
 ```
 
 **Why:** The executioner sets `stage: verification` (its standard contract) but the fast path skips do-verifier entirely. The `review_pending` sub-state is unique to fast-path tasks and signals "executioner done, awaiting fast code review." It does not collide with the normal pipeline (where `stages.execution: complete` routes to the full code review + council flow).
@@ -239,19 +228,7 @@ After executioner completes, re-run FE-4 (override stage back to `execution: rev
 Abandon the task:
 
 ```bash
-node -e "
-const fm = require('gray-matter');
-const fs = require('fs');
-const filePath = '.do/tasks/<active_task>';
-const raw = fs.readFileSync(filePath, 'utf8');
-const parsed = fm(raw);
-parsed.data.abandoned = true;
-parsed.data.pre_abandon_stage = 'execution';
-parsed.data.fast_path = false;
-const out = fm.stringify(parsed.content, parsed.data);
-fs.writeFileSync(filePath, out);
-console.log('Task abandoned');
-"
+node @scripts/update-task-frontmatter.cjs set '.do/tasks/<active_task>' abandoned=true pre_abandon_stage=execution fast_path=false
 ```
 
 Then clear the active task from config:

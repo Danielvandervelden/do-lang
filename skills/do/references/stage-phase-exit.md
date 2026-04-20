@@ -25,24 +25,25 @@ Read the following files:
 
    ```bash
    node -e "
-   const fm = require('gray-matter');
    const fs = require('fs'), path = require('path');
+   const { execSync } = require('child_process');
    const wavesDir = '.do/projects/<active_project>/phases/<completed_phase_slug>/waves';
    if (!fs.existsSync(wavesDir)) { console.log(JSON.stringify([])); process.exit(0); }
+   const fmRead = (f) => JSON.parse(execSync('node @scripts/update-task-frontmatter.cjs read \"' + f + '\"', { encoding: 'utf8' }));
    const waves = fs.readdirSync(wavesDir)
      .filter(d => fs.statSync(path.join(wavesDir, d)).isDirectory())
      .map(slug => {
        const wPath = path.join(wavesDir, slug, 'wave.md');
        if (!fs.existsSync(wPath)) return null;
-       const w = fm(fs.readFileSync(wPath, 'utf8'));
+       const data = fmRead(wPath);
        return {
          slug,
-         status: w.data.status,
-         scope: w.data.scope,
-         wave_summary: w.data.wave_summary || null,
-         modified_files: w.data.modified_files || [],
-         unresolved_concerns: w.data.unresolved_concerns || [],
-         discovered_followups: w.data.discovered_followups || []
+         status: data.status,
+         scope: data.scope,
+         wave_summary: data.wave_summary || null,
+         modified_files: data.modified_files || [],
+         unresolved_concerns: data.unresolved_concerns || [],
+         discovered_followups: data.discovered_followups || []
        };
      })
      .filter(Boolean)
@@ -129,20 +130,21 @@ Walk the `phases/` folder, read each `phase.md` leaf file directly, and find the
 
 ```bash
 NEXT_PHASE=$(node -e "
-const fm = require('gray-matter'), fs = require('fs'), path = require('path');
+const fs = require('fs'), path = require('path');
+const { execSync } = require('child_process');
 const phasesDir = '.do/projects/<active_project>/phases';
 const completedSlug = '<completed_phase_slug>';
+const fmRead = (f) => JSON.parse(execSync('node @scripts/update-task-frontmatter.cjs read \"' + f + '\"', { encoding: 'utf8' }));
 const phases = fs.readdirSync(phasesDir)
   .filter(d => fs.statSync(path.join(phasesDir, d)).isDirectory())
   .map(slug => {
     const phPath = path.join(phasesDir, slug, 'phase.md');
     if (!fs.existsSync(phPath)) return null;
-    const ph = fm(fs.readFileSync(phPath, 'utf8'));
-    return { slug, status: ph.data.status, scope: ph.data.scope };
+    const data = fmRead(phPath);
+    return { slug, status: data.status, scope: data.scope };
   })
   .filter(Boolean)
   .sort((a, b) => a.slug.localeCompare(b.slug));
-// Find first in-scope phase whose slug sorts after completedSlug
 const next = phases.find(p => p.scope === 'in_scope' && p.slug.localeCompare(completedSlug) > 0);
 process.stdout.write(next ? next.slug : '');
 ")

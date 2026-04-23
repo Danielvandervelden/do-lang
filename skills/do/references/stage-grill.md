@@ -8,6 +8,7 @@ description: Grill-me flow for confidence improvement. Loaded when stage is refi
 This reference file is loaded by /do:continue when the task needs confidence improvement.
 
 **Prerequisites:**
+
 - Active task exists in `.do/tasks/`
 - Task stage is `refinement`
 - Task confidence.score < auto_grill_threshold from config
@@ -27,6 +28,7 @@ Run this flow when stage is `refinement` AND (confidence.score < auto_grill_thre
 Follow @skills/do/references/resume-preamble.md Steps R0.1-R0.5.
 
 **For grill-me stage:**
+
 - Last action = last Q&A pair from Clarifications section (if any)
 - If no Clarifications, last action = "Grill-me not started"
 - Skip R0.6 (mid-execution progress) - not applicable to grill stage
@@ -36,6 +38,7 @@ Follow @skills/do/references/resume-preamble.md Steps R0.1-R0.5.
 **Step G1: Enter grill-me flow (first time only)**
 
 If `stages.grilling` is `pending`:
+
 - Update task frontmatter: `stages.grilling: in_progress`
 - Update `updated` timestamp
 - Continue to Step G2
@@ -48,18 +51,45 @@ Use priority order for presentation: context > scope > complexity > familiarity.
 
 **Step G3: Generate questions for all low factors (per D-14)**
 
-For each factor with a deduction, generate a specific question. Use inline text prompt (NOT AskUserQuestion - documented bug).
+For each factor with a deduction, generate a specific question.
 
-| Factor | Question Pattern |
-|--------|------------------|
-| context | "What existing component/pattern should this use? Any specific files or docs I should reference?" |
-| scope | "Which specific files/functions need modification? Are there any areas explicitly OUT of scope?" |
-| complexity | "How do these systems interact? Any dependencies or edge cases I should know about?" |
-| familiarity | "Has similar work been done before in this codebase? Any reference implementations to follow?" |
+| Factor      | Question Pattern                                                                                  |
+| ----------- | ------------------------------------------------------------------------------------------------- |
+| context     | "What existing component/pattern should this use? Any specific files or docs I should reference?" |
+| scope       | "Which specific files/functions need modification? Are there any areas explicitly OUT of scope?"  |
+| complexity  | "How do these systems interact? Any dependencies or edge cases I should know about?"              |
+| familiarity | "Has similar work been done before in this codebase? Any reference implementations to follow?"    |
 
-**Step G4: Present all questions at once and wait for combined answer**
+**Step G3b: Present questions via AskUserQuestion (preferred) or inline fallback**
 
-Display all questions to user in a single numbered list:
+AskUserQuestion supports 1-4 questions per call. Batch into rounds of up to 4 questions per call.
+
+Try AskUserQuestion for each batch:
+
+```javascript
+AskUserQuestion({
+  header: "Confidence: <score> (threshold: <threshold>)",
+  questions: [
+    {
+      question: "[<factor> (<value>)] <question for factor 1>",
+      options: [
+        { label: "<common answer A>" },
+        { label: "<common answer B>" },
+        { label: "<common answer C>" },
+      ],
+    },
+    // ... up to 4 questions per call
+  ],
+  multiSelect: false,
+});
+```
+
+**Proceeding anyway:** If the user selects "Other" on all questions (the automatic fallback option added by AskUserQuestion) with text matching "proceed anyway" (case-insensitive), treat as user override.
+
+**If AskUserQuestion returns empty, undefined, or the tool call errors** (inline fallback):
+
+Present all remaining questions as a single numbered inline list:
+
 ```
 Confidence: <score> (threshold: <threshold>)
 
@@ -72,7 +102,14 @@ Please answer each question by number.
 Enter your answers (numbered to match), or type "Proceed anyway" to skip:
 ```
 
-If user types "Proceed anyway" (case-insensitive):
+Log which interaction method was used (AskUserQuestion or inline) in the Clarifications section.
+
+**Step G4: Wait for combined answer and handle override**
+
+After receiving the combined answer (from either method):
+
+If user types "Proceed anyway" (case-insensitive, in inline fallback) or selects "Other" with "proceed anyway" text (in AskUserQuestion):
+
 - Add to Clarifications section: `User override at confidence <score>`
 - Update task frontmatter:
   - `stages.grilling: complete`
@@ -87,11 +124,13 @@ For each Q&A pair independently, add to Clarifications section:
 
 ```markdown
 ### <Factor> (was: <old_value> -> now: <new_value>)
+
 **Q:** <question asked>
 **A:** <user's answer for this question>
 ```
 
 Calculate confidence boost per Q&A pair independently based on answer specificity:
+
 - Contains file path (e.g., `src/`, `.ts`, `.md`): +0.03
 - Contains PascalCase component name: +0.02
 - Contains specific term (src, lib, utils, hooks, components, api, endpoint): +0.02
@@ -105,19 +144,23 @@ Update `updated` timestamp to current ISO-8601.
 **Step G6: Check threshold or ask follow-ups (per D-15)**
 
 If confidence.score >= auto_grill_threshold:
+
 - Update task frontmatter:
   - `stages.grilling: complete`
   - `stages.refinement: complete`
 - Display:
+
   ```
   Confidence: <old_score> -> <new_score> (+<delta>)
   All factors improved.
-  
+
   Confidence threshold met. Ready for implementation. Run /do:continue to start execution.
   ```
+
 - Stop grill-me flow
 
 Else:
+
 - Display:
   ```
   Confidence: <old_score> -> <new_score> (+<delta>)

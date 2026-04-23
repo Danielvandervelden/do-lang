@@ -11,6 +11,7 @@ Token-efficient meta programming language for Claude Code.
 - **Structured workflows**: Every task follows the same pipeline — no ad-hoc conversations
 - **Quality gates**: Parallel plan review + council review before execution; code review + verification after
 - **State persistence**: Progress saved in `.do/` so sessions can resume at any stage
+- **Direct user interaction**: Agents ask questions via AskUserQuestion with inline text fallback — no orchestrator relay
 - **Claude Code only**: Installs to `~/.claude/` — no other runtime required
 
 ## Installation
@@ -139,10 +140,10 @@ State persists in `.do/projects/` — fully separate from `/do:task`'s `.do/task
 | `do-planner` | Creates the task plan, loads context, calculates confidence |
 | `do-plan-reviewer` | Self-review of the plan — returns PASS / CONCERNS / RETHINK |
 | `do-council-reviewer` | External AI council review via `council-invoke.cjs` |
-| `do-griller` | Asks clarifying questions when confidence falls below threshold |
-| `do-executioner` | Implements the plan step by step with deviation handling |
+| `do-griller` | Asks clarifying questions directly via AskUserQuestion when confidence falls below threshold |
+| `do-executioner` | Implements the plan step by step; resolves blocking deviations via AskUserQuestion |
 | `do-code-reviewer` | Self-review of the diff — returns APPROVED / NITPICKS_ONLY / CHANGES_REQUESTED |
-| `do-verifier` | Approach checklist, quality checks, UAT sign-off |
+| `do-verifier` | Approach checklist, quality checks, UAT sign-off via AskUserQuestion |
 | `do-debugger` | Scientific method debugging (hypothesis → test → confirm/reject) |
 
 ### Full task flow

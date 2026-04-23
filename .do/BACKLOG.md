@@ -124,19 +124,9 @@ Where `<description>` is the in-session variable already available from the call
 
 ---
 
-### Rewrite do-lang agent interactions to use AskUserQuestion
+### ~~Rewrite do-lang agent interactions to use AskUserQuestion~~
 **id:** ask-user-question-rewrite
-
-**Problem:** Currently when any do-lang agent (griller, planner, executioner) needs to ask the user a question, it returns a text response to the orchestrator, which relays it to the user, waits for the response, then sends it back to the agent. This multi-hop relay wastes context tokens, loses agent state between hops, and adds latency. The `AskUserQuestion` tool is available to agents and allows direct user interaction without returning to the orchestrator.
-
-**Impact:** The griller in particular would benefit — it currently asks questions through the orchestrator, which has to parse the response and send it back. With `AskUserQuestion`, the griller could ask questions directly, process answers, and update confidence in a tight loop without orchestrator involvement. The executioner could also use it for mid-execution decisions instead of returning BLOCKED.
-
-**Fix:** Audit all do-lang agents and reference files for patterns where an agent returns questions to the orchestrator for relay to the user. Replace with direct `AskUserQuestion` calls:
-1. `do-griller.md` — primary candidate. Replace the "return questions to orchestrator" pattern with direct AskUserQuestion calls in a loop until confidence >= threshold.
-2. `do-executioner.md` — for BLOCKED/deviation decisions, ask the user directly instead of returning to the orchestrator.
-3. `do-verifier.md` — for UAT approval, ask the user directly.
-4. Update orchestrator stages (`do:task`, `do:continue`) to handle the simplified flow where agents resolve their own questions.
-5. Consider whether the planner should also directly ask clarifying questions instead of deferring to the griller.
+**Status:** DONE (2026-04-23) — task file: `.do/tasks/260423-ask-user-question-rewrite.md`
 
 **Scope:** All agent definitions in `agents/`, orchestrator skills in `skills/do/`, and reference files in `skills/do/references/`.
 

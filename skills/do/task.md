@@ -1,7 +1,7 @@
 ---
 name: do:task
 description: "Start a new piece of work with agent-based workflow. Orchestrates do-planner, do-plan-reviewer + do-council-reviewer (parallel, at plan review), do-griller (if needed), do-executioner, do-code-reviewer + do-council-reviewer (parallel, at code review), and do-verifier agents. Creates task file, runs reviews, executes, reviews code, and verifies."
-argument-hint: "\"description of what you want to accomplish\""
+argument-hint: '"description of what you want to accomplish"'
 allowed-tools:
   - Read
   - Write
@@ -91,6 +91,7 @@ At Step 4 (task file creation) and when invoking `@references/stage-fast-exec.md
 - If `delivery_contract` is null, leave both sections empty (commented-out defaults in frontmatter, empty comment block in markdown section).
 
 Rendered `## Delivery Contract` format (when non-null):
+
 ```markdown
 ## Delivery Contract
 
@@ -128,12 +129,12 @@ Perform a quick heuristic assessment from `$ARGUMENTS`:
 
 ### Decision Matrix
 
-| Files | Mechanical | Confidence | Recommend |
-|-------|------------|------------|-----------|
-| 1-3 | yes | ≥ 0.8 | `fast` |
-| any | no | any | `task` |
-| any | any | < 0.8 | `task` (router honesty — default to full when unsure) |
-| unclear | any | any | `task` |
+| Files   | Mechanical | Confidence | Recommend                                             |
+| ------- | ---------- | ---------- | ----------------------------------------------------- |
+| 1-3     | yes        | ≥ 0.8      | `fast`                                                |
+| any     | no         | any        | `task`                                                |
+| any     | any        | < 0.8      | `task` (router honesty — default to full when unsure) |
+| unclear | any        | any        | `task`                                                |
 
 **Router honesty:** If signals are ambiguous (description is vague, can't estimate file scope), default to `task` — do not gamble on `fast`. Better to over-ceremony a small task than under-ceremony a subtle one. The user can always override down.
 
@@ -156,11 +157,13 @@ Prompt the user with two choices only: `fast` / `task`, with the recommended as 
 ### Branch on User Choice
 
 **If user chooses `fast`:**
+
 1. Run Steps 1-3 below (prerequisites, active task guard, model config read — same as `/do:fast` Steps 1-3b). Skip Step 4 (task-file creation); the fast reference writes the task file itself.
 2. Invoke `@references/stage-fast-exec.md` with `<description>` and `models` as in-session variables per the caller-contract preamble
 3. **STOP** — do not fall through to Step 4. The fast reference handles task-file creation; falling through would write a second task file (violation of "no double task files" invariant).
 
 **If user chooses `task`:**
+
 - Continue normally to Step 1 below.
 
 ---
@@ -180,6 +183,7 @@ node ~/.claude/commands/do/scripts/task-abandon.cjs check --config .do/config.js
 ```
 
 If active task exists, offer options:
+
 - Continue it (`/do:continue`)
 - Abandon it and start new: `node ~/.claude/commands/do/scripts/task-abandon.cjs abandon <filename>`
 - Cancel
@@ -204,6 +208,7 @@ TASK_FILE="${TASK_DATE}-${TASK_SLUG}.md"
 ```
 
 Create task file from template using the Write tool:
+
 - Read `@references/task-template.md`
 - Replace `{{TASK_ID}}` with filename (without .md)
 - Replace `{{CREATED_AT}}` with ISO timestamp
@@ -212,6 +217,7 @@ Create task file from template using the Write tool:
 - Leave all other `{{PLACEHOLDER}}` fields as-is — do-planner fills them in Step 5.
 
 Update config:
+
 ```bash
 node -e "
 const fs = require('fs');
@@ -240,11 +246,12 @@ Config: .do/config.json
 The task file already exists with basic metadata. Load context, analyze the task, 
 calculate confidence, and fill in the Problem Statement, Approach, and Concerns sections.
 Return a structured summary when complete.
-`
-})
+`,
+});
 ```
 
 Parse the returned summary for:
+
 - Confidence score and factors
 - Approach summary
 - Concerns count
@@ -254,6 +261,7 @@ Parse the returned summary for:
 @references/stage-plan-review.md
 
 Handle result:
+
 - **APPROVED** (council_review_ran.plan set to true by reference file): Continue to Step 7
 - **ITERATE**: stage-plan-review.md owns this loop — follow its PR-5 steps. ITERATE may resolve inline if all findings are nitpicks (see PR-4.5 in stage-plan-review.md). Do NOT handle plan revisions manually. stage-plan-review.md owns the ITERATE loop, including inline Edit tool calls for nitpick-only rounds. The caller must not bypass stage logic or edit the task file outside of the stage reference.
 - **MAX_ITERATIONS**: Show user the outstanding issues, ask to proceed or revise
@@ -294,8 +302,12 @@ Threshold: <threshold>
 
 Ask targeted questions for lowest-scoring factors.
 Present all questions at once. After receiving combined answer, update confidence for each Q&A pair independently. Check threshold after processing the full batch. If below threshold, batch any follow-up questions into the next round.
-`
-})
+`,
+});
+```
+
+**Note:** The griller resolves the full question loop internally via AskUserQuestion (with inline text fallback). It returns only the final GRILLING COMPLETE summary to the orchestrator — no relaying of questions through the orchestrator.
+
 ```
 
 ## Step 8: User Approval Checkpoint
@@ -303,6 +315,7 @@ Present all questions at once. After receiving combined answer, update confidenc
 Display summary and ask for execution approval:
 
 ```
+
 ## Ready to Execute
 
 **Task:** <task file>
@@ -311,7 +324,8 @@ Display summary and ask for execution approval:
 **Reviews:** <plan review status>
 
 Proceed with execution? [Y/n]
-```
+
+````
 
 If user says no, stop. Task file is saved for later `/do:continue`.
 
@@ -333,11 +347,12 @@ Handle deviations appropriately.
 Return summary when complete.
 `
 })
-```
+````
 
 Handle result:
+
 - **COMPLETE**: Continue to Step 10
-- **BLOCKED**: Show blocker, ask user for resolution
+- **BLOCKED**: The executioner has already asked the user via AskUserQuestion (with inline fallback). BLOCKED is only returned when the user explicitly chose "Pause and investigate" or both interaction methods failed. Display the executioner's output as-is — it already contains the issue context and the user's decision (or interaction failure note). Do NOT re-ask the user.
 - **FAILED**: Show error, offer recovery options
 
 ## Step 10: Code Review
@@ -345,6 +360,7 @@ Handle result:
 @references/stage-code-review.md
 
 Handle result:
+
 - **VERIFIED** (stage:verification + council_review_ran.code set by reference file): Continue to Step 11
 - **ITERATE**: stage-code-review.md owns this loop — follow its CR-5 steps, which will re-spawn do-executioner and reviewers (up to 3x). ITERATE now passes classified findings to do-executioner as a prioritized brief (blockers first, nitpicks second — see CR-4.5 in stage-code-review.md). Do NOT fix code issues manually.
 - **MAX_ITERATIONS**: Show outstanding issues to user, ask to proceed or fix manually
@@ -355,21 +371,23 @@ Handle result:
 Agent({
   description: "Verify implementation",
   subagent_type: "do-verifier",
-  model: "<models.overrides.verifier || models.overrides.code_reviewer || models.default>",
+  model:
+    "<models.overrides.verifier || models.overrides.code_reviewer || models.default>",
   prompt: `
 Run verification flow for this task.
 
 Task file: .do/tasks/<active_task>
 
 Run verification: approach checklist, quality checks, UAT.
-`
-})
+`,
+});
 ```
 
 Handle result:
+
 - **PASS**: Task marked complete by do-verifier; continue to Step 12
-- **FAIL**: Show failure details and options to user
-- **UAT_FAILED**: Show do-verifier's handoff prompt or loop-back options as-is
+- **FAIL**: The verifier has already asked the user which fix option they prefer (via AskUserQuestion with inline fallback). Display the verifier's output as-is — it already contains the failure details and the user's chosen next step. Do NOT re-ask.
+- **UAT_FAILED**: The verifier has already asked the user about loop-back vs new task (or generated the handoff prompt for >= 80% context). Display the verifier's output as-is — it already contains the user's decision or the handoff prompt. Do NOT re-ask.
 
 ## Step 12: Completion
 
@@ -393,6 +411,7 @@ node @scripts/update-task-frontmatter.cjs read '.do/tasks/<active_task>' stage
 ## Failure Handling
 
 Any agent failure returns immediately to user with:
+
 - Which agent failed
 - What it was trying to do
 - Last known good state

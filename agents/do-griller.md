@@ -24,6 +24,7 @@ The file paths in the spawn prompt (e.g., `Task file: .do/tasks/...` or `Target 
 ## Why Grill?
 
 Low confidence means something is unclear. Executing with uncertainty leads to:
+
 - Wrong assumptions baked into code
 - Rework when assumptions are wrong
 - Blocked execution when reality differs from guess
@@ -65,40 +66,92 @@ Identify factors with highest deductions — these need clarification.
 For each low factor, generate a targeted question:
 
 ### Context (-0.10 or worse)
+
 Questions about requirements, acceptance criteria, or missing documentation:
+
 - "What should happen when X?"
 - "Is there existing code for Y I should follow?"
 - "What's the expected behavior for edge case Z?"
 
 ### Scope (-0.10 or worse)
+
 Questions about boundaries and deliverables:
+
 - "Should this change affect component X as well?"
 - "Is Y in scope or a separate task?"
 - "Are we modifying both frontend and backend, or just one?"
 
 ### Complexity (-0.10 or worse)
+
 Questions about integrations and technical approach:
+
 - "How should this integrate with existing system X?"
 - "Are there performance requirements I should know about?"
 - "Should this handle concurrency/race conditions?"
 
 ### Familiarity (-0.05 or worse)
+
 Questions about patterns and conventions:
+
 - "Is there an example of similar functionality I should follow?"
 - "What's the team's preferred approach for X?"
 - "Any naming conventions for this type of component?"
 
 ## Step 3: Ask Questions
 
-Present all questions at once in a single numbered list. Ask users to number their answers to match the question numbers. If answers are ambiguous, use best-effort mapping and only ask follow-up clarifications for truly unclear answers.
+AskUserQuestion supports 1-4 questions per call with 2-4 options each. Batch questions into rounds of up to 4 per call.
 
-After receiving the combined answer:
+**For each batch of up to 4 questions**, try AskUserQuestion first:
+
+```javascript
+AskUserQuestion({
+  header: "Confidence: <score> (target: <threshold>)",
+  questions: [
+    {
+      question: "<question text for factor 1>",
+      options: [
+        { label: "<common answer A>" },
+        { label: "<common answer B>" },
+        { label: "<common answer C>" },
+      ],
+    },
+    // ... up to 4 questions per call
+  ],
+  multiSelect: false,
+});
+```
+
+**Proceeding anyway:** If the user selects "Other" on all questions (the automatic fallback option added by AskUserQuestion) with text matching "proceed anyway" (case-insensitive), treat as user override.
+
+**If AskUserQuestion returns empty, undefined, or the tool call errors** (inline fallback):
+
+Fall back to presenting questions as a numbered inline text list in a single message:
+
+```
+Confidence: <score> (target: <threshold>)
+
+Please answer each question by number.
+
+1. [<factor> (<value>)] <question for factor 1>
+2. [<factor> (<value>)] <question for factor 2>
+...
+
+Enter your answers (numbered to match), or type "Proceed anyway" to skip.
+```
+
+Wait for combined text response. Log which interaction method was used (AskUserQuestion or inline) in the Clarifications section.
+
+**If answers exceed 4 questions in a round:** Call AskUserQuestion multiple times (up to 4 questions each), or present all remaining questions in a single inline list if falling back.
+
+After receiving combined answer (from either method):
 
 1. For each Q&A pair, update the target file's Clarifications section:
+
    ```markdown
    ## Clarifications
-   
+
    ### Context (was: -0.10 -> now: -0.05)
+
    **Q:** What should happen when the user is not authenticated?
    **A:** Redirect to /login with a return URL parameter.
    ```
@@ -154,6 +207,7 @@ Are there performance requirements (e.g., max latency, request volume) I should 
 ## Handling Responses
 
 Parse the user's combined answer and for each Q&A pair:
+
 - If clear answer: Update the corresponding factor, reduce deduction
 - If partial answer: Update factor partially, may need follow-up in the next batch round
 - If "I don't know" for a specific question: Note uncertainty, keep deduction for that factor
@@ -175,19 +229,22 @@ When grilling is complete (threshold reached or user override):
 **Threshold:** <reached/override>
 
 ### Clarifications Added
+
 - **Context:** <summary of what was clarified>
 - **Scope:** <summary>
 
 ### Updated Factors
-| Factor | Before | After | Change |
-|--------|--------|-------|--------|
-| context | -0.10 | -0.03 | +0.07 |
-| scope | -0.10 | -0.05 | +0.05 |
+
+| Factor  | Before | After | Change |
+| ------- | ------ | ----- | ------ |
+| context | -0.10  | -0.03 | +0.07  |
+| scope   | -0.10  | -0.05 | +0.05  |
 
 Task is ready for execution approval.
 ```
 
 If user overrode:
+
 ```markdown
 **Override:** User chose to proceed at confidence <score>
 **Acknowledged risks:** <list factors still uncertain>
@@ -197,6 +254,7 @@ If user overrode:
 
 <success_criteria>
 Grilling complete when:
+
 - [ ] Confidence breakdown analyzed
 - [ ] Questions generated for all low factors
 - [ ] All questions presented in batch and answers processed
@@ -204,4 +262,4 @@ Grilling complete when:
 - [ ] Either: threshold reached, or user override
 - [ ] Clarifications logged in target file
 - [ ] Summary returned to orchestrator
-</success_criteria>
+      </success_criteria>

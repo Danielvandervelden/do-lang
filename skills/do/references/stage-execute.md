@@ -8,11 +8,13 @@ description: Implementation execution flow. Handles context clear decision and t
 This reference file is loaded by /do:continue when the task is ready for implementation.
 
 **Prerequisites:**
+
 - Active task exists in `.do/tasks/`
 - Task stage is `refinement` with `stages.grilling: complete` OR confidence >= threshold
 - OR task stage is `execution` (resuming)
 
 **Entry conditions:**
+
 - If stage is `refinement`, first transition to `execution` stage
 - If stage is already `execution`, resume from current state
 
@@ -27,6 +29,7 @@ Before running execution logic, execute Step R0 from resume-preamble.md.
 Follow @skills/do/references/resume-preamble.md Steps R0.1-R0.6.
 
 **For execution stage:**
+
 - Last action = summary of last Execution Log entry (Files and Status)
 - If no Execution Log entries, last action = "Execution not started"
 - Run R0.6 if Execution Log has entries but last Status is NOT "Execution complete"
@@ -70,13 +73,14 @@ Parse JSON output for: `advisor`, `verdict`, `findings`, `recommendations`, `suc
 
 **Step E-1.2: Handle verdict**
 
-| Verdict | Action |
-|---------|--------|
-| LOOKS_GOOD | Log to Council Review section, mark `council_review_ran.plan: true`, proceed to E0 |
-| CONCERNS | Log to Council Review, display concerns to user, ask if they want to revise or proceed |
-| RETHINK | Log to Council Review, display RETHINK findings, recommend revision, ask user |
+| Verdict    | Action                                                                                 |
+| ---------- | -------------------------------------------------------------------------------------- |
+| LOOKS_GOOD | Log to Council Review section, mark `council_review_ran.plan: true`, proceed to E0     |
+| CONCERNS   | Log to Council Review, display concerns to user, ask if they want to revise or proceed |
+| RETHINK    | Log to Council Review, display RETHINK findings, recommend revision, ask user          |
 
 **If CONCERNS or RETHINK:**
+
 ```
 Plan Review: <verdict>
 
@@ -96,6 +100,7 @@ Enter 1 or 2:
 ```
 
 Wait for user response.
+
 - If 1: Display "Update the Approach section in .do/tasks/<active_task>, then run /do:continue." Stop.
 - If 2: Log "User override: proceeding despite <verdict>" in Council Review section. Mark `council_review_ran.plan: true`. Continue to E0.
 
@@ -107,6 +112,7 @@ Add/update Council Review section **after Execution Log** (per D-46):
 ## Council Review
 
 ### Plan Review
+
 - **Reviewer:** <advisor>
 - **Verdict:** <verdict>
 - **Findings:**
@@ -114,9 +120,9 @@ Add/update Council Review section **after Execution Log** (per D-46):
   - <finding 2>
 - **Recommendations:**
   - <recommendation 1>
-{{#if USER_OVERRIDE}}
+    {{#if USER_OVERRIDE}}
 - **User Override:** Proceeded despite <verdict>
-{{/if}}
+  {{/if}}
 ```
 
 Also update frontmatter: `council_review_ran.plan: true`
@@ -132,20 +138,25 @@ Also update frontmatter: `council_review_ran.plan: true`
 Before starting execution, ask user about clearing context.
 
 Try AskUserQuestion:
+
 ```javascript
 AskUserQuestion({
   header: "Context",
   question: "Clear context before implementation?",
   options: [
-    { label: "Yes", description: "Run /clear, then /do:continue to resume with fresh context" },
-    { label: "No", description: "Proceed with current context" }
+    {
+      label: "Yes",
+      description: "Run /clear, then /do:continue to resume with fresh context",
+    },
+    { label: "No", description: "Proceed with current context" },
   ],
-  multiSelect: false
-})
+  multiSelect: false,
+});
 ```
 
 **If response is empty, undefined, or tool fails:**
 Fall back to inline text prompt:
+
 ```
 Context Decision
 
@@ -159,6 +170,7 @@ Enter 1 or 2 (default: 2):
 ```
 
 **Process response:**
+
 - If "Yes" or "1": Update task stage, display instructions, STOP
   - Update frontmatter: `stage: execution`, `stages.refinement: complete`, `stages.execution: pending`
   - Display: "Run /clear to clear context, then /do:continue to resume execution."
@@ -168,8 +180,10 @@ Enter 1 or 2 (default: 2):
 
 **Log context decision:**
 Add to Execution Log:
+
 ```markdown
 ### <timestamp>
+
 **Context decision:** [AskUserQuestion|inline prompt] - user chose [Yes|No]
 ```
 
@@ -180,6 +194,7 @@ Add to Execution Log:
 ### Step E1: Load Task Context
 
 Read task markdown for:
+
 - Problem Statement (what to solve)
 - Approach (how to solve it)
 - Concerns (what to watch for)
@@ -195,17 +210,22 @@ Load each file from Context Loaded section to understand the codebase patterns.
 Follow the Approach section step by step.
 
 **Execution rules:**
+
 1. Execute changes following the documented approach
 2. After each significant action, update the Execution Log (per D-20)
 3. If plan says X but you encounter Y, STOP and ask (per D-21)
 
 **Log entry format (per D-20):**
+
 ```markdown
 ### <YYYY-MM-DD HH:MM>
+
 **Files:**
+
 - `path/to/file.ts` - Change summary
 
 **Decisions:**
+
 - Plan said X - chose approach Y because Z
 - [If error] Tried A, failed because B, resolved with C
 
@@ -213,7 +233,28 @@ Follow the Approach section step by step.
 ```
 
 **Deviation handling (per D-21):**
-If ANY deviation from plan:
+If ANY deviation from plan, try AskUserQuestion first:
+
+```javascript
+AskUserQuestion({
+  header: "Deviation from plan",
+  questions: [
+    {
+      question:
+        "Plan said: [original instruction]\nIssue: [what actually happened or what's different]\n\nHow should we proceed?",
+      options: [
+        { label: "[Alternative A]" },
+        { label: "[Alternative B]" },
+        { label: "Pause and investigate" },
+      ],
+    },
+  ],
+  multiSelect: false,
+});
+```
+
+**If AskUserQuestion returns empty, undefined, or fails** (inline fallback):
+
 ```
 Plan said: [original instruction from Approach section]
 Issue: [what actually happened or what's different]
@@ -225,7 +266,10 @@ Options:
 
 Which option?
 ```
-Wait for user response. Log the decision in Execution Log with "User chose: X".
+
+Wait for response (either method). Log the decision in Execution Log with "User chose: X".
+
+If user chooses "Pause and investigate" (option 3 / "Other" with that text): stop execution and surface the blocker to the caller.
 
 ---
 
@@ -240,17 +284,21 @@ After all execution is complete:
    - `updated: <ISO-8601 timestamp>`
 
 2. Final log entry:
+
 ```markdown
 ### <timestamp>
+
 **Status:** Execution complete
 
 **Summary:**
+
 - Files modified: <count>
 - Decisions made: <count>
 - Deviations: <count or "none">
 ```
 
 3. Display completion message:
+
 ```
 Execution complete. Checking council config before verification.
 ```
@@ -293,13 +341,14 @@ Parse JSON output for: `advisor`, `verdict`, `findings`, `recommendations`, `suc
 
 **Step E4.3: Handle verdict**
 
-| Verdict | Action |
-|---------|--------|
-| APPROVED | Log to Council Review section, mark `council_review_ran.code: true`, display completion message |
-| NITPICKS_ONLY | Log to Council Review section (include nitpicks), mark `council_review_ran.code: true`, display completion message |
-| CHANGES_REQUESTED | Log to Council Review, display issues to user, ask if they want to fix or proceed |
+| Verdict           | Action                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------ |
+| APPROVED          | Log to Council Review section, mark `council_review_ran.code: true`, display completion message                    |
+| NITPICKS_ONLY     | Log to Council Review section (include nitpicks), mark `council_review_ran.code: true`, display completion message |
+| CHANGES_REQUESTED | Log to Council Review, display issues to user, ask if they want to fix or proceed                                  |
 
 **If CHANGES_REQUESTED:**
+
 ```
 Code Review: CHANGES_REQUESTED
 
@@ -319,6 +368,7 @@ Enter 1 or 2:
 ```
 
 Wait for user response.
+
 - If 1: Display "Fix the reported issues, then run /do:continue." Stop.
 - If 2: Log "User override: proceeding despite CHANGES_REQUESTED" in Council Review section. Mark `council_review_ran.code: true`. Continue to completion message.
 
@@ -328,6 +378,7 @@ Add/update Council Review section with `### Code Review` heading:
 
 ```markdown
 ### Code Review
+
 - **Reviewer:** <advisor>
 - **Verdict:** <verdict>
 - **Findings:**
@@ -335,14 +386,15 @@ Add/update Council Review section with `### Code Review` heading:
   - <finding 2>
 - **Recommendations:**
   - <recommendation 1>
-{{#if USER_OVERRIDE}}
+    {{#if USER_OVERRIDE}}
 - **User Override:** Proceeded despite CHANGES_REQUESTED
-{{/if}}
+  {{/if}}
 ```
 
 Also update frontmatter: `council_review_ran.code: true`
 
 **Final completion message (after E4 completes):**
+
 ```
 Execution complete. Proceeding to verification.
 

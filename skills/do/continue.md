@@ -46,6 +46,7 @@ If `--task <filename>` provided, use that instead.
 ## Step 2: Load Task State
 
 Read the task file and extract:
+
 - `stage`: Current workflow stage
 - `stages`: Sub-stage completion status
 - `confidence`: Score and factors
@@ -58,6 +59,7 @@ node @scripts/update-task-frontmatter.cjs read '.do/tasks/<active_task>' stage s
 ## Step 3: Handle Abandoned Tasks
 
 If `stage: abandoned`:
+
 1. Restore to `pre_abandon_stage`
 2. Update frontmatter
 3. Set as active task
@@ -105,17 +107,18 @@ Parse the output: if `fast_path` is `true`, the path is `fast`; otherwise `norma
 
 ### Fast-path routing (fast_path: true)
 
-| Stage | Sub-condition | Action |
-|-------|---------------|--------|
-| `execution` | `stages.execution: pending` | Spawn do-executioner (task was created but execution never started) |
-| `execution` | `stages.execution: in_progress` | Spawn do-executioner to continue (same as normal) |
-| `execution` | `stages.execution: review_pending` AND `quick_path: false` or absent | Run the single fast code review round (see below) |
-| `execution` | `stages.execution: review_pending` AND `quick_path: true` | Run full code-review stack (see Quick-path escalation resume below) |
-| `complete` | - | Show "Task already complete. No action needed." and stop |
+| Stage       | Sub-condition                                                        | Action                                                              |
+| ----------- | -------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `execution` | `stages.execution: pending`                                          | Spawn do-executioner (task was created but execution never started) |
+| `execution` | `stages.execution: in_progress`                                      | Spawn do-executioner to continue (same as normal)                   |
+| `execution` | `stages.execution: review_pending` AND `quick_path: false` or absent | Run the single fast code review round (see below)                   |
+| `execution` | `stages.execution: review_pending` AND `quick_path: true`            | Run full code-review stack (see Quick-path escalation resume below) |
+| `complete`  | -                                                                    | Show "Task already complete. No action needed." and stop            |
 
 **Fast code review round** (for `review_pending` state, `quick_path: false` or absent):
 
 Spawn do-code-reviewer only (no council, no parallel spawning). Follow FE-6 logic from `@skills/do/references/stage-fast-exec.md`:
+
 - APPROVED or NITPICKS_ONLY → mark `council_review_ran.code: true`, update `stage: complete`, done
 - CHANGES_REQUESTED (first time) → spawn do-executioner with fix instructions, override stage back to `execution: review_pending`, re-spawn do-code-reviewer once
 - CHANGES_REQUESTED (second time) → abandon task: set `abandoned: true`, `pre_abandon_stage: execution`, `fast_path: false`. Print: "Fast-path review failed twice. The task has been abandoned and preserved at `.do/tasks/<filename>` for reference. Please run `/do:task "description"` to start fresh with the full workflow." Stop.
@@ -136,6 +139,7 @@ Then invoke the full code-review stack via `@references/stage-code-review.md`. T
 **Important:** Do NOT delete the existing Council Review section — it contains both quick-path round-1 and round-2 findings, preserved as history. `stage-code-review.md` appends new findings; it does not overwrite.
 
 After `@references/stage-code-review.md` returns:
+
 - **VERIFIED** → `stage-code-review.md` CR-5 has already set `stage: verification`, `stages.verification: pending`, and `council_review_ran.code: true`. Spawn do-verifier.
 - **ITERATE** → `stage-code-review.md` owns the loop (CR-5). Do NOT handle manually.
 - **MAX_ITERATIONS** → show to user, stop (same as normal flow).
@@ -144,17 +148,17 @@ After `@references/stage-code-review.md` returns:
 
 ### Normal routing (fast_path: false or absent)
 
-| Stage | Sub-condition | Action |
-|-------|---------------|--------|
-| `refinement` | stages.refinement: in_progress | Spawn do-planner to finish planning |
-| `refinement` | stages.refinement: complete, plan review not ran | Run stage-plan-review (parallel reviewers if council enabled) |
-| `refinement` | plan review complete, confidence < threshold | Spawn do-griller |
-| `refinement` | all complete | Show approval checkpoint, then spawn do-executioner |
-| `execution` | stages.execution: in_progress | Spawn do-executioner to continue |
-| `execution` | stages.execution: complete | Run stage-code-review (parallel reviewers if council enabled) |
-| `verification` | any | Spawn do-verifier |
-| `verified` | - | Spawn do-verifier (resumes at V5 UAT flow) |
-| `complete` | - | Show "Task already complete. No action needed." and stop |
+| Stage          | Sub-condition                                    | Action                                                        |
+| -------------- | ------------------------------------------------ | ------------------------------------------------------------- |
+| `refinement`   | stages.refinement: in_progress                   | Spawn do-planner to finish planning                           |
+| `refinement`   | stages.refinement: complete, plan review not ran | Run stage-plan-review (parallel reviewers if council enabled) |
+| `refinement`   | plan review complete, confidence < threshold     | Spawn do-griller                                              |
+| `refinement`   | all complete                                     | Show approval checkpoint, then spawn do-executioner           |
+| `execution`    | stages.execution: in_progress                    | Spawn do-executioner to continue                              |
+| `execution`    | stages.execution: complete                       | Run stage-code-review (parallel reviewers if council enabled) |
+| `verification` | any                                              | Spawn do-verifier                                             |
+| `verified`     | -                                                | Spawn do-verifier (resumes at V5 UAT flow)                    |
+| `complete`     | -                                                | Show "Task already complete. No action needed." and stop      |
 
 ### Spawn do-planner (resume planning)
 
@@ -170,8 +174,8 @@ Task file: .do/tasks/<active_task>
 
 The task file already exists. Read it, complete any missing sections.
 Return structured summary when done.
-`
-})
+`,
+});
 ```
 
 ### Plan Review
@@ -179,6 +183,7 @@ Return structured summary when done.
 @references/stage-plan-review.md
 
 The resume guard (PR-0) handles the `council_review_ran.plan` skip-entirely check. If already ran, stage-plan-review returns immediately. Result handling:
+
 - **APPROVED**: Continue to griller check / approval checkpoint
 - **ITERATE**: stage-plan-review.md owns this loop — follow its PR-5 steps. ITERATE may resolve inline if all findings are nitpicks (see PR-4.5 in stage-plan-review.md). Do NOT handle plan revisions manually. stage-plan-review.md owns the ITERATE loop, including inline Edit tool calls for nitpick-only rounds. The caller must not bypass stage logic or edit the task file outside of the stage reference.
 - **MAX_ITERATIONS** or **ESCALATE**: Show to user, stop
@@ -204,9 +209,11 @@ Task confidence is below threshold. Ask clarifying questions.
 Task file: .do/tasks/<active_task>
 Current confidence: <score>
 Threshold: <threshold>
-`
-})
+`,
+});
 ```
+
+**Note:** The griller resolves the full question loop internally via AskUserQuestion (with inline text fallback). It returns only the final GRILLING COMPLETE summary — no relaying of questions through the orchestrator.
 
 ### Spawn do-executioner (new or resume)
 
@@ -222,15 +229,18 @@ Task file: .do/tasks/<active_task>
 
 Check Execution Log for prior progress.
 Continue from where it left off.
-`
-})
+`,
+});
 ```
+
+**Note:** Deviation decisions are handled internally — the executioner asks the user directly via AskUserQuestion (with inline text fallback). BLOCKED is only returned when the user explicitly chose "Pause and investigate" or both interaction methods failed. If BLOCKED is returned, display its output as-is — do NOT re-ask the user.
 
 ### Code Review
 
 @references/stage-code-review.md
 
 The resume guard (CR-0) handles the `council_review_ran.code` skip-entirely check. If already ran, stage-code-review returns immediately (proceed to do-verifier). Result handling:
+
 - **VERIFIED**: Task file updated with stage:verification — spawn do-verifier
 - **ITERATE**: stage-code-review.md owns this loop — follow its CR-5 steps, which will re-spawn do-executioner and reviewers (up to 3x). ITERATE now passes classified findings to do-executioner as a prioritized brief (blockers first, nitpicks second — see CR-4.5 in stage-code-review.md). Do NOT fix code issues manually.
 - **MAX_ITERATIONS**: Show to user, stop
@@ -241,7 +251,8 @@ The resume guard (CR-0) handles the `council_review_ran.code` skip-entirely chec
 Agent({
   description: "Verify implementation",
   subagent_type: "do-verifier",
-  model: "<models.overrides.verifier || models.overrides.code_reviewer || models.default>",
+  model:
+    "<models.overrides.verifier || models.overrides.code_reviewer || models.default>",
   prompt: `
 Run verification for this task.
 
@@ -249,13 +260,16 @@ Task file: .do/tasks/<active_task>
 
 Run verification: approach checklist, quality checks, UAT.
 If stage is verified, resume at UAT flow (Step V5).
-`
-})
+`,
+});
 ```
+
+**Note:** UAT approval and fail handling are resolved internally — the verifier asks the user directly via AskUserQuestion (with inline text fallback). If FAIL or UAT_FAILED is returned, display the verifier's output as-is — it already contains the user's chosen next step. Do NOT re-ask.
 
 ## Step 7: Handle Agent Result
 
 After agent returns, check the result and either:
+
 - Continue to next stage (loop back to Step 6)
 - Show completion summary
 - Report blocker/failure to user
@@ -265,3 +279,7 @@ After agent returns, check the result and either:
 ## Files
 
 - **Task template:** @references/task-template.md
+
+```
+
+```

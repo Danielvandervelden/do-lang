@@ -111,4 +111,52 @@ Scope: new file `skills/do/scripts/lib/agent-harness.cjs` + a `__tests__/integra
 
 ---
 
+### stage-fast-exec.md: load-task-context.cjs invocation missing description argument
+**id:** fast-exec-load-context-arg
+
+**Problem:** `stage-fast-exec.md` FE-2 shows `node ~/.claude/commands/do/scripts/load-task-context.cjs` without passing the task description as an argument. The script requires a description string for keyword matching and exits with `"No task description provided"` when called bare. This causes agents to fail on first try, then have to guess that a description argument is needed.
+
+**Fix:** Update `stage-fast-exec.md` FE-2 to show the description argument explicitly:
+```bash
+node ~/.claude/commands/do/scripts/load-task-context.cjs "<description>"
+```
+Where `<description>` is the in-session variable already available from the caller contract. One-line fix in the reference file.
+
+---
+
+### Rewrite do-lang agent interactions to use AskUserQuestion
+**id:** ask-user-question-rewrite
+
+**Problem:** Currently when any do-lang agent (griller, planner, executioner) needs to ask the user a question, it returns a text response to the orchestrator, which relays it to the user, waits for the response, then sends it back to the agent. This multi-hop relay wastes context tokens, loses agent state between hops, and adds latency. The `AskUserQuestion` tool is available to agents and allows direct user interaction without returning to the orchestrator.
+
+**Impact:** The griller in particular would benefit — it currently asks questions through the orchestrator, which has to parse the response and send it back. With `AskUserQuestion`, the griller could ask questions directly, process answers, and update confidence in a tight loop without orchestrator involvement. The executioner could also use it for mid-execution decisions instead of returning BLOCKED.
+
+**Fix:** Audit all do-lang agents and reference files for patterns where an agent returns questions to the orchestrator for relay to the user. Replace with direct `AskUserQuestion` calls:
+1. `do-griller.md` — primary candidate. Replace the "return questions to orchestrator" pattern with direct AskUserQuestion calls in a loop until confidence >= threshold.
+2. `do-executioner.md` — for BLOCKED/deviation decisions, ask the user directly instead of returning to the orchestrator.
+3. `do-verifier.md` — for UAT approval, ask the user directly.
+4. Update orchestrator stages (`do:task`, `do:continue`) to handle the simplified flow where agents resolve their own questions.
+5. Consider whether the planner should also directly ask clarifying questions instead of deferring to the griller.
+
+**Scope:** All agent definitions in `agents/`, orchestrator skills in `skills/do/`, and reference files in `skills/do/references/`.
+
+---
+
+### Fast-path FE-2 context scan should keyword-match project docs
+**id:** fast-exec-keyword-context
+
+**Problem:** The fast-path's FE-2 "Quick Context Scan" only spot-checks the target files mentioned in the task description. It does not do keyword → doc matching (e.g., `useSelector` → `store-state.md`, `useForm` → `forms.md`, `api` → `api-layer.md`). The full planner does this via `load-task-context.cjs`, but the fast path skips the planner entirely. This means executioners on fast-path tasks miss project conventions documented in topic files and fall back to generic patterns (e.g., using `useSelector` instead of the project's `useAppSelector` wrapper).
+
+**Impact:** Recurring review feedback for convention violations that are clearly documented in the project database. The whole point of the database docs is to prevent this — but they're only loaded on the full pipeline path.
+
+**Fix:** In `stage-fast-exec.md` FE-2, add a lightweight keyword → doc mapping step:
+1. Scan the task description for domain keywords (configurable per-project or via a standard mapping: `useSelector|useDispatch|Redux|slice|store` → `store-state.md`, `useForm|react-hook-form|validation` → `forms.md`, `api|query|mutation|endpoint` → `api-layer.md`, `route|layout|navigate` → `routing-layouts.md`, etc.)
+2. For each matched doc, load it and append to the Context Loaded section
+3. Keep it fast — this is keyword matching, not deep analysis. The mapping can live in `project.md` or `.do/config.json` as a `context_keywords` table
+4. Consider reusing `load-task-context.cjs` with the task description (currently broken on fast-path — see backlog item `fast-exec-load-context-arg`)
+
+**Scope:** `skills/do/references/stage-fast-exec.md` FE-2 section. Potentially `scripts/load-task-context.cjs` if reuse is feasible.
+
+---
+
 

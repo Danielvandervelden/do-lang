@@ -18,5 +18,9 @@
   },
   "auto_grill_threshold": 0.9,
   "database_entry": true,
-  "active_task": "260419-worktree-isolation.md"
+  "active_task": "260423-planner-max-turns.md",
+  "delivery_contract": {
+    "onboarded": true,
+    "dismissed": true
+  }
 }

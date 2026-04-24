@@ -6,23 +6,67 @@ Token-efficient meta programming language for Claude Code.
 
 ## What is do?
 
-**do** brings structured, repeatable task execution to Claude Code. It wraps complex AI workflows — plan, review, implement, verify — in a flat agent hierarchy that keeps token usage low and quality gates intact.
+**do** brings structured, repeatable task execution to Claude Code. Without structure, AI coding assistants produce inconsistent results — great one session, off-track the next. do-lang fixes this by wrapping complex AI workflows — plan, review, implement, verify — in a flat agent hierarchy (one coordinator, no nested chains of sub-agents) that keeps token usage low and quality gates intact.
 
 - **Structured workflows**: Every task follows the same pipeline — no ad-hoc conversations
-- **Quality gates**: Parallel plan review + council review before execution; code review + verification after
+- **Quality gates**: Parallel plan review + council review (a second AI checks the plan from outside) before execution; code review + verification after
 - **State persistence**: Progress saved in `.do/` so sessions can resume at any stage
-- **Direct user interaction**: Agents ask questions via AskUserQuestion with inline text fallback — no orchestrator relay
-- **Claude Code only**: Installs to `~/.claude/` — no other runtime required
+- **Direct user interaction**: Agents ask questions inline via a structured prompt — no going through an intermediary
+- **Installs to Claude Code**: Requires Node.js ≥18 and npm for installation; no separate runtime needed at usage time
+
+## Workspace Architecture
+
+do-lang expects a **workspace** — a root directory that contains your projects and a shared knowledge base (called the "database"). A typical layout:
+
+```
+~/workspace/                        ← workspace root
+├── .do-workspace.json              ← workspace config (created by /do:init)
+├── AGENTS.md                       ← instructions for AI assistants
+├── database/                       ← centralized knowledge base
+│   ├── __index__.md                ← barrel imports (project registry)
+│   ├── projects/
+│   │   ├── my-frontend/            ← per-project docs, conventions, tech notes
+│   │   └── my-backend/
+│   └── shared/                     ← cross-project patterns and standards
+└── github-projects/                ← your actual git repos
+    ├── my-frontend/
+    │   └── .do/                    ← task state for this repo (plans, logs, config)
+    └── my-backend/
+        └── .do/
+```
+
+Each repo has a `.do/` folder for **task state** — active plans, execution logs, debug sessions. This is ephemeral, per-repo working data.
+
+Project **knowledge** lives in the centralized `database/` instead. Why not just store everything in each repo's `.do/` folder?
+
+- **Shared conventions** — Code style, component patterns, naming rules, and architectural decisions often apply across multiple repos. A centralized database avoids duplicating them in every `.do/` folder and keeps them in sync.
+- **Cross-repo context** — When working on a frontend repo, the AI can reference the backend's API docs, serializer shapes, or model definitions without switching repos. A centralized database makes this a natural lookup.
+- **Multi-repo projects** — Many projects span multiple repos. The database documents the project holistically rather than fragmenting knowledge across repos.
+- **Version-controllable workspace** — The workspace root (including the database) can be its own git repository. This means your entire knowledge base — project docs, shared patterns, daily logs — is version-controlled and portable across machines.
+- **No repo pollution** — Project repos stay clean. Documentation and AI context don't clutter the codebase or show up in PRs. The `.do/` folder stays small: just config and active task state.
+- **Survivable across forks and clones** — Since knowledge isn't embedded in the repo, a fresh clone or a colleague's fork doesn't lose or inherit your AI workflow context.
 
 ## Installation
 
-This package is published to **GitHub Packages** under the `@danielvandervelden` scope. You need a GitHub personal access token with `read:packages` permission.
+This package is published to **GitHub Packages** under the `@danielvandervelden` scope.
 
-**Step 1 — Configure `~/.npmrc`:**
+<details>
+<summary>🤖 <strong>AI-assisted install</strong> — paste this into your AI coding assistant</summary>
+
+<br>
+
+> Install the `@danielvandervelden/do-lang` npm package globally. It's published to GitHub Packages, not the public npm registry.
+>
+> 1. Ensure `~/.npmrc` contains the line `@danielvandervelden:registry=https://npm.pkg.github.com` (add it if missing, don't overwrite existing content)
+> 2. Run `npm install -g @danielvandervelden/do-lang --registry https://npm.pkg.github.com`
+> 3. Verify the install by checking that `~/.claude/commands/do/` and `~/.claude/agents/` were populated by the postinstall script
+
+</details>
+
+**Step 1 — Point the scope to GitHub Packages in `~/.npmrc`:**
 
 ```
 @danielvandervelden:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
 ```
 
 **Step 2 — Install globally:**
@@ -45,7 +89,7 @@ Run once at the workspace root:
 /do:init
 ```
 
-This sets up the database structure and `.do/config.json`.
+This sets up the database structure and `.do-workspace.json`. Run again inside a project directory to initialize `.do/config.json` for that project.
 
 ### Scan a project
 
@@ -177,14 +221,43 @@ do-planner → orchestrator spawns in parallel:
 
 ## Configuration
 
-Project configuration lives in `.do/config.json`:
+### Workspace — `.do-workspace.json`
+
+Created at the workspace root by `/do:init`. Tells do-lang where your database and projects live, and which AI tools are available for council reviews.
 
 ```json
 {
+  "version": "0.1.0",
+  "workspace": "/absolute/path/to/workspace",
+  "database": "/absolute/path/to/workspace/database",
+  "githubProjects": "/absolute/path/to/workspace/github-projects",
+  "initializedAt": "2026-04-13T20:45:00.000Z",
+  "availableTools": ["codex", "gemini"],
+  "defaultReviewer": "random",
+  "council_reviews": { "planning": true, "execution": true }
+}
+```
+
+**`availableTools`** — AI CLIs detected during init (used for council reviews). **`defaultReviewer`** — which tool to use: `"codex"`, `"gemini"`, `"both"`, or `"random"`. These serve as workspace-level defaults — project config in `.do/config.json` overrides them.
+
+### Project — `.do/config.json`
+
+Project-level configuration lives in `.do/config.json`. The JSON below shows the user-editable settings:
+
+```json
+{
+  "version": "0.3.0",
+  "project_name": "my-app",
   "council_reviews": {
     "planning": true,
     "execution": true,
-    "reviewer": "random"
+    "reviewer": "random",
+    "project": {
+      "plan": true,
+      "phase_plan": true,
+      "wave_plan": true,
+      "code": true
+    }
   },
   "web_search": {
     "context7": true
@@ -193,17 +266,30 @@ Project configuration lives in `.do/config.json`:
     "default": "sonnet",
     "overrides": {}
   },
-  "auto_grill_threshold": 0.9
+  "auto_grill_threshold": 0.9,
+  "project_intake_threshold": 0.85
 }
 ```
 
-**`council_reviews.reviewer`** — which external AI to use for council reviews: `"codex"`, `"gemini"`, `"both"`, or `"random"`. Set `planning` and `execution` to `false` to disable council reviews for those stages.
+**`project_name`** — human-readable name for this project (used in reports and prompts).
 
-**`web_search.context7`** — enables ctx7 documentation lookups during `/do:optimise`. Set to `false` to skip library-doc fetching.
+**`council_reviews.reviewer`** — which external AI to use for council reviews: `"codex"`, `"gemini"`, `"both"`, or `"random"`. Set `planning` and `execution` to `false` to disable council reviews for those stages. The nested `project` object controls review gates for `/do:project` workflows (plan, phase plan, wave plan, and code review).
+
+**`web_search.context7`** — enables ctx7 documentation lookups during planning (do-planner), debugging (do-debugger), and `/do:optimise` audits. Set to `false` to skip library-doc fetching.
 
 **`auto_grill_threshold`** — confidence score below which `/do:task` spawns `do-griller` for clarifying questions. Default `0.9`.
 
+**`project_intake_threshold`** — confidence score below which `/do:project new` triggers additional grilling before planning. Default `0.85`.
+
 **`models.overrides`** — per-agent model overrides (e.g. `{"planner": "opus", "debugger": "opus"}`). Agents not listed fall back to `models.default`.
+
+**State (managed automatically)** — do-lang writes these fields to `.do/config.json` during normal operation. Do not edit them manually:
+
+- `database_entry` — whether this project has a database entry (`true` / `false`)
+- `active_task` — filename of the currently running task (`null` when idle)
+- `active_debug` — filename of the active debug session (`null` when idle)
+- `active_project` — slug of the active `/do:project` session (`null` when idle)
+- `delivery_contract` — delivery settings established during onboarding (`onboarded`, `dismissed`, `entry_commands`)
 
 ## Development
 

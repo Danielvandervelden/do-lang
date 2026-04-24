@@ -14,9 +14,54 @@ Token-efficient meta programming language for Claude Code.
 - **Direct user interaction**: Agents ask questions inline via a structured prompt — no going through an intermediary
 - **Installs to Claude Code**: Requires Node.js ≥18 and npm for installation; no separate runtime needed at usage time
 
+## Workspace Architecture
+
+do-lang expects a **workspace** — a root directory that contains your projects and a shared knowledge base (called the "database"). A typical layout:
+
+```
+~/workspace/                        ← workspace root
+├── .do-workspace.json              ← workspace config (created by /do:init)
+├── AGENTS.md                       ← instructions for AI assistants
+├── database/                       ← centralized knowledge base
+│   ├── __index__.md                ← barrel imports (project registry)
+│   ├── projects/
+│   │   ├── my-frontend/            ← per-project docs, conventions, tech notes
+│   │   └── my-backend/
+│   └── shared/                     ← cross-project patterns and standards
+└── github-projects/                ← your actual git repos
+    ├── my-frontend/
+    │   └── .do/                    ← task state for this repo (plans, logs, config)
+    └── my-backend/
+        └── .do/
+```
+
+Each repo has a `.do/` folder for **task state** — active plans, execution logs, debug sessions. This is ephemeral, per-repo working data.
+
+Project **knowledge** lives in the centralized `database/` instead. Why not just store everything in each repo's `.do/` folder?
+
+- **Shared conventions** — Code style, component patterns, naming rules, and architectural decisions often apply across multiple repos. A centralized database avoids duplicating them in every `.do/` folder and keeps them in sync.
+- **Cross-repo context** — When working on a frontend repo, the AI can reference the backend's API docs, serializer shapes, or model definitions without switching repos. A centralized database makes this a natural lookup.
+- **Multi-repo projects** — Many projects span multiple repos. The database documents the project holistically rather than fragmenting knowledge across repos.
+- **Version-controllable workspace** — The workspace root (including the database) can be its own git repository. This means your entire knowledge base — project docs, shared patterns, daily logs — is version-controlled and portable across machines.
+- **No repo pollution** — Project repos stay clean. Documentation and AI context don't clutter the codebase or show up in PRs. The `.do/` folder stays small: just config and active task state.
+- **Survivable across forks and clones** — Since knowledge isn't embedded in the repo, a fresh clone or a colleague's fork doesn't lose or inherit your AI workflow context.
+
 ## Installation
 
 This package is published to **GitHub Packages** under the `@danielvandervelden` scope.
+
+<details>
+<summary>🤖 <strong>AI-assisted install</strong> — paste this into your AI coding assistant</summary>
+
+<br>
+
+> Install the `@danielvandervelden/do-lang` npm package globally. It's published to GitHub Packages, not the public npm registry.
+>
+> 1. Ensure `~/.npmrc` contains the line `@danielvandervelden:registry=https://npm.pkg.github.com` (add it if missing, don't overwrite existing content)
+> 2. Run `npm install -g @danielvandervelden/do-lang --registry https://npm.pkg.github.com`
+> 3. Verify the install by checking that `~/.claude/commands/do/` and `~/.claude/agents/` were populated by the postinstall script
+
+</details>
 
 **Step 1 — Point the scope to GitHub Packages in `~/.npmrc`:**
 
@@ -33,19 +78,6 @@ npm install -g @danielvandervelden/do-lang
 The postinstall script copies files to:
 - `~/.claude/commands/do/` — skill files (`/do:*` commands)
 - `~/.claude/agents/` — agent definitions
-
-<details>
-<summary>🤖 <strong>AI-assisted install</strong> — paste this into your AI coding assistant</summary>
-
-<br>
-
-> Install the `@danielvandervelden/do-lang` npm package globally. It's published to GitHub Packages, not the public npm registry.
->
-> 1. Ensure `~/.npmrc` contains the line `@danielvandervelden:registry=https://npm.pkg.github.com` (add it if missing, don't overwrite existing content)
-> 2. Run `npm install -g @danielvandervelden/do-lang --registry https://npm.pkg.github.com`
-> 3. Verify the install by checking that `~/.claude/commands/do/` and `~/.claude/agents/` were populated by the postinstall script
-
-</details>
 
 ## Quick Start
 

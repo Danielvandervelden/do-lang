@@ -32,7 +32,7 @@ node -e "
 const fs = require('fs'), path = require('path');
 const { execSync } = require('child_process');
 const phasesDir = '.do/projects/<active_project>/phases';
-const fmRead = (f) => JSON.parse(execSync('node @scripts/update-task-frontmatter.cjs read \"' + f + '\"', { encoding: 'utf8' }));
+const fmRead = (f) => JSON.parse(execSync('node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read \"' + f + '\"', { encoding: 'utf8' }));
 const phases = fs.readdirSync(phasesDir)
   .filter(d => fs.statSync(path.join(phasesDir, d)).isDirectory())
   .map(slug => {
@@ -77,7 +77,7 @@ node -e "
 const fs = require('fs'), path = require('path');
 const { execSync } = require('child_process');
 const phasesDir = '.do/projects/<active_project>/phases';
-const fmRead = (f) => JSON.parse(execSync('node @scripts/update-task-frontmatter.cjs read \"' + f + '\"', { encoding: 'utf8' }));
+const fmRead = (f) => JSON.parse(execSync('node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read \"' + f + '\"', { encoding: 'utf8' }));
 const phases = fs.readdirSync(phasesDir)
   .filter(d => fs.statSync(path.join(phasesDir, d)).isDirectory())
   .map(slug => {
@@ -198,7 +198,7 @@ node -e "
 const fs = require('fs'), path = require('path');
 const { execSync } = require('child_process');
 const basePath = '.do/projects/<active_project>/phases';
-const fmRead = (f) => JSON.parse(execSync('node @scripts/update-task-frontmatter.cjs read \"' + f + '\"', { encoding: 'utf8' }));
+const fmRead = (f) => JSON.parse(execSync('node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read \"' + f + '\"', { encoding: 'utf8' }));
 const phases = fs.readdirSync(basePath).filter(d => fs.statSync(path.join(basePath, d)).isDirectory());
 const allFiles = [];
 phases.forEach(phase => {

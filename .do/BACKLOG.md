@@ -111,8 +111,9 @@ Scope: new file `skills/do/scripts/lib/agent-harness.cjs` + a `__tests__/integra
 
 ---
 
-### stage-fast-exec.md: load-task-context.cjs invocation missing description argument
+### ~~stage-fast-exec.md: load-task-context.cjs invocation missing description argument~~
 **id:** fast-exec-load-context-arg
+**Status:** DONE (2026-04-28) — task file: `.do/tasks/260428-fix-three-backlog-bug-items.md`
 
 **Problem:** `stage-fast-exec.md` FE-2 shows `node ~/.claude/commands/do/scripts/load-task-context.cjs` without passing the task description as an argument. The script requires a description string for keyword matching and exits with `"No task description provided"` when called bare. This causes agents to fail on first try, then have to guess that a description argument is needed.
 
@@ -147,6 +148,29 @@ Where `<description>` is the in-session variable already available from the call
 
 **Scope:** `skills/do/references/stage-fast-exec.md` FE-2 section. Potentially `scripts/load-task-context.cjs` if reuse is feasible.
 
+---
+
+### ~~Fix YAML frontmatter parsing for exclude_paths and @scripts/ path resolution~~
+**id:** yaml-frontmatter-parsing
+**Status:** DONE (2026-04-28) — task file: `.do/tasks/260428-fix-three-backlog-bug-items.md`
+
+**Problem:** Two issues surface when `/do:continue` tries to read task frontmatter via `update-task-frontmatter.cjs`:
+
+1. **YAML parsing failure on `exclude_paths`** — The delivery contract writes `exclude_paths: "[\\".do/\\"]"` into task frontmatter. The double-escaped quotes inside the YAML string break the parser: `Error: can not read an implicit mapping pair; a colon is missed`. This blocks any frontmatter read/write operation on tasks with `exclude_paths` set.
+
+2. **`@scripts/` path prefix doesn't resolve from consumer projects** — Skill docs reference scripts as `@scripts/update-task-frontmatter.cjs`, but this `@scripts/` prefix only resolves within the do-lang repo itself. When running from a consumer project (e.g., leaselinq-frontend), the path fails with `MODULE_NOT_FOUND`. The script needs to be locatable via the globally installed `@danielvandervelden/do-lang` npm package.
+
+**Fix:**
+1. Change how `exclude_paths` is written to frontmatter — use YAML array syntax (`exclude_paths: [".do/"]`) or single-quoted strings instead of double-escaped JSON-in-YAML. Also audit other delivery contract fields for similar quoting issues.
+2. For `@scripts/` resolution: either document the correct `require.resolve('@danielvandervelden/do-lang/skills/do/scripts/...')` path in skill docs, or add a runtime resolver that maps `@scripts/` to the installed package path automatically.
+
+---
+
+### ~~Reference skills don't support non-.md extensions (e.g. config-template.json)~~
+**id:** json-reference-skill
+**Status:** DONE (2026-04-28) — task file: `.do/tasks/260428-fix-three-backlog-bug-items.md`
+**Problem:** `/do:init` project setup references `@references/config-template.json` but invoking `do:references:config-template.json` as a skill fails with "Unknown skill". The skill system only registers `.md` files as loadable references, so JSON templates can't be loaded via the `@references/` convention. During `/do:init` in go-ai-reviewer-github-app, the template had to be found manually via `find` and read directly — breaking the self-contained reference loading pattern.
+**Fix:** Either register `.json` files as valid reference skills (skill loader strips extension and serves raw content), or convert `config-template.json` to a fenced JSON block inside a `.md` wrapper (e.g. `config-template.md` containing the JSON in a code fence). The `.md` wrapper approach is simpler and requires no skill-loader changes.
 ---
 
 

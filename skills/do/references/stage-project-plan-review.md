@@ -16,7 +16,7 @@ This reference file is loaded by `skills/do/project.md` after intake completes. 
 Check if project plan review already ran:
 
 ```bash
-node @scripts/update-task-frontmatter.cjs check '<project_path>' council_review_ran.project_plan
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs check '<project_path>' council_review_ran.project_plan
 ```
 
 **If already ran (exit 1):** Skip this entire stage. Return control to caller immediately.
@@ -28,7 +28,7 @@ node @scripts/update-task-frontmatter.cjs check '<project_path>' council_review_
 Resolve config using the cascade (project → workspace → defaults):
 
 ```bash
-node @scripts/council-gate.cjs project.plan planning
+node ~/.claude/commands/do/scripts/council-gate.cjs project.plan planning
 ```
 
 Store result as `council_enabled` (enabled/disabled).

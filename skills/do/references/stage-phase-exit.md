@@ -29,7 +29,7 @@ Read the following files:
    const { execSync } = require('child_process');
    const wavesDir = '.do/projects/<active_project>/phases/<completed_phase_slug>/waves';
    if (!fs.existsSync(wavesDir)) { console.log(JSON.stringify([])); process.exit(0); }
-   const fmRead = (f) => JSON.parse(execSync('node @scripts/update-task-frontmatter.cjs read \"' + f + '\"', { encoding: 'utf8' }));
+   const fmRead = (f) => JSON.parse(execSync('node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read \"' + f + '\"', { encoding: 'utf8' }));
    const waves = fs.readdirSync(wavesDir)
      .filter(d => fs.statSync(path.join(wavesDir, d)).isDirectory())
      .map(slug => {
@@ -134,7 +134,7 @@ const fs = require('fs'), path = require('path');
 const { execSync } = require('child_process');
 const phasesDir = '.do/projects/<active_project>/phases';
 const completedSlug = '<completed_phase_slug>';
-const fmRead = (f) => JSON.parse(execSync('node @scripts/update-task-frontmatter.cjs read \"' + f + '\"', { encoding: 'utf8' }));
+const fmRead = (f) => JSON.parse(execSync('node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read \"' + f + '\"', { encoding: 'utf8' }));
 const phases = fs.readdirSync(phasesDir)
   .filter(d => fs.statSync(path.join(phasesDir, d)).isDirectory())
   .map(slug => {

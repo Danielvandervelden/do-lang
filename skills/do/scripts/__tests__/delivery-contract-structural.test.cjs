@@ -194,22 +194,25 @@ describe('wave-template.md: contains delivery: frontmatter block and ## Delivery
 });
 
 // ============================================================================
-// config-template.json — delivery_contract onboarding keys
+// config-template.md — delivery_contract onboarding keys (JSON fenced block)
 // ============================================================================
 
-describe('config-template.json: contains delivery_contract onboarding section', () => {
-  const filePath = path.join(REFS_DIR, 'config-template.json');
+describe('config-template.md: contains delivery_contract onboarding section', () => {
+  const filePath = path.join(REFS_DIR, 'config-template.md');
   let parsed;
 
   before(() => {
-    assert.ok(fs.existsSync(filePath), 'config-template.json must exist');
-    parsed = JSON.parse(read(filePath));
+    assert.ok(fs.existsSync(filePath), 'config-template.md must exist (config-template.json was replaced by this .md wrapper)');
+    const content = read(filePath);
+    const jsonMatch = content.match(/```json\s*([\s\S]*?)```/);
+    assert.ok(jsonMatch, 'config-template.md must contain a ```json...``` fenced block');
+    parsed = JSON.parse(jsonMatch[1].trim());
   });
 
   it('has delivery_contract key', () => {
     assert.ok(
       'delivery_contract' in parsed,
-      'config-template.json must have a delivery_contract key'
+      'config-template.md JSON block must have a delivery_contract key'
     );
   });
 
@@ -217,7 +220,7 @@ describe('config-template.json: contains delivery_contract onboarding section', 
     assert.strictEqual(
       parsed.delivery_contract.onboarded,
       false,
-      'config-template.json delivery_contract.onboarded must default to false'
+      'config-template.md delivery_contract.onboarded must default to false'
     );
   });
 
@@ -225,14 +228,14 @@ describe('config-template.json: contains delivery_contract onboarding section', 
     assert.strictEqual(
       parsed.delivery_contract.dismissed,
       false,
-      'config-template.json delivery_contract.dismissed must default to false'
+      'config-template.md delivery_contract.dismissed must default to false'
     );
   });
 
   it('delivery_contract.entry_commands defaults to empty array', () => {
     assert.ok(
       Array.isArray(parsed.delivery_contract.entry_commands),
-      'config-template.json delivery_contract.entry_commands must be an array'
+      'config-template.md delivery_contract.entry_commands must be an array'
     );
     assert.strictEqual(parsed.delivery_contract.entry_commands.length, 0);
   });

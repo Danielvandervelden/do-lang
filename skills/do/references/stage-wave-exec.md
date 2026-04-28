@@ -16,7 +16,7 @@ This reference file is loaded by `skills/do/project.md` `wave next` after `stage
 Check if wave execution already completed:
 
 ```bash
-node @scripts/update-task-frontmatter.cjs check '<wave_path>' stages.execution==complete
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs check '<wave_path>' stages.execution==complete
 ```
 
 **If already completed (exit 1):** Skip this stage. Return control to caller (proceed to `stage-wave-code-review.md`).
@@ -90,7 +90,7 @@ Handle result:
 ## WE-3: Verify Execution Complete
 
 ```bash
-node @scripts/update-task-frontmatter.cjs read '<wave_path>' stages.execution
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read '<wave_path>' stages.execution
 ```
 
 If `stages.execution` is `complete`, proceed to WE-4. If not, the executioner may have stopped mid-run.

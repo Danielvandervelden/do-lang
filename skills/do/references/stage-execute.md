@@ -44,7 +44,7 @@ Follow @skills/do/references/resume-preamble.md Steps R0.1-R0.6.
 Check if plan review already ran (prevents re-running on resume):
 
 ```bash
-node @scripts/update-task-frontmatter.cjs check '.do/tasks/<active_task>' council_review_ran.plan
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs check '.do/tasks/<active_task>' council_review_ran.plan
 ```
 
 **If already ran (exit 1):** Skip to Step E0.
@@ -312,7 +312,7 @@ Execution complete. Checking council config before verification.
 **Step E4.0: Check if code review already ran**
 
 ```bash
-node @scripts/update-task-frontmatter.cjs check '.do/tasks/<active_task>' council_review_ran.code
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs check '.do/tasks/<active_task>' council_review_ran.code
 ```
 
 **If already ran (exit 1):** Skip to end -- display "Proceeding to verification. Run /do:continue to verify and complete the task." and stop.

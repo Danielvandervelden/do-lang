@@ -16,7 +16,7 @@ This reference file is loaded by `do:task` (Step 10) and `do:continue` (stage ro
 Check if code review already ran:
 
 ```bash
-node @scripts/update-task-frontmatter.cjs check '.do/tasks/<active_task>' council_review_ran.code
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs check '.do/tasks/<active_task>' council_review_ran.code
 ```
 
 **If already ran (exit 1):** Skip this entire stage. Return control to caller (proceed to do-verifier).
@@ -28,7 +28,7 @@ node @scripts/update-task-frontmatter.cjs check '.do/tasks/<active_task>' counci
 Resolve config using the cascade (project → workspace → defaults):
 
 ```bash
-node @scripts/council-gate.cjs execution
+node ~/.claude/commands/do/scripts/council-gate.cjs execution
 ```
 
 Store result as `council_enabled` (enabled/disabled).

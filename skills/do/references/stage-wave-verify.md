@@ -16,7 +16,7 @@ This reference file is loaded by `skills/do/project.md` `wave next` after `stage
 Check if wave verification already completed:
 
 ```bash
-node @scripts/update-task-frontmatter.cjs check '<wave_path>' status==completed
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs check '<wave_path>' status==completed
 ```
 
 **If wave already `completed` (exit 1):** Skip this stage. Return control to caller.
@@ -113,7 +113,7 @@ Wait for user response:
 
 2. **Clear `active_wave` in `phase.md`** (atomic temp-file + rename):
    ```bash
-   node @scripts/update-task-frontmatter.cjs set '.do/projects/<active_project>/phases/<phase_slug>/phase.md' active_wave=null
+   node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs set '.do/projects/<active_project>/phases/<phase_slug>/phase.md' active_wave=null
    ```
 
 3. **Append changelog:**

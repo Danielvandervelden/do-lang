@@ -70,3 +70,19 @@ When the user invokes `/do` without specifying a sub-command, infer from context
 `/do:quick` is **never auto-recommended** by the router — invoke it directly when you want it. For ambiguous intent, `/do:task` is always safe (its router defaults to full when unsure).
 
 If intent is genuinely ambiguous, show the table above and ask which sub-command they want.
+
+## Conventions
+
+### @scripts/ path shorthand
+
+`@scripts/<name>.cjs` is a documentation shorthand used in prose and file-reference tables (e.g., "Script: @scripts/foo.cjs"). It is **not** a Node.js or shell-resolvable path.
+
+**Rule:** All `node` invocations in shell commands and bash blocks must use the absolute install path:
+
+```bash
+node ~/.claude/commands/do/scripts/<name>.cjs
+```
+
+This path is guaranteed to exist for every consumer project after `npm install -g @danielvandervelden/do-lang` (the postinstall step copies `skills/do/scripts/` to `~/.claude/commands/do/scripts/`).
+
+Prose references and the "Files / Scripts" tables at the bottom of skill files may continue to use `@scripts/` as a shorthand — those are human-readable markers, not shell commands.

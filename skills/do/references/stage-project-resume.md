@@ -102,12 +102,12 @@ Return control to the user. Do NOT auto-invoke `stage-project-complete.md`.
 
 ```bash
 # Read active_phase from project.md
-PROJ_DATA=$(node @scripts/update-task-frontmatter.cjs read '.do/projects/<active_project>/project.md' active_phase)
+PROJ_DATA=$(node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read '.do/projects/<active_project>/project.md' active_phase)
 ACTIVE_PHASE=$(node -e "console.log(JSON.parse(process.argv[1]).active_phase || '')" "$PROJ_DATA")
 
 # Read active_wave from phase.md if active_phase is set
 if [ -n "$ACTIVE_PHASE" ] && [ -f ".do/projects/<active_project>/phases/$ACTIVE_PHASE/phase.md" ]; then
-  PHASE_DATA=$(node @scripts/update-task-frontmatter.cjs read ".do/projects/<active_project>/phases/$ACTIVE_PHASE/phase.md" active_wave)
+  PHASE_DATA=$(node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read ".do/projects/<active_project>/phases/$ACTIVE_PHASE/phase.md" active_wave)
   ACTIVE_WAVE=$(node -e "console.log(JSON.parse(process.argv[1]).active_wave || '')" "$PHASE_DATA")
 else
   ACTIVE_WAVE=""

@@ -124,7 +124,9 @@ Mark as having database entry? (yes/no) [Enter = no]:
    mkdir -p .do/tasks
    ```
 
-2. **Create config.json** from @references/config-template.json:
+2. **Create config.json** from the JSON block in @references/config-template.md:
+
+   Read the `.md` wrapper, copy the fenced JSON block, then apply the substitutions below.
    - `{{PROJECT_NAME}}` → confirmed project name
    - `council_reviews.planning` → user's choice
    - `council_reviews.execution` → user's choice

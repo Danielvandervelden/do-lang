@@ -18,7 +18,7 @@ This reference file is loaded by `skills/do/project.md` when a phase enters plan
 Check if phase plan review already ran:
 
 ```bash
-node @scripts/update-task-frontmatter.cjs check '<phase_path>' council_review_ran.plan
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs check '<phase_path>' council_review_ran.plan
 ```
 
 **If already ran (exit 1):** Skip this entire stage. Return control to caller immediately.
@@ -28,7 +28,7 @@ node @scripts/update-task-frontmatter.cjs check '<phase_path>' council_review_ra
 ## PR-1: Council Gate Check
 
 ```bash
-node @scripts/council-gate.cjs project.phase_plan planning
+node ~/.claude/commands/do/scripts/council-gate.cjs project.phase_plan planning
 ```
 
 Store result as `council_enabled` (enabled/disabled).
@@ -46,7 +46,7 @@ Set `review_iterations = 0` (in-session variable, not persisted).
 Check if `phase.md` body still contains scaffold placeholders:
 
 ```bash
-node @scripts/update-task-frontmatter.cjs read-body '<phase_path>' | grep -q '{{[A-Z_]*}}'
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read-body '<phase_path>' | grep -q '{{[A-Z_]*}}'
 # exit 0 = placeholders found, exit 1 = no placeholders
 ```
 
@@ -187,7 +187,7 @@ Apply single-review fallback in PR-4b (skip PR-4a).
 1. **Phase-pointer non-hijack guard (FIRST — gates all subsequent writes):** This must be the very first step so that none of writes 2-6 leak onto a future phase whose promotion is deferred. Read `project.md.active_phase`. If another phase is already active (`active_phase` is set to a different, non-null slug), this plan-review was triggered by `/do:project phase new` during an in-progress phase (planning a future phase while the current one is still active). In that case log to changelog, `exit 0`, and let `/do:project phase complete` on the currently-active phase be what re-invokes this stage for the now-becoming-active phase. On re-entry: PR-0 passes (flag still false because we wrote nothing), review re-runs idempotently, this guard passes (pointer is null after phase-complete cleared it), and steps 2-7 land. Cost: one redundant review pass per deferred phase. Benefit: no state leaks and no complex resume guard.
 
    ```bash
-   CURRENT_ACTIVE_PHASE=$(node @scripts/update-task-frontmatter.cjs read '.do/projects/<active_project>/project.md' active_phase | node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).active_phase || '')")
+   CURRENT_ACTIVE_PHASE=$(node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read '.do/projects/<active_project>/project.md' active_phase | node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).active_phase || '')")
 
    if [ -n "$CURRENT_ACTIVE_PHASE" ] && [ "$CURRENT_ACTIVE_PHASE" != "<phase_slug>" ]; then
      # Another phase is currently active — this is a future-phase-plan-review
@@ -220,7 +220,7 @@ Apply single-review fallback in PR-4b (skip PR-4a).
 4. **Promote project to `in_progress` (first-phase-approval gate, idempotent):** read `project.md` status. If it is still `planning`, promote it now — this is the single authoritative place the project transitions out of `planning`, without which `/do:project complete` will hard-fail later (α's state machine only allows `project: in_progress → completed`). On the 2nd, 3rd, Nth phase approval the project is already `in_progress`, so this step **must be a true shell no-op** (exit 0, no promotion call, no changelog write).
 
    ```bash
-   CURRENT_STATUS=$(node @scripts/update-task-frontmatter.cjs read '.do/projects/<active_project>/project.md' status | node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).status || '')")
+   CURRENT_STATUS=$(node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read '.do/projects/<active_project>/project.md' status | node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).status || '')")
 
    if [ "$CURRENT_STATUS" = "planning" ]; then
      node ~/.claude/commands/do/scripts/project-state.cjs set project <active_project> status=in_progress
@@ -244,7 +244,7 @@ Apply single-review fallback in PR-4b (skip PR-4a).
 
 6. **Activate phase pointer on project.md:** `/do:project wave new` and `/do:project wave next` both read `active_phase` from `project.md` to know which phase to target. After this approval is the moment that pointer becomes authoritative. Atomic temp-file + rename on `project.md`:
    ```bash
-   node @scripts/update-task-frontmatter.cjs set '.do/projects/<active_project>/project.md' 'active_phase=<phase_slug>'
+   node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs set '.do/projects/<active_project>/project.md' 'active_phase=<phase_slug>'
    ```
    Append changelog:
    ```

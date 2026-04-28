@@ -39,7 +39,23 @@ council_review_ran:
 fast_path: true
 ```
 
-**Delivery contract threading:** If `delivery_contract` in-session variable is non-null, populate the `delivery:` frontmatter fields and render the `## Delivery Contract` markdown section (between `## Problem Statement` and `## Clarifications`) with the contract data:
+**Delivery contract threading:** If `delivery_contract` in-session variable is non-null, populate the `delivery:` frontmatter fields and render the `## Delivery Contract` markdown section (between `## Problem Statement` and `## Clarifications`) with the contract data.
+
+Rendered `delivery:` frontmatter (when non-null):
+
+```yaml
+delivery:
+  branch: <delivery_contract.branch>
+  commit_prefix: <delivery_contract.commit_prefix>
+  push_policy: <delivery_contract.push_policy>
+  pr_policy: <delivery_contract.pr_policy>
+  stop_after_push: <delivery_contract.stop_after_push>
+  exclude_paths: <delivery_contract.exclude_paths as YAML flow-array, e.g. [".do/"]>
+```
+
+Render `exclude_paths` as a YAML flow-array (e.g. `[".do/"]`), never as a JSON-stringified value. Quotes around path strings stay single-level — no `\"` escapes.
+
+Rendered `## Delivery Contract` markdown section:
 
 ```markdown
 ## Delivery Contract
@@ -87,8 +103,10 @@ fs.writeFileSync('.do/config.json', JSON.stringify(c, null, 2));
 
 Load project context:
 
+`<description>` is the in-session variable from the caller contract (see preamble).
+
 ```bash
-node ~/.claude/commands/do/scripts/load-task-context.cjs
+node ~/.claude/commands/do/scripts/load-task-context.cjs "<description>"
 ```
 
 This resolves to this project's database entry via `load-task-context.cjs`. Spot-check the files most likely to be affected based on the task description. No deep research, no broad codebase scan.
@@ -131,7 +149,7 @@ Handle result:
 **Immediately after do-executioner returns** — before any other action — override the stage:
 
 ```bash
-node @scripts/update-task-frontmatter.cjs set '.do/tasks/<active_task>' stage=execution stages.execution=review_pending
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs set '.do/tasks/<active_task>' stage=execution stages.execution=review_pending
 ```
 
 **Why:** The executioner sets `stage: verification` (its standard contract) but the fast path skips do-verifier entirely. The `review_pending` sub-state is unique to fast-path tasks and signals "executioner done, awaiting fast code review." It does not collide with the normal pipeline (where `stages.execution: complete` routes to the full code review + council flow).
@@ -228,7 +246,7 @@ After executioner completes, re-run FE-4 (override stage back to `execution: rev
 Abandon the task:
 
 ```bash
-node @scripts/update-task-frontmatter.cjs set '.do/tasks/<active_task>' abandoned=true pre_abandon_stage=execution fast_path=false
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs set '.do/tasks/<active_task>' abandoned=true pre_abandon_stage=execution fast_path=false
 ```
 
 Then clear the active task from config:

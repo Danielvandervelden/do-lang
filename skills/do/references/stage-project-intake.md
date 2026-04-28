@@ -116,7 +116,7 @@ Write transcript file `.do/projects/<active_project>/intake/session-${TIMESTAMP}
 
 ```bash
 # Read confidence from frontmatter
-node @scripts/update-task-frontmatter.cjs read '<project_path>' confidence
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read '<project_path>' confidence
 # Read threshold from config
 node -e "const c=require('./.do/config.json'); console.log(JSON.stringify({ threshold: c.project_intake_threshold || c.auto_grill_threshold || 0.85 }))"
 ```
@@ -171,7 +171,7 @@ This is the authoritative gate that controls exit from intake. Earlier PI-4 is i
 
 ```bash
 # Read confidence from frontmatter and threshold from config, then compare
-CONFIDENCE=$(node @scripts/update-task-frontmatter.cjs read '<project_path>' confidence)
+CONFIDENCE=$(node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read '<project_path>' confidence)
 THRESHOLD=$(node -e "const c=require('./.do/config.json'); console.log(c.project_intake_threshold || c.auto_grill_threshold || 0.85)")
 node -e "
 const score = JSON.parse(process.argv[1]).confidence?.score ?? 0;
@@ -242,8 +242,8 @@ After the PI-6 spawn returns, confirm the curated sections actually landed. **He
 
 ```bash
 # Read title from frontmatter and body content separately
-TITLE=$(node @scripts/update-task-frontmatter.cjs read '<project_path>' title)
-BODY=$(node @scripts/update-task-frontmatter.cjs read-body '<project_path>')
+TITLE=$(node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read '<project_path>' title)
+BODY=$(node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read-body '<project_path>')
 
 node -e "
 const title = JSON.parse(process.argv[1]).title;

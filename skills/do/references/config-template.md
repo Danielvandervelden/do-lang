@@ -1,3 +1,13 @@
+---
+name: config-template
+description: "Template for .do/config.json. Used by /do:init project setup."
+---
+
+# Project Config Template
+
+Copy the JSON below into `.do/config.json`. Substitute `{{PROJECT_NAME}}` with the confirmed project name and apply user choices for council, models, threshold, and database fields.
+
+```json
 {
   "version": "0.3.0",
   "project_name": "{{PROJECT_NAME}}",
@@ -31,3 +41,4 @@
     "entry_commands": []
   }
 }
+```

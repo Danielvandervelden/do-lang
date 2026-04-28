@@ -88,4 +88,4 @@ test -d .do && test -f .do/config.json
 ## Files
 
 - **Scripts:** @scripts/workspace-health.cjs, @scripts/project-health.cjs, @scripts/detect-tools.cjs
-- **Templates:** @references/agents-template.md, @references/pointer-templates.md, @references/config-template.json
+- **Templates:** @references/agents-template.md, @references/pointer-templates.md, @references/config-template.md

@@ -16,7 +16,7 @@ This reference file is loaded by `skills/do/project.md` `wave next` after `stage
 Check if wave code review already ran:
 
 ```bash
-node @scripts/update-task-frontmatter.cjs check '<wave_path>' council_review_ran.code
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs check '<wave_path>' council_review_ran.code
 ```
 
 **If already ran (exit 1):** Skip this entire stage. Return control to caller (proceed to `stage-wave-verify.md`).
@@ -26,7 +26,7 @@ node @scripts/update-task-frontmatter.cjs check '<wave_path>' council_review_ran
 ## CR-1: Council Gate Check
 
 ```bash
-node @scripts/council-gate.cjs project.code execution
+node ~/.claude/commands/do/scripts/council-gate.cjs project.code execution
 ```
 
 Store result as `council_enabled` (enabled/disabled).

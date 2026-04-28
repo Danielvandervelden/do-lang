@@ -53,7 +53,7 @@ Read the task file and extract:
 - Execution Log: Last action
 
 ```bash
-node @scripts/update-task-frontmatter.cjs read '.do/tasks/<active_task>' stage stages confidence council_review_ran
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read '.do/tasks/<active_task>' stage stages confidence council_review_ran
 ```
 
 ## Step 3: Handle Abandoned Tasks
@@ -100,7 +100,7 @@ console.log(JSON.stringify(models));
 **Fast-path guard:** Before using the routing table below, check if `fast_path: true` is present in the task frontmatter, and also extract the `quick_path` discriminator:
 
 ```bash
-node @scripts/update-task-frontmatter.cjs read '.do/tasks/<active_task>' fast_path quick_path
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read '.do/tasks/<active_task>' fast_path quick_path
 ```
 
 Parse the output: if `fast_path` is `true`, the path is `fast`; otherwise `normal`. Extract `quick_path` as-is.
@@ -131,7 +131,7 @@ The escalated quick-path task file carries `council_review_ran.code: true` (pres
 # Flip council_review_ran.code to false so CR-0 allows a fresh full review.
 # The existing Council Review section with both quick-path rounds is preserved as history.
 # Also override stage to execution:complete so stage-code-review.md picks it up correctly.
-node @scripts/update-task-frontmatter.cjs set '.do/tasks/<active_task>' council_review_ran.code=false stages.execution=complete
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs set '.do/tasks/<active_task>' council_review_ran.code=false stages.execution=complete
 ```
 
 Then invoke the full code-review stack via `@references/stage-code-review.md`. This brings in the full review stack (council + do-code-reviewer in parallel) rather than the single-reviewer tier that already failed twice.

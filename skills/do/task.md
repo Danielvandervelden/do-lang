@@ -90,6 +90,20 @@ At Step 4 (task file creation) and when invoking `@references/stage-fast-exec.md
 - If `delivery_contract` is non-null, populate the `delivery:` frontmatter fields and render the `## Delivery Contract` markdown section with the contract data.
 - If `delivery_contract` is null, leave both sections empty (commented-out defaults in frontmatter, empty comment block in markdown section).
 
+Rendered `delivery:` frontmatter (when non-null):
+
+```yaml
+delivery:
+  branch: <delivery_contract.branch>
+  commit_prefix: <delivery_contract.commit_prefix>
+  push_policy: <delivery_contract.push_policy>
+  pr_policy: <delivery_contract.pr_policy>
+  stop_after_push: <delivery_contract.stop_after_push>
+  exclude_paths: <delivery_contract.exclude_paths as YAML flow-array, e.g. [".do/"]>
+```
+
+Render `exclude_paths` as a YAML flow-array (e.g. `[".do/"]`), never as a JSON-stringified value. Quotes around path strings stay single-level — no `\"` escapes.
+
 Rendered `## Delivery Contract` format (when non-null):
 
 ```markdown
@@ -279,7 +293,7 @@ Orchestrators resuming via /do:continue should be aware this subsection may exis
 Read confidence from task file:
 
 ```bash
-node @scripts/update-task-frontmatter.cjs read '.do/tasks/<active_task>' confidence
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read '.do/tasks/<active_task>' confidence
 # Then read threshold from config:
 node -e "const c=require('./.do/config.json'); console.log(JSON.stringify({ threshold: c.auto_grill_threshold || 0.9 }))"
 ```
@@ -308,8 +322,6 @@ Present all questions at once. After receiving combined answer, update confidenc
 
 **Note:** The griller resolves the full question loop internally via AskUserQuestion (with inline text fallback). It returns only the final GRILLING COMPLETE summary to the orchestrator — no relaying of questions through the orchestrator.
 
-```
-
 ## Step 8: User Approval Checkpoint
 
 Display summary and ask for execution approval:
@@ -325,7 +337,7 @@ Display summary and ask for execution approval:
 
 Proceed with execution? [Y/n]
 
-````
+```
 
 If user says no, stop. Task file is saved for later `/do:continue`.
 
@@ -396,7 +408,7 @@ Handle result:
 Read the task file to check final stage:
 
 ```bash
-node @scripts/update-task-frontmatter.cjs read '.do/tasks/<active_task>' stage
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read '.do/tasks/<active_task>' stage
 ```
 
 - **If stage is `complete`**: Display brief confirmation:

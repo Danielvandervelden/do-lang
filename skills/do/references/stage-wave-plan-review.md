@@ -16,7 +16,7 @@ This reference file is loaded by `skills/do/project.md` `wave next` after the pe
 Check if wave plan review already ran:
 
 ```bash
-node @scripts/update-task-frontmatter.cjs check '<wave_path>' council_review_ran.plan
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs check '<wave_path>' council_review_ran.plan
 ```
 
 **If already ran (exit 1):** Skip this entire stage. Return control to caller (proceed to `stage-wave-exec.md`).
@@ -26,7 +26,7 @@ node @scripts/update-task-frontmatter.cjs check '<wave_path>' council_review_ran
 ## PR-1: Council Gate Check
 
 ```bash
-node @scripts/council-gate.cjs project.wave_plan planning
+node ~/.claude/commands/do/scripts/council-gate.cjs project.wave_plan planning
 ```
 
 Store result as `council_enabled` (enabled/disabled).
@@ -44,7 +44,7 @@ Set `review_iterations = 0` (in-session variable, not persisted).
 Check if `wave.md` body still contains scaffold placeholders:
 
 ```bash
-node @scripts/update-task-frontmatter.cjs read-body '<wave_path>' | grep -q '{{[A-Z_]*}}'
+node ~/.claude/commands/do/scripts/update-task-frontmatter.cjs read-body '<wave_path>' | grep -q '{{[A-Z_]*}}'
 # exit 0 = placeholders found, exit 1 = no placeholders
 ```
 

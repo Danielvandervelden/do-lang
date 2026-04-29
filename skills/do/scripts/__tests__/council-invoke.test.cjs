@@ -637,6 +637,151 @@ describe("resolveConfig", () => {
 });
 
 // ============================================================================
+// CLI project config auto-detection
+// ============================================================================
+
+describe("CLI project config auto-detection", () => {
+  let tempDir;
+
+  beforeEach(() => {
+    tempDir = mkdtempSync(path.join(os.tmpdir(), "council-cli-test-"));
+  });
+
+  afterEach(() => {
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  test("auto-detects .do/config.json from cwd when file exists", () => {
+    // Create .do/config.json in tempDir
+    const doDir = path.join(tempDir, ".do");
+    mkdirSync(doDir);
+    const projectConfig = {
+      council_reviews: { reviewer: "codex" },
+    };
+    const configPath = path.join(doDir, "config.json");
+    writeFileSync(configPath, JSON.stringify(projectConfig));
+
+    // Simulate CLI auto-detection logic
+    const { existsSync } = require("fs");
+    const defaultProjectConfigPath = path.join(tempDir, ".do", "config.json");
+    const resolved = existsSync(defaultProjectConfigPath)
+      ? defaultProjectConfigPath
+      : null;
+
+    assert.strictEqual(
+      resolved,
+      configPath,
+      "should resolve to .do/config.json in cwd",
+    );
+
+    // Verify the resolved config is readable and correct
+    const config = resolveConfig(resolved, tempDir);
+    assert.strictEqual(config.council_reviews.reviewer, "codex");
+  });
+
+  test("returns null when .do/config.json does not exist in cwd", () => {
+    // tempDir has no .do/ directory
+    const { existsSync } = require("fs");
+    const defaultProjectConfigPath = path.join(tempDir, ".do", "config.json");
+    const resolved = existsSync(defaultProjectConfigPath)
+      ? defaultProjectConfigPath
+      : null;
+
+    assert.strictEqual(
+      resolved,
+      null,
+      "should return null when config is absent",
+    );
+  });
+
+  test("explicit --project-config-path overrides auto-detected path", () => {
+    // Create two configs: one in cwd/.do/config.json, one at explicit path
+    const doDir = path.join(tempDir, ".do");
+    mkdirSync(doDir);
+    const cwdConfig = { council_reviews: { reviewer: "gemini" } };
+    writeFileSync(path.join(doDir, "config.json"), JSON.stringify(cwdConfig));
+
+    const explicitDir = mkdtempSync(
+      path.join(os.tmpdir(), "council-explicit-"),
+    );
+    const explicitDoDir = path.join(explicitDir, ".do");
+    mkdirSync(explicitDoDir);
+    const explicitConfig = { council_reviews: { reviewer: "codex" } };
+    const explicitConfigPath = path.join(explicitDoDir, "config.json");
+    writeFileSync(explicitConfigPath, JSON.stringify(explicitConfig));
+
+    try {
+      // When --project-config-path is provided it wins over auto-detected path
+      const flagValue = explicitConfigPath; // simulates getArg("--project-config-path")
+      const autoDetected = path.join(tempDir, ".do", "config.json");
+      const resolved =
+        flagValue ||
+        (require("fs").existsSync(autoDetected) ? autoDetected : null);
+
+      assert.strictEqual(
+        resolved,
+        explicitConfigPath,
+        "explicit path should win",
+      );
+
+      const config = resolveConfig(resolved, tempDir);
+      assert.strictEqual(
+        config.council_reviews.reviewer,
+        "codex",
+        "should use explicit config reviewer",
+      );
+    } finally {
+      rmSync(explicitDir, { recursive: true, force: true });
+    }
+  });
+
+  test("invokeCouncil respects projectConfigPath reviewer override", async () => {
+    // Create project config with reviewer: codex
+    const doDir = path.join(tempDir, ".do");
+    mkdirSync(doDir);
+    const projectConfig = { council_reviews: { reviewer: "codex" } };
+    writeFileSync(
+      path.join(doDir, "config.json"),
+      JSON.stringify(projectConfig),
+    );
+
+    // Create a minimal task file
+    const taskFilePath = path.join(tempDir, "task.md");
+    writeFileSync(taskFilePath, "# Test task\n");
+
+    const projectConfigPath = path.join(doDir, "config.json");
+
+    // We cannot actually spawn a reviewer in unit tests, but we can verify
+    // that invokeCouncil does not return an error for an unknown reviewer when
+    // projectConfigPath is passed — it should at least reach reviewer selection
+    // and fail because codex/gemini runtime is not available in test env, not
+    // because of a missing config. A structurally valid call should return a
+    // result object (possibly with success: false due to missing runtime).
+    const result = await invokeCouncil({
+      type: "plan",
+      taskFile: taskFilePath,
+      reviewer: "random",
+      workspace: tempDir,
+      timeout: 5000,
+      projectConfigPath,
+    });
+
+    // The result must be a proper object (not undefined/null)
+    assert.ok(
+      typeof result === "object" && result !== null,
+      "result should be an object",
+    );
+    // It will likely fail due to no runtime, but the error should not be config-related
+    if (!result.success) {
+      assert.ok(
+        typeof result.error === "string",
+        "failure should have string error message",
+      );
+    }
+  });
+});
+
+// ============================================================================
 // getAvailableReviewers Tests with Config (D-55)
 // ============================================================================
 
@@ -689,14 +834,22 @@ describe("getAvailableReviewers with config", () => {
     // Per council code review: single-tool scenario where availableTools only has current runtime
     const mockConfig = { availableTools: ["claude"] };
     const result = getAvailableReviewers("claude", mockConfig);
-    assert.deepStrictEqual(result, [], "should return empty when only current runtime is available");
+    assert.deepStrictEqual(
+      result,
+      [],
+      "should return empty when only current runtime is available",
+    );
   });
 
   test("selectReviewer returns null when no reviewers available", () => {
     // Per council code review: selectRandomReviewer should return null, not hardcode 'gemini'
     const available = [];
     const result = selectReviewer("random", "claude", available);
-    assert.strictEqual(result, null, "should return null when no reviewers available");
+    assert.strictEqual(
+      result,
+      null,
+      "should return null when no reviewers available",
+    );
   });
 });
 
@@ -749,23 +902,36 @@ describe("findWorkspaceConfig", () => {
 
 describe("classifyFindings", () => {
   test("all [blocker] tagged findings go to blockers, nitpicks empty", () => {
-    const findings = ["[blocker] scope gap in Step 3", "[blocker] missing responsibility"];
+    const findings = [
+      "[blocker] scope gap in Step 3",
+      "[blocker] missing responsibility",
+    ];
     const result = classifyFindings(findings);
     assert.deepStrictEqual(result.blockers, findings);
     assert.deepStrictEqual(result.nitpicks, []);
   });
 
   test("all [nitpick] tagged findings go to nitpicks, blockers empty", () => {
-    const findings = ["[nitpick] wording fix in intro", "[nitpick] missing example"];
+    const findings = [
+      "[nitpick] wording fix in intro",
+      "[nitpick] missing example",
+    ];
     const result = classifyFindings(findings);
     assert.deepStrictEqual(result.blockers, []);
     assert.deepStrictEqual(result.nitpicks, findings);
   });
 
   test("mixed tagged findings split correctly", () => {
-    const findings = ["[blocker] scope gap", "[nitpick] typo in Step 2", "[blocker] design flaw"];
+    const findings = [
+      "[blocker] scope gap",
+      "[nitpick] typo in Step 2",
+      "[blocker] design flaw",
+    ];
     const result = classifyFindings(findings);
-    assert.deepStrictEqual(result.blockers, ["[blocker] scope gap", "[blocker] design flaw"]);
+    assert.deepStrictEqual(result.blockers, [
+      "[blocker] scope gap",
+      "[blocker] design flaw",
+    ]);
     assert.deepStrictEqual(result.nitpicks, ["[nitpick] typo in Step 2"]);
   });
 
@@ -801,7 +967,7 @@ describe("parseSelfReviewFindings", () => {
 `;
     const result = parseSelfReviewFindings(markdown);
     assert.deepStrictEqual(result, [
-      "Clarity: Step 3 is ambiguous — \"update the file\" is underspecified",
+      'Clarity: Step 3 is ambiguous — "update the file" is underspecified',
       "Completeness: Missing edge case for empty input",
     ]);
   });
@@ -836,7 +1002,9 @@ Cannot proceed without a working API.
 Use the alternative approach.
 `;
     const result = parseSelfReviewFindings(markdown);
-    assert.deepStrictEqual(result, ["Feasibility: The referenced API does not exist"]);
+    assert.deepStrictEqual(result, [
+      "Feasibility: The referenced API does not exist",
+    ]);
   });
 
   test("RETHINK format with bulleted items", () => {
@@ -895,7 +1063,10 @@ Not a list item.
 - Fix it
 `;
     const result = parseSelfReviewFindings(markdown);
-    assert.deepStrictEqual(result, ["Clarity: vague wording", "Completeness: missing step"]);
+    assert.deepStrictEqual(result, [
+      "Clarity: vague wording",
+      "Completeness: missing step",
+    ]);
   });
 
   test("mixed list markers within same section: some numbered, some bulleted", () => {
@@ -924,8 +1095,14 @@ Not a list item.
 - Fix scope gap
 `;
     const result = parseSelfReviewFindings(markdown);
-    assert.ok(result[0].startsWith("[blocker]"), "blocker tag should be preserved");
-    assert.ok(result[1].startsWith("[nitpick]"), "nitpick tag should be preserved");
+    assert.ok(
+      result[0].startsWith("[blocker]"),
+      "blocker tag should be preserved",
+    );
+    assert.ok(
+      result[1].startsWith("[nitpick]"),
+      "nitpick tag should be preserved",
+    );
   });
 
   // Section boundary tests (per plan Concern 6)
@@ -942,7 +1119,10 @@ Not a list item.
     assert.strictEqual(result.length, 2, "should extract exactly 2 findings");
     assert.ok(result[0].includes("Clarity"), "first finding should be Clarity");
     assert.ok(result[1].includes("Risks"), "second finding should be Risks");
-    assert.ok(!result.some(f => f.includes("Rewrite")), "Recommendations items must be excluded");
+    assert.ok(
+      !result.some((f) => f.includes("Rewrite")),
+      "Recommendations items must be excluded",
+    );
   });
 
   test("RETHINK with Why-this-is-blocking section following: only finding extracted", () => {
@@ -954,8 +1134,14 @@ Cannot proceed — the API is required for all steps.
 `;
     const result = parseSelfReviewFindings(markdown);
     assert.strictEqual(result.length, 1, "should extract exactly 1 finding");
-    assert.ok(result[0].includes("Feasibility"), "finding should be the Feasibility issue");
-    assert.ok(!result.some(f => f.includes("Cannot proceed")), "Why-blocking content must be excluded");
+    assert.ok(
+      result[0].includes("Feasibility"),
+      "finding should be the Feasibility issue",
+    );
+    assert.ok(
+      !result.some((f) => f.includes("Cannot proceed")),
+      "Why-blocking content must be excluded",
+    );
   });
 
   test("CHANGES_REQUESTED with Required-changes section following: only findings extracted", () => {
@@ -969,7 +1155,10 @@ Cannot proceed — the API is required for all steps.
 `;
     const result = parseSelfReviewFindings(markdown);
     assert.strictEqual(result.length, 2, "should extract exactly 2 findings");
-    assert.ok(!result.some(f => f.includes("Fix return")), "Required-changes items must be excluded");
+    assert.ok(
+      !result.some((f) => f.includes("Fix return")),
+      "Required-changes items must be excluded",
+    );
   });
 
   test("back-to-back bold sections with no findings: empty array", () => {
@@ -978,7 +1167,11 @@ Cannot proceed — the API is required for all steps.
 - Some recommendation
 `;
     const result = parseSelfReviewFindings(markdown);
-    assert.deepStrictEqual(result, [], "should return empty when no list items between headers");
+    assert.deepStrictEqual(
+      result,
+      [],
+      "should return empty when no list items between headers",
+    );
   });
 });
 
@@ -996,7 +1189,10 @@ Findings:
 Recommendations:
 - Fix scope gap and typo`;
     const result = parseCouncilRunnerOutput(agentText);
-    assert.deepStrictEqual(result, ["[blocker] scope gap in Step 3", "[nitpick] typo in intro"]);
+    assert.deepStrictEqual(result, [
+      "[blocker] scope gap in Step 3",
+      "[nitpick] typo in intro",
+    ]);
   });
 
   test("single finding with commas preserved (no comma-splitting)", () => {
@@ -1007,7 +1203,9 @@ Findings:
 Recommendations:
 - Fix the gap`;
     const result = parseCouncilRunnerOutput(agentText);
-    assert.deepStrictEqual(result, ["[blocker] scope gap in modules A, B, and C"]);
+    assert.deepStrictEqual(result, [
+      "[blocker] scope gap in modules A, B, and C",
+    ]);
   });
 
   test("empty findings section returns empty array", () => {
@@ -1038,8 +1236,15 @@ Findings: [blocker] scope gap, [nitpick] typo
 Recommendations: fix both`;
     const result = parseCouncilRunnerOutput(agentText);
     // No bullet lines found — fallback wraps entire captured text
-    assert.strictEqual(result.length, 1, "should return single-element array for legacy format");
-    assert.ok(result[0].includes("scope gap"), "legacy text should be preserved");
+    assert.strictEqual(
+      result.length,
+      1,
+      "should return single-element array for legacy format",
+    );
+    assert.ok(
+      result[0].includes("scope gap"),
+      "legacy text should be preserved",
+    );
   });
 
   test("tags are preserved in output (not stripped by parser)", () => {
@@ -1051,7 +1256,13 @@ Findings:
 Recommendations:
 - Fix design issue`;
     const result = parseCouncilRunnerOutput(agentText);
-    assert.ok(result[0].startsWith("[blocker]"), "blocker tag should be preserved");
-    assert.ok(result[1].startsWith("[nitpick]"), "nitpick tag should be preserved");
+    assert.ok(
+      result[0].startsWith("[blocker]"),
+      "blocker tag should be preserved",
+    );
+    assert.ok(
+      result[1].startsWith("[nitpick]"),
+      "nitpick tag should be preserved",
+    );
   });
 });

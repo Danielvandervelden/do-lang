@@ -8,7 +8,7 @@
  * output capture, and verdict parsing.
  *
  * Usage:
- *   node council-invoke.cjs --type plan|code --task-file <path> [--reviewer <value>] [--workspace <path>]
+ *   node council-invoke.cjs --type plan|code --task-file <path> [--reviewer <value>] [--workspace <path>] [--project-config-path <path>]
  *
  * Exit codes:
  *   0 - Success
@@ -367,7 +367,8 @@ function parseFindings(response) {
 function parseSelfReviewFindings(markdown) {
   if (!markdown) return [];
 
-  const FINDINGS_HEADER = /\*\*Issues found:\*\*|\*\*Fundamental issues:\*\*|\*\*Issues requiring changes:\*\*/;
+  const FINDINGS_HEADER =
+    /\*\*Issues found:\*\*|\*\*Fundamental issues:\*\*|\*\*Issues requiring changes:\*\*/;
   const BOLD_SECTION = /^\*\*[^*]+:\*\*/m;
 
   // Find the findings header
@@ -379,11 +380,13 @@ function parseSelfReviewFindings(markdown) {
 
   // Find the next bold section boundary (if any)
   const boundaryMatch = BOLD_SECTION.exec(afterHeader);
-  const slice = boundaryMatch ? afterHeader.slice(0, boundaryMatch.index) : afterHeader;
+  const slice = boundaryMatch
+    ? afterHeader.slice(0, boundaryMatch.index)
+    : afterHeader;
 
   // Extract list items (numbered or bulleted)
   const findings = [];
-  for (const line of slice.split('\n')) {
+  for (const line of slice.split("\n")) {
     const trimmed = line.trim();
     // Numbered: "1. text", "2. text", etc.
     const numberedMatch = trimmed.match(/^\d+\.\s+(.+)/);
@@ -434,13 +437,16 @@ function parseCouncilRunnerOutput(agentText) {
   const findingsStart = agentText.match(/^Findings:\s*/m);
   if (!findingsStart) return [];
 
-  const afterFindings = agentText.slice(findingsStart.index + findingsStart[0].length);
+  const afterFindings = agentText.slice(
+    findingsStart.index + findingsStart[0].length,
+  );
   const recsIndex = afterFindings.search(/^Recommendations:/m);
-  const sectionText = recsIndex !== -1 ? afterFindings.slice(0, recsIndex) : afterFindings;
+  const sectionText =
+    recsIndex !== -1 ? afterFindings.slice(0, recsIndex) : afterFindings;
 
   // Extract bullet lines from the section
   const findings = [];
-  for (const line of sectionText.split('\n')) {
+  for (const line of sectionText.split("\n")) {
     const trimmed = line.trim();
     const bulletMatch = trimmed.match(/^[-*]\s+(.+)/);
     if (bulletMatch) {
@@ -478,7 +484,7 @@ function classifyFindings(findings) {
 
   for (const finding of findings) {
     const trimmed = finding.trim();
-    if (trimmed.startsWith('[nitpick]')) {
+    if (trimmed.startsWith("[nitpick]")) {
       nitpicks.push(trimmed);
     } else {
       // [blocker] prefix or untagged — defaults to blocker
@@ -892,7 +898,8 @@ async function invokeCouncil(options) {
     return {
       success: true,
       skipped: true,
-      reason: "No external reviewers available for this runtime/config combination",
+      reason:
+        "No external reviewers available for this runtime/config combination",
       advisor: null,
       verdict: null,
     };
@@ -972,22 +979,24 @@ if (require.main === module) {
     console.log(`
 Council Invocation
 
-Usage: node council-invoke.cjs --type plan|code --task-file <path> [options]
+Usage: node council-invoke.cjs --type plan|code --task-file <path> [--project-config-path <path>] [options]
 
 Options:
-  --type <plan|code>       Review type (required)
-  --task-file <path>       Path to task markdown file (required)
-  --reviewer <value>       Reviewer selection (default: random)
-                           Values: claude, codex, gemini, random, both
-  --workspace <path>       Workspace path for Gemini (default: cwd)
-  --files-modified <list>  Comma-separated list of modified files (for code reviews)
-  --timeout <ms>           Timeout in milliseconds (default: 240000)
-  --help, -h               Show this help message
+  --type <plan|code>            Review type (required)
+  --task-file <path>            Path to task markdown file (required)
+  --reviewer <value>            Reviewer selection (default: random)
+                                Values: claude, codex, gemini, random, both
+  --workspace <path>            Workspace path for Gemini (default: cwd)
+  --files-modified <list>       Comma-separated list of modified files (for code reviews)
+  --project-config-path <path>  Path to project .do/config.json (default: auto-detected from cwd)
+  --timeout <ms>                Timeout in milliseconds (default: 240000)
+  --help, -h                    Show this help message
 
 Examples:
   node council-invoke.cjs --type plan --task-file .do/tasks/my-task.md
   node council-invoke.cjs --type code --task-file .do/tasks/my-task.md --reviewer codex
   node council-invoke.cjs --type code --task-file .do/tasks/my-task.md --files-modified "src/a.js,src/b.js"
+  node council-invoke.cjs --type plan --task-file .do/tasks/my-task.md --project-config-path /path/to/.do/config.json
 `);
     process.exit(0);
   }
@@ -1005,7 +1014,19 @@ Examples:
   const reviewer = getArg("--reviewer") || "random";
   const workspace = getArg("--workspace") || process.cwd();
   const filesModified = getArg("--files-modified");
-  const timeout = getArg("--timeout") ? parseInt(getArg("--timeout"), 10) : DEFAULT_TIMEOUT;
+  const timeout = getArg("--timeout")
+    ? parseInt(getArg("--timeout"), 10)
+    : DEFAULT_TIMEOUT;
+
+  // Auto-detect .do/config.json from cwd; allow explicit override via --project-config-path
+  const defaultProjectConfigPath = path.join(
+    process.cwd(),
+    ".do",
+    "config.json",
+  );
+  const projectConfigPath =
+    getArg("--project-config-path") ||
+    (fs.existsSync(defaultProjectConfigPath) ? defaultProjectConfigPath : null);
 
   if (!type || !taskFile) {
     console.error(
@@ -1014,7 +1035,15 @@ Examples:
     process.exit(1);
   }
 
-  invokeCouncil({ type, taskFile, reviewer, workspace, filesModified, timeout })
+  invokeCouncil({
+    type,
+    taskFile,
+    reviewer,
+    workspace,
+    filesModified,
+    timeout,
+    projectConfigPath,
+  })
     .then((result) => {
       console.log(JSON.stringify(result, null, 2));
       process.exit(result.success ? 0 : 1);

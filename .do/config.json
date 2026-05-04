@@ -22,5 +22,6 @@
   "delivery_contract": {
     "onboarded": true,
     "dismissed": true
-  }
+  },
+  "active_project": null
 }

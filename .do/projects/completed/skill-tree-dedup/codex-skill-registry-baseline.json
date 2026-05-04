@@ -1,0 +1,490 @@
+{
+  "version": "1.19.0",
+  "gitCommit": "ca173f12049da0e1a00637acb54d16eb1adb87ad",
+  "files": [
+    {
+      "path": ".codex/agents/codex-code-reviewer.md",
+      "sha256": "ef35c0c0def33780f647a2c210e9fc7fb9a3c7b70259fc2be624773f1581570a"
+    },
+    {
+      "path": ".codex/agents/codex-council-reviewer.md",
+      "sha256": "8fbaa833415f33d71c2596eeeab2ca5e131974fdcad3f1d605c878afeb0deedc"
+    },
+    {
+      "path": ".codex/agents/codex-debugger.md",
+      "sha256": "713563a71b18e28f64d248492c3ea35f75fa69d0382e08e8c563e55faaf35cd0"
+    },
+    {
+      "path": ".codex/agents/codex-executioner.md",
+      "sha256": "48d7c2eec124e416962588e2ae16874d6724a1ad9733857054f3d5284dc982ba"
+    },
+    {
+      "path": ".codex/agents/codex-griller.md",
+      "sha256": "d34742aa65423d5d6ddf6ba82b7b7903c09fb528eafbd437c321cfb7d64140b7"
+    },
+    {
+      "path": ".codex/agents/codex-plan-reviewer.md",
+      "sha256": "29c6ede227472a120ede25f5942dd220fbcb3cb75e21142d41b99ae6f6036522"
+    },
+    {
+      "path": ".codex/agents/codex-planner.md",
+      "sha256": "0ea86ca31ed00f1326ec187118cbe0902b361d11e917e0f8beb326c7e5b2aa1e"
+    },
+    {
+      "path": ".codex/agents/codex-verifier.md",
+      "sha256": "343f36b415449ddbf8077352bb060452537a11bfa424202b229f3e909f1423f4"
+    },
+    {
+      "path": ".codex/skills/do-abandon/SKILL.md",
+      "sha256": "686a0fbe18ee41c644d5ff59c31edea9f1f5cbf861c828bae0f48ee1bd0423d2"
+    },
+    {
+      "path": ".codex/skills/do-backlog/SKILL.md",
+      "sha256": "8f2fcbc713f9bc4168595bf865eff7225d99993cd1a7abc154c007acc815e10a"
+    },
+    {
+      "path": ".codex/skills/do-continue/SKILL.md",
+      "sha256": "302fabd0f6b8e1c0d8aa3c222621b7cd42285b55362131e1b1d683bc3490d074"
+    },
+    {
+      "path": ".codex/skills/do-debug/SKILL.md",
+      "sha256": "ec0b8f19d85e9a849714965739eb99031d620ee3ec6e697830cd831600942190"
+    },
+    {
+      "path": ".codex/skills/do-fast/SKILL.md",
+      "sha256": "abb6ef33d62b6bf1f17c44c532731a53f4555b9f72155761c9fdccb286db04e8"
+    },
+    {
+      "path": ".codex/skills/do-init/SKILL.md",
+      "sha256": "251bf3c0b40b614cc785e8895ecef72f3f7f1af0b6bfa75dd2583c97e72604ff"
+    },
+    {
+      "path": ".codex/skills/do-optimise/SKILL.md",
+      "sha256": "6f9827d6662397fe293db29fcfb872699633b90b8c59db31e000aa90e6dab758"
+    },
+    {
+      "path": ".codex/skills/do-project/SKILL.md",
+      "sha256": "59001e9f962201b2e637a1e064bce49d9fd3c6437b9de1e7e706641ea7eb123c"
+    },
+    {
+      "path": ".codex/skills/do-quick/SKILL.md",
+      "sha256": "5f84c36cb58c609010a5ad2e4f9cefe695e9fdedd59af53c8b0425b3e864452b"
+    },
+    {
+      "path": ".codex/skills/do-scan/SKILL.md",
+      "sha256": "72e28cbdbf0ab1a1808e91ec40a40ec34dae22dc7404541a5b51fe5852bdf01c"
+    },
+    {
+      "path": ".codex/skills/do-task/SKILL.md",
+      "sha256": "d2a1d2f63c3a137fb06b01e64b6555ed24cfc615cf590ea1b074310cc8d11a7d"
+    },
+    {
+      "path": ".codex/skills/do-update/SKILL.md",
+      "sha256": "ba51fe8741c831c9185bcba69b3888ddf1adf16fb6f9db82ab184ffcec77b907"
+    },
+    {
+      "path": ".codex/skills/do/abandon.md",
+      "sha256": "49959beb1528b16f7f09370964440558678b39e752058ea32399941bb6c165f9"
+    },
+    {
+      "path": ".codex/skills/do/backlog.md",
+      "sha256": "5eed7fbada647a00c1ae7345a373d5ab05940e721ef30678f92a061d095b9400"
+    },
+    {
+      "path": ".codex/skills/do/continue.md",
+      "sha256": "723ea1e8802abf64f1d2fae9410999125e6d4bb5f8c565fadcbe75c63678a239"
+    },
+    {
+      "path": ".codex/skills/do/debug.md",
+      "sha256": "0e546a340886ed86f678cc502f89cc877159c33b79a2c6e49fa531cc3d84d3e9"
+    },
+    {
+      "path": ".codex/skills/do/do.md",
+      "sha256": "1ad42ec05e1fc802fda39a2b8d4517719f9e54d66b558901cb6e60d5bbf276ac"
+    },
+    {
+      "path": ".codex/skills/do/fast.md",
+      "sha256": "47c4094eca30e1fc8477ecb16d4aec27efb31095f8778c281de241a0f591404c"
+    },
+    {
+      "path": ".codex/skills/do/init.md",
+      "sha256": "cc665521646ae6b7c5261aaf281c1264c6d8d51a6bbd9c5ca7e032c54b9c715e"
+    },
+    {
+      "path": ".codex/skills/do/optimise.md",
+      "sha256": "0b6d432182431ca375807d766c9ec7ff91ed7e048d804f7f97716434dd430bee"
+    },
+    {
+      "path": ".codex/skills/do/project.md",
+      "sha256": "0cc246ad40481d96f1b023f3283c2849de5c299b7ba5bae6213db481c973a84f"
+    },
+    {
+      "path": ".codex/skills/do/quick.md",
+      "sha256": "5ba8dc1ef31927d8fd91b228cb4b63bbf73cdfe9f21be97149c8344fbae75414"
+    },
+    {
+      "path": ".codex/skills/do/references/agents-template.md",
+      "sha256": "19cc257935eb24f6cdb8c219bd5e1e10271c05a63a10771ed3736b487f09529b"
+    },
+    {
+      "path": ".codex/skills/do/references/backlog-seed.md",
+      "sha256": "03857ce244b93ad53b1605e6663ddfc4fbcea19ea58d6815419658eb3b896306"
+    },
+    {
+      "path": ".codex/skills/do/references/changelog-template.md",
+      "sha256": "ea2ed0689c2eed8bab9597ddb47f04d18fd43ca2c9ae443372cf9025f51b455c"
+    },
+    {
+      "path": ".codex/skills/do/references/classify-findings.md",
+      "sha256": "45cecc31a1f537c85c00fecfa5ad89f6cef6b94cfc22c174892db5c1abdf888e"
+    },
+    {
+      "path": ".codex/skills/do/references/completion-summary-template.md",
+      "sha256": "fcfae8bd8ea6cbe1baaf656dc4ce7f08f89c874a838d26ead936d99d5c04553f"
+    },
+    {
+      "path": ".codex/skills/do/references/component-readme.md",
+      "sha256": "93b5afd73ddd79d40cb929b4fef14f2ce82436d9b29c70c852ab790a833374ad"
+    },
+    {
+      "path": ".codex/skills/do/references/config-template.md",
+      "sha256": "f3b94832cf6f6227db206c17631ad926e464f23d50d8f896c86768c88041f3eb"
+    },
+    {
+      "path": ".codex/skills/do/references/council-brief-code.md",
+      "sha256": "3bc00c1a92ce8a64a97a0cd1acab73d1e104eabe25da28db66cfe54c952aa2b5"
+    },
+    {
+      "path": ".codex/skills/do/references/council-brief-plan.md",
+      "sha256": "9967f1fc38e0766bbf34282657f9014f16683e1d17da164ac8bd8abe33182682"
+    },
+    {
+      "path": ".codex/skills/do/references/debug-template.md",
+      "sha256": "458344d57eba72ccc30c625388c82272836d6c4ea087cd472d4f56ae95c72c0a"
+    },
+    {
+      "path": ".codex/skills/do/references/delivery-contract.md",
+      "sha256": "8c6ab62980bc28233066680423327c01253bd08e007e7aae74efb076d6fa1f26"
+    },
+    {
+      "path": ".codex/skills/do/references/delivery-onboarding.md",
+      "sha256": "50c668b30c18a25facd725a8a5d77908802d90cb1a3ba667d9d05ebfc48eb0f3"
+    },
+    {
+      "path": ".codex/skills/do/references/features-readme.md",
+      "sha256": "ec078f28d3c8f0436a70ae6fc85c101fca1ba51c003a5cf1e4f48341577ee8fb"
+    },
+    {
+      "path": ".codex/skills/do/references/handoff-template.md",
+      "sha256": "96884dd6b26e7f8f9a7e34412e1cc33ded4d2f3c64236c191c1467d96fd4b930"
+    },
+    {
+      "path": ".codex/skills/do/references/init-health-check.md",
+      "sha256": "ed4db136cc08e83a2c06e05cfab8c0ccbac44d8453291293bebc249e41b204b2"
+    },
+    {
+      "path": ".codex/skills/do/references/init-project-setup.md",
+      "sha256": "87ae6de98557fc284bbe1ec672197186982ffe94f19c2e8ff4676e28ebfe932a"
+    },
+    {
+      "path": ".codex/skills/do/references/init-workspace-setup.md",
+      "sha256": "75f02f1e2a42f2ac7e72d1dc5155fb29e6d65bbc39d42d5f0152662ae3bc3363"
+    },
+    {
+      "path": ".codex/skills/do/references/intake-transcript-template.md",
+      "sha256": "eb8ae5ded3082ca0ef9339bdd73b134e991d0c3ab3103242935a8a3c328972fd"
+    },
+    {
+      "path": ".codex/skills/do/references/phase-template.md",
+      "sha256": "50530178526ad81fe498d2b3591edf31381bb2633f735869e8d553cffa71259f"
+    },
+    {
+      "path": ".codex/skills/do/references/pointer-templates.md",
+      "sha256": "b0a74ada08cd834fa65fe61d06a46832481f0d7892d80745048606a63d8b39bb"
+    },
+    {
+      "path": ".codex/skills/do/references/project-master-template.md",
+      "sha256": "3837b7ad70a6e97b36b0bd8bcbf4585569972d00e701466537de112577e2ecb7"
+    },
+    {
+      "path": ".codex/skills/do/references/project-state-machine.md",
+      "sha256": "b6036621f2b5ba627ac435d1084d7fff4e5ee9038efcbc08b4c2a1090882b64f"
+    },
+    {
+      "path": ".codex/skills/do/references/project-template.md",
+      "sha256": "84f0087d6cc477900f506f146eb88140f2a444695bba7dfdbd1147a6dbedebf1"
+    },
+    {
+      "path": ".codex/skills/do/references/resume-preamble-project.md",
+      "sha256": "bc7dfd48132a403d941b1d520370f969dd8987cc3e762bd542e6e025b3b16101"
+    },
+    {
+      "path": ".codex/skills/do/references/resume-preamble.md",
+      "sha256": "1bd5562886a4484b72a878f9892850dc9b55d90153c3b68ded3b1ed590d2d417"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-code-review.md",
+      "sha256": "8b3d590b1ecce45d1ce8acc84c405ab6af42d471b3caf688120eda1197f9abac"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-debug.md",
+      "sha256": "29f1a4495df2dd6fe259aaaa924485b570be50d3a629cd3149cf47a45962e6bc"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-execute.md",
+      "sha256": "0b4b24c4b922cb4abbaaf935a6e00f2edd2963ddab86f2324255d5550ef18d54"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-fast-exec.md",
+      "sha256": "099e6b76f06bcf2e9860dc8ca3f8448e68132b83eaf8c6745a6f472377c19c40"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-grill.md",
+      "sha256": "b9e0b6f7ecb11d4767b6703704e891ffa227bebd7b7c4c11e8b918b81d5e0c99"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-phase-exit.md",
+      "sha256": "e0262de2b146d3bfbeb73dba230a58a94817e6c4057fc4670c9a904e4c3f485d"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-phase-plan-review.md",
+      "sha256": "e9d5ab4d78bf4a0f157428c965d16d6b3da62cdde69503e407f13f39933f6432"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-phase-transition.md",
+      "sha256": "640c673ffddb4518e68420ddcf65b1af0b86cf76da13ce6af425728199167ecd"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-plan-review.md",
+      "sha256": "6d0d102cd13f684235c965559e37e4ca73905dd1d1dd338bffd79dd38795fc79"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-project-complete.md",
+      "sha256": "1d3ec857657b1bb251ef9b555d0a864f34c377bda90e849b02d06a9909ea1c0c"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-project-intake.md",
+      "sha256": "243a561c4b1c7b8bcb4b0a94ae18510a7de5a950232f150901ee164ee256e895"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-project-plan-review.md",
+      "sha256": "f86066ce789ed57c88f6c66d11c41251d17e132959cda80da01fc8524bd85fd2"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-project-resume.md",
+      "sha256": "dd732fb94add35464f729e71a0f70f84f7c3777c3960f4513fe3f6705e2c4557"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-quick-exec.md",
+      "sha256": "31b8ca415108e1c84410a7c2273eb203b9d6c3a59bba5525b7d450c4a7a5f4e3"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-verify.md",
+      "sha256": "d293b44dabc84a91561dc7f4d0b3ffc00cf35cf6069e7a4e1b1e596d8a3d9b01"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-wave-code-review.md",
+      "sha256": "4385c42ec3658532070064e316e100a488af2e28822047f32d4e5e82ae53ade7"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-wave-exec.md",
+      "sha256": "5e7eeedfd0ddf6642c61d7e5b0988ee47b0eabfda4cd87694a6824b2b608aee2"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-wave-plan-review.md",
+      "sha256": "8ec7127093d47bc16d3eff076b23ea8e4309c40c1234ef2a1b4ae0634897a7ee"
+    },
+    {
+      "path": ".codex/skills/do/references/stage-wave-verify.md",
+      "sha256": "629cfe087a694a0dd58b3898aa9226783c3b8a363199f2be6fdc0cdf2f31bf1a"
+    },
+    {
+      "path": ".codex/skills/do/references/task-template.md",
+      "sha256": "b1d441c4db1ae553da15962f7f3b5477277bb4e4f6a2b2bd4fe431fc2e007d62"
+    },
+    {
+      "path": ".codex/skills/do/references/tech-readme.md",
+      "sha256": "094cf219e47c92cce9e19f586a0af5a508d7e35f06b66ff69317f2fb185a6abd"
+    },
+    {
+      "path": ".codex/skills/do/references/wave-template.md",
+      "sha256": "4a1201443561ffa8f4f6d45ecc99dc9445892aec213ff820590b5b2b0ea9e5ac"
+    },
+    {
+      "path": ".codex/skills/do/scan.md",
+      "sha256": "e371c269dc96a02ae1a97188451c4430051c2798d8918d6b1d1f2558882fc604"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/agent-frontmatter-gates.test.cjs",
+      "sha256": "fca5ea922fb514d7bc441c6cbabeb916c77e1fe4cd8cf669f60a0a7b8f620cc7"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/beta-backlog-integration.test.cjs",
+      "sha256": "4dacd6710826bfcc817e563252d5d348356b2c97408869efec75045820e68e2e"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/beta-skill-structural.test.cjs",
+      "sha256": "ebabedf5fda4962cb3abacb8cfc8470e99b07569d33efb03faff725bd8764097"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/bug-fix-structural.test.cjs",
+      "sha256": "749e08c16e8ba77932d8bd541521f257419aa8d9ff57ec489027433f26a65be2"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/council-invoke.test.cjs",
+      "sha256": "c3cb059c7384cae443e7a1857c58564f6dc858a3a2a37ef384480d849440bf2f"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/debug-session.test.cjs",
+      "sha256": "456441392757d7b2819e2fe023341574df6a4c76c70a6fc870b5aa9297b636d5"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/delivery-contract-structural.test.cjs",
+      "sha256": "384ae42708c6c27c76e653608a980fe2f958f0b240487b08c7def16d2de849d5"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/detect-tools.test.cjs",
+      "sha256": "b3a17e8fe20fc0e86c8ac81fff35d8b10d32d06ef5479a5c90f2fec9aead2668"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/load-task-context.test.cjs",
+      "sha256": "03e212b92e8e51f6c84159b0d02bb474374945c0bffb0a0f0171d0e7b3f74ebd"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/optimise-target.test.cjs",
+      "sha256": "cd002edd8404887fd526fa44acc2fc82c928934216a72b958687bd05e7b864e8"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/optimization-guard.test.cjs",
+      "sha256": "1f2a869e633731a328d2be1380b6f708e3fa98933a2d19f80959f81f7ebf897e"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/project-health.test.cjs",
+      "sha256": "5b9b3227c6c558cabc33d1a9a2cf6f37db600037502d2ab358afb341833c5dee"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/project-lifecycle-roundtrip.test.cjs",
+      "sha256": "5fb669d8e635098fc4122bcb5bdac16a8849db869cbee3373b3ef05739c84d56"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/project-resume.test.cjs",
+      "sha256": "7a07c145eeafb54b0e218e1d76eed06b844594b3d333ba0ad0573c47415f9516"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/project-scaffold.test.cjs",
+      "sha256": "b2b177d421712a564c8d74b4030f0fbc2d55d83fa1e7cb5a47e6206638e4d982"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/project-state.test.cjs",
+      "sha256": "1570f4d1d262f4b0636045034b9afec4dd955db5b673cfe9a065e9b5e6987e82"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/stage-decision.test.cjs",
+      "sha256": "c3cbea99367d6f815f6455fb8c2ab487e76bc11db0932ebb3eb79000573fc423"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/task-abandon.test.cjs",
+      "sha256": "316767b073081d11772342bdb4e20aa1efd467e275ef381fbefe910874f6d2ec"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/task-workflow-structural.test.cjs",
+      "sha256": "525846d49a13d7fd085da7093db9bed7d1661ae15de4ff00598bf0b08392ba7a"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/validate-delivery-contract.test.cjs",
+      "sha256": "779ed0b67bf0726670e092faf7433277f4d27099e0151ca4912ad5070d896599"
+    },
+    {
+      "path": ".codex/skills/do/scripts/__tests__/validate-slug.test.cjs",
+      "sha256": "abd875860cb4219fc5bb96291ead815dddda4e69990b44461b2b179f8378e134"
+    },
+    {
+      "path": ".codex/skills/do/scripts/check-database-entry.cjs",
+      "sha256": "8616c3e0bf07994ec68b34f9db7b0a298e52926387d41452e310e795931e2a9c"
+    },
+    {
+      "path": ".codex/skills/do/scripts/council-gate.cjs",
+      "sha256": "b006c357e6371d127cf98694d7e1604a346be3cd584bfc751bdf425532693832"
+    },
+    {
+      "path": ".codex/skills/do/scripts/council-invoke.cjs",
+      "sha256": "17d8c952d76aa891c65eadae188e59ac4477e13fc659b565f32231030f457ef2"
+    },
+    {
+      "path": ".codex/skills/do/scripts/debug-session.cjs",
+      "sha256": "7a207bf6febccf8ad57388e8c680f5e1701216d43a023ed2af1808ca85c6ed6f"
+    },
+    {
+      "path": ".codex/skills/do/scripts/detect-tools.cjs",
+      "sha256": "805d897a6f6d9d0676ad30754d33f84b802244f6a25d4d92b06d99b24744281f"
+    },
+    {
+      "path": ".codex/skills/do/scripts/lib/validate-slug.cjs",
+      "sha256": "27d156164b16321d3ba5b46944cc9dffe6fbbd9629b706f47459cfe7944a0cd9"
+    },
+    {
+      "path": ".codex/skills/do/scripts/load-task-context.cjs",
+      "sha256": "65780b8a6faaa7a0ec73c2915703c8452df45db9f0c60d7e049f0bad0d5dfbb9"
+    },
+    {
+      "path": ".codex/skills/do/scripts/optimise-target.cjs",
+      "sha256": "d4d7d0492c84e0348916c4d517e6732f0b7c4cfc2f314562434784a701fc396c"
+    },
+    {
+      "path": ".codex/skills/do/scripts/project-health.cjs",
+      "sha256": "e86e51a92bd3611ea768a7eb89bb8d26e8a4b3edde3f4bd2f56dd4d8afe40aaf"
+    },
+    {
+      "path": ".codex/skills/do/scripts/project-resume.cjs",
+      "sha256": "01339526aafead2f040b2d3d0ab460975bd1ea61a0f60f39288682dd601ae892"
+    },
+    {
+      "path": ".codex/skills/do/scripts/project-scaffold.cjs",
+      "sha256": "816467d43033ccbe0af0fbc1cb2db2f7a11e753ae5481f77212af66dd03fadf8"
+    },
+    {
+      "path": ".codex/skills/do/scripts/project-state.cjs",
+      "sha256": "c9d084cbfcc8b560e69be6a92a98559aa382b4654a97e4a76f7027d01e60b958"
+    },
+    {
+      "path": ".codex/skills/do/scripts/read-config.cjs",
+      "sha256": "67efadf4b4b36e7ef4e7bf2dca5f12d1c3bf4f0a7675fdc05c84cc1dd66b74c0"
+    },
+    {
+      "path": ".codex/skills/do/scripts/scan-project.cjs",
+      "sha256": "1c96f37cacbfd0c10a07e37845a3f74ff32ade8e053e6d28b851c33b428c2300"
+    },
+    {
+      "path": ".codex/skills/do/scripts/stage-decision.cjs",
+      "sha256": "2c0cbb28642f1b369bbee1346f48639abfaf657e9e5e434142090197e6247213"
+    },
+    {
+      "path": ".codex/skills/do/scripts/task-abandon.cjs",
+      "sha256": "000b11f000d27ff70bfbcbdae1f767e55479464bc282018fa3baf6c6332bd9c5"
+    },
+    {
+      "path": ".codex/skills/do/scripts/update-task-frontmatter.cjs",
+      "sha256": "13977502a6d63a56aa5642a795f37c877c783074407c95b74d9400d11a1f6242"
+    },
+    {
+      "path": ".codex/skills/do/scripts/validate-delivery-contract.cjs",
+      "sha256": "d4896b248a21d9e71cbd0040900ba167a03c9155efe4ce9903ac5ce25081ba09"
+    },
+    {
+      "path": ".codex/skills/do/scripts/workspace-health.cjs",
+      "sha256": "6a377a073c4efed9112827452e0b28ce1c4b7b7b087d0c205726a4df8695b67a"
+    },
+    {
+      "path": ".codex/skills/do/SKILL.md",
+      "sha256": "911b1144d01bb76292ee01a72bf28c5b1e7e73bae7eef267b2e6027095867e44"
+    },
+    {
+      "path": ".codex/skills/do/task.md",
+      "sha256": "05f71606ca9a70ea696b6432699438c2462c5952d3dc3ea039731abf74d472c4"
+    },
+    {
+      "path": ".codex/skills/do/update.md",
+      "sha256": "a01dd333568511700ef0d9c10ba637949aeffcd68b1921d1e86ffbaefaf1a223"
+    }
+  ]
+}

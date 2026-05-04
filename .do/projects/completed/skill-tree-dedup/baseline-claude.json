@@ -1,0 +1,438 @@
+{
+  "version": "1.19.0",
+  "gitCommit": "ca173f12049da0e1a00637acb54d16eb1adb87ad",
+  "files": [
+    {
+      "path": ".claude/agents/do-code-reviewer.md",
+      "sha256": "6b205aab238071334ef8d296060141c98d5b0dc40245a2fe2886e8abd37346bc"
+    },
+    {
+      "path": ".claude/agents/do-council-reviewer.md",
+      "sha256": "60931303cb20d35d1f7e15ff93a19409a29c61dfcef75b93f0163a04eac56361"
+    },
+    {
+      "path": ".claude/agents/do-debugger.md",
+      "sha256": "00c3b1bd3ed8866704d0708cff58b3141cf1b3c077145d3d45528c7ec710d295"
+    },
+    {
+      "path": ".claude/agents/do-executioner.md",
+      "sha256": "635ef71859834bdb6819de06b1b9583f1db8eb5545df094bee3b6878f8f02976"
+    },
+    {
+      "path": ".claude/agents/do-griller.md",
+      "sha256": "c5d0299783edea96cb26ec9c7a98a51b36e44ce84063f8523f6b18e8852c6762"
+    },
+    {
+      "path": ".claude/agents/do-plan-reviewer.md",
+      "sha256": "31cf4dadd4f6dce2b4da8c4428833c0e3fd5f1f7b4f5c0bd39bd0fc32d611733"
+    },
+    {
+      "path": ".claude/agents/do-planner.md",
+      "sha256": "08ece1e7e6c1066abe61777103f191ec139cf6b95917386ada968c18020ae938"
+    },
+    {
+      "path": ".claude/agents/do-verifier.md",
+      "sha256": "8883c359b3f537d74ba7ea0e8a972da3d929fb7ec0bfe64546ff9f46eeac76d5"
+    },
+    {
+      "path": ".claude/commands/do/abandon.md",
+      "sha256": "868ac082dd0a1cec4a6ba951fb0ebcfdc5136e6014e599b6dba4a94a9247ce4e"
+    },
+    {
+      "path": ".claude/commands/do/backlog.md",
+      "sha256": "8d88dd40ae89df6f088c495481fceb72931603d0d4f409d65970ff5e669c38f9"
+    },
+    {
+      "path": ".claude/commands/do/continue.md",
+      "sha256": "f5e4709148a2ec043ee2709e1425b794dace7a3c14eeae12d79df8114a160bb6"
+    },
+    {
+      "path": ".claude/commands/do/debug.md",
+      "sha256": "1135908ef25b4c85ad5f54a4cacaa4b3cc64b8d1ff644b536bab97457e4681c0"
+    },
+    {
+      "path": ".claude/commands/do/do.md",
+      "sha256": "a9faf4ce637ba4a18a58f759b6b64d554eb9a478afd17a1a399038fdc71610e1"
+    },
+    {
+      "path": ".claude/commands/do/fast.md",
+      "sha256": "49fac53a5a4cca085ad75123d394d8a6db20778baac6c3326b14fd76d6fc8369"
+    },
+    {
+      "path": ".claude/commands/do/init.md",
+      "sha256": "cc665521646ae6b7c5261aaf281c1264c6d8d51a6bbd9c5ca7e032c54b9c715e"
+    },
+    {
+      "path": ".claude/commands/do/optimise.md",
+      "sha256": "6e744d0441925b3d1b52b8b0259384d06478c78dd9ba5e8848f6ae641cc3cf6c"
+    },
+    {
+      "path": ".claude/commands/do/project.md",
+      "sha256": "e524024880cc96e702109e98675e99c98ba7c1a620687d8ab8dc6a9d3364e2db"
+    },
+    {
+      "path": ".claude/commands/do/quick.md",
+      "sha256": "06d72d1d610f1198d4ef2e32f2b5fbfd442fc946bc2486230750b2c065d5b352"
+    },
+    {
+      "path": ".claude/commands/do/references/agents-template.md",
+      "sha256": "19cc257935eb24f6cdb8c219bd5e1e10271c05a63a10771ed3736b487f09529b"
+    },
+    {
+      "path": ".claude/commands/do/references/backlog-seed.md",
+      "sha256": "03857ce244b93ad53b1605e6663ddfc4fbcea19ea58d6815419658eb3b896306"
+    },
+    {
+      "path": ".claude/commands/do/references/changelog-template.md",
+      "sha256": "ea2ed0689c2eed8bab9597ddb47f04d18fd43ca2c9ae443372cf9025f51b455c"
+    },
+    {
+      "path": ".claude/commands/do/references/classify-findings.md",
+      "sha256": "68b1b40ac6495922ec2dd1576e8960ea8552f452dcd9c9872a2b9c25797de982"
+    },
+    {
+      "path": ".claude/commands/do/references/completion-summary-template.md",
+      "sha256": "fcfae8bd8ea6cbe1baaf656dc4ce7f08f89c874a838d26ead936d99d5c04553f"
+    },
+    {
+      "path": ".claude/commands/do/references/component-readme.md",
+      "sha256": "93b5afd73ddd79d40cb929b4fef14f2ce82436d9b29c70c852ab790a833374ad"
+    },
+    {
+      "path": ".claude/commands/do/references/config-template.md",
+      "sha256": "f3b94832cf6f6227db206c17631ad926e464f23d50d8f896c86768c88041f3eb"
+    },
+    {
+      "path": ".claude/commands/do/references/council-brief-code.md",
+      "sha256": "3bc00c1a92ce8a64a97a0cd1acab73d1e104eabe25da28db66cfe54c952aa2b5"
+    },
+    {
+      "path": ".claude/commands/do/references/council-brief-plan.md",
+      "sha256": "9967f1fc38e0766bbf34282657f9014f16683e1d17da164ac8bd8abe33182682"
+    },
+    {
+      "path": ".claude/commands/do/references/debug-template.md",
+      "sha256": "458344d57eba72ccc30c625388c82272836d6c4ea087cd472d4f56ae95c72c0a"
+    },
+    {
+      "path": ".claude/commands/do/references/delivery-contract.md",
+      "sha256": "8c6ab62980bc28233066680423327c01253bd08e007e7aae74efb076d6fa1f26"
+    },
+    {
+      "path": ".claude/commands/do/references/delivery-onboarding.md",
+      "sha256": "50c668b30c18a25facd725a8a5d77908802d90cb1a3ba667d9d05ebfc48eb0f3"
+    },
+    {
+      "path": ".claude/commands/do/references/features-readme.md",
+      "sha256": "ec078f28d3c8f0436a70ae6fc85c101fca1ba51c003a5cf1e4f48341577ee8fb"
+    },
+    {
+      "path": ".claude/commands/do/references/handoff-template.md",
+      "sha256": "96884dd6b26e7f8f9a7e34412e1cc33ded4d2f3c64236c191c1467d96fd4b930"
+    },
+    {
+      "path": ".claude/commands/do/references/init-health-check.md",
+      "sha256": "0d2b81ffb845aa2b2827cadf65f77c09cfb49bf3b386bc942f630b9b1617ef24"
+    },
+    {
+      "path": ".claude/commands/do/references/init-project-setup.md",
+      "sha256": "87ae6de98557fc284bbe1ec672197186982ffe94f19c2e8ff4676e28ebfe932a"
+    },
+    {
+      "path": ".claude/commands/do/references/init-workspace-setup.md",
+      "sha256": "9160ce61ea2456c9b11ac3f87637a37b536dbdc6e78cc5cec7d71a4c4438e68e"
+    },
+    {
+      "path": ".claude/commands/do/references/intake-transcript-template.md",
+      "sha256": "eb8ae5ded3082ca0ef9339bdd73b134e991d0c3ab3103242935a8a3c328972fd"
+    },
+    {
+      "path": ".claude/commands/do/references/phase-template.md",
+      "sha256": "a94c64ce614e689f1ed342fb6bb8e1a176c2c78b37e4f57767b006a41a0e18b8"
+    },
+    {
+      "path": ".claude/commands/do/references/pointer-templates.md",
+      "sha256": "b0a74ada08cd834fa65fe61d06a46832481f0d7892d80745048606a63d8b39bb"
+    },
+    {
+      "path": ".claude/commands/do/references/project-master-template.md",
+      "sha256": "19db10578cb9b3c815d9f86b78008ed1fad7fd177387725d7e979a9bcc2507b5"
+    },
+    {
+      "path": ".claude/commands/do/references/project-state-machine.md",
+      "sha256": "b6036621f2b5ba627ac435d1084d7fff4e5ee9038efcbc08b4c2a1090882b64f"
+    },
+    {
+      "path": ".claude/commands/do/references/project-template.md",
+      "sha256": "84f0087d6cc477900f506f146eb88140f2a444695bba7dfdbd1147a6dbedebf1"
+    },
+    {
+      "path": ".claude/commands/do/references/resume-preamble-project.md",
+      "sha256": "31ca312ad3fbbb34c99b38c487b970448bb24347528553b8a78dce1bf352e391"
+    },
+    {
+      "path": ".claude/commands/do/references/resume-preamble.md",
+      "sha256": "3b0e61320f752fe574ab82ad4de059cf39f2eaeb77444d3f479e6307a800d037"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-code-review.md",
+      "sha256": "d6e1a882c195b5ce7bd38f1463e2f03eac5094d1257454661d91f645436a3444"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-debug.md",
+      "sha256": "29f1a4495df2dd6fe259aaaa924485b570be50d3a629cd3149cf47a45962e6bc"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-execute.md",
+      "sha256": "ec0c552323bde3a45aa991aeb696aa31933e9fe9d05f607b18da3d5307eb2433"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-fast-exec.md",
+      "sha256": "ffcd24e9338a07caded354996ae33995adf49d8f363e5cf30d239f7ef1bd599e"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-grill.md",
+      "sha256": "b9e0b6f7ecb11d4767b6703704e891ffa227bebd7b7c4c11e8b918b81d5e0c99"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-phase-exit.md",
+      "sha256": "5f35429bd3ff52b6a6ee1f1be430b4272a040ae6225adaf390d5d0c34981cdcb"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-phase-plan-review.md",
+      "sha256": "db74e049fc00096409a81fdafc7965f3d04ef6c8ebc3e748dc70b6a293a83da1"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-phase-transition.md",
+      "sha256": "c775468e9f86769f41b73d2893d11b7f48ec00de5e869477ffb7aa7204661165"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-plan-review.md",
+      "sha256": "70bff51f18a24f067793dad9cb1a35a60578de079afdcd08fa0864d68bf365e2"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-project-complete.md",
+      "sha256": "74e5fa9b36755f3af558bd331fe78008f0a41ee70132fe8e5225ebe345ab549f"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-project-intake.md",
+      "sha256": "93c1bb7a270d851910688b897627fc1ad7d1018db2602215fbfcdca7e833204d"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-project-plan-review.md",
+      "sha256": "adb12a8b782e3acc676de142a4dcf0123ea63ba23ba5e48ac1b1dbc055a60465"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-project-resume.md",
+      "sha256": "aceb877236aa9b71f665588a2471453fd0dba0a7e511586cf8710cb079f9f4db"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-quick-exec.md",
+      "sha256": "c44f5c2708398502648719942a26c849096b96902b876aca38411312b17a9ffc"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-verify.md",
+      "sha256": "d293b44dabc84a91561dc7f4d0b3ffc00cf35cf6069e7a4e1b1e596d8a3d9b01"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-wave-code-review.md",
+      "sha256": "3ffe9146e54252f1787e02d5b169d3d77ff8a80fee126c5925efc8a16b025e2b"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-wave-exec.md",
+      "sha256": "bbb8189f46e2f55d624b9b004f4333983a137432d7e21fda5607b42d08c7ed64"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-wave-plan-review.md",
+      "sha256": "19317f66e977abcf02dae78b761ef29335ce0c2735a0f42e9e25f08ee0a5a7ac"
+    },
+    {
+      "path": ".claude/commands/do/references/stage-wave-verify.md",
+      "sha256": "df20c96447ca1b6e09e7bd057471d79cdfea4c041d3536a2e98a5a6ed7272402"
+    },
+    {
+      "path": ".claude/commands/do/references/task-template.md",
+      "sha256": "2462c167212ea87f488efe4f763c889fb60e935c8710acb405307451ee24023b"
+    },
+    {
+      "path": ".claude/commands/do/references/tech-readme.md",
+      "sha256": "094cf219e47c92cce9e19f586a0af5a508d7e35f06b66ff69317f2fb185a6abd"
+    },
+    {
+      "path": ".claude/commands/do/references/wave-template.md",
+      "sha256": "470621e022ef8cb08ba38d6aecae522dee174c994322d976259444c95f30516c"
+    },
+    {
+      "path": ".claude/commands/do/scan.md",
+      "sha256": "e59eb9052da81d6c88eef6acfdab73cb9a6f7d89402c18a0d6e893d6abf79ddf"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/agent-frontmatter-gates.test.cjs",
+      "sha256": "fca5ea922fb514d7bc441c6cbabeb916c77e1fe4cd8cf669f60a0a7b8f620cc7"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/beta-backlog-integration.test.cjs",
+      "sha256": "4dacd6710826bfcc817e563252d5d348356b2c97408869efec75045820e68e2e"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/beta-skill-structural.test.cjs",
+      "sha256": "ebabedf5fda4962cb3abacb8cfc8470e99b07569d33efb03faff725bd8764097"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/bug-fix-structural.test.cjs",
+      "sha256": "749e08c16e8ba77932d8bd541521f257419aa8d9ff57ec489027433f26a65be2"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/council-invoke.test.cjs",
+      "sha256": "c3cb059c7384cae443e7a1857c58564f6dc858a3a2a37ef384480d849440bf2f"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/debug-session.test.cjs",
+      "sha256": "456441392757d7b2819e2fe023341574df6a4c76c70a6fc870b5aa9297b636d5"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/delivery-contract-structural.test.cjs",
+      "sha256": "384ae42708c6c27c76e653608a980fe2f958f0b240487b08c7def16d2de849d5"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/detect-tools.test.cjs",
+      "sha256": "b3a17e8fe20fc0e86c8ac81fff35d8b10d32d06ef5479a5c90f2fec9aead2668"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/load-task-context.test.cjs",
+      "sha256": "03e212b92e8e51f6c84159b0d02bb474374945c0bffb0a0f0171d0e7b3f74ebd"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/optimise-target.test.cjs",
+      "sha256": "cd002edd8404887fd526fa44acc2fc82c928934216a72b958687bd05e7b864e8"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/optimization-guard.test.cjs",
+      "sha256": "1f2a869e633731a328d2be1380b6f708e3fa98933a2d19f80959f81f7ebf897e"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/project-health.test.cjs",
+      "sha256": "5b9b3227c6c558cabc33d1a9a2cf6f37db600037502d2ab358afb341833c5dee"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/project-lifecycle-roundtrip.test.cjs",
+      "sha256": "5fb669d8e635098fc4122bcb5bdac16a8849db869cbee3373b3ef05739c84d56"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/project-resume.test.cjs",
+      "sha256": "7a07c145eeafb54b0e218e1d76eed06b844594b3d333ba0ad0573c47415f9516"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/project-scaffold.test.cjs",
+      "sha256": "b2b177d421712a564c8d74b4030f0fbc2d55d83fa1e7cb5a47e6206638e4d982"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/project-state.test.cjs",
+      "sha256": "1570f4d1d262f4b0636045034b9afec4dd955db5b673cfe9a065e9b5e6987e82"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/stage-decision.test.cjs",
+      "sha256": "c3cbea99367d6f815f6455fb8c2ab487e76bc11db0932ebb3eb79000573fc423"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/task-abandon.test.cjs",
+      "sha256": "316767b073081d11772342bdb4e20aa1efd467e275ef381fbefe910874f6d2ec"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/task-workflow-structural.test.cjs",
+      "sha256": "525846d49a13d7fd085da7093db9bed7d1661ae15de4ff00598bf0b08392ba7a"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/validate-delivery-contract.test.cjs",
+      "sha256": "779ed0b67bf0726670e092faf7433277f4d27099e0151ca4912ad5070d896599"
+    },
+    {
+      "path": ".claude/commands/do/scripts/__tests__/validate-slug.test.cjs",
+      "sha256": "abd875860cb4219fc5bb96291ead815dddda4e69990b44461b2b179f8378e134"
+    },
+    {
+      "path": ".claude/commands/do/scripts/check-database-entry.cjs",
+      "sha256": "8616c3e0bf07994ec68b34f9db7b0a298e52926387d41452e310e795931e2a9c"
+    },
+    {
+      "path": ".claude/commands/do/scripts/council-gate.cjs",
+      "sha256": "b006c357e6371d127cf98694d7e1604a346be3cd584bfc751bdf425532693832"
+    },
+    {
+      "path": ".claude/commands/do/scripts/council-invoke.cjs",
+      "sha256": "17d8c952d76aa891c65eadae188e59ac4477e13fc659b565f32231030f457ef2"
+    },
+    {
+      "path": ".claude/commands/do/scripts/debug-session.cjs",
+      "sha256": "7a207bf6febccf8ad57388e8c680f5e1701216d43a023ed2af1808ca85c6ed6f"
+    },
+    {
+      "path": ".claude/commands/do/scripts/detect-tools.cjs",
+      "sha256": "805d897a6f6d9d0676ad30754d33f84b802244f6a25d4d92b06d99b24744281f"
+    },
+    {
+      "path": ".claude/commands/do/scripts/lib/validate-slug.cjs",
+      "sha256": "27d156164b16321d3ba5b46944cc9dffe6fbbd9629b706f47459cfe7944a0cd9"
+    },
+    {
+      "path": ".claude/commands/do/scripts/load-task-context.cjs",
+      "sha256": "65780b8a6faaa7a0ec73c2915703c8452df45db9f0c60d7e049f0bad0d5dfbb9"
+    },
+    {
+      "path": ".claude/commands/do/scripts/optimise-target.cjs",
+      "sha256": "d4d7d0492c84e0348916c4d517e6732f0b7c4cfc2f314562434784a701fc396c"
+    },
+    {
+      "path": ".claude/commands/do/scripts/project-health.cjs",
+      "sha256": "e86e51a92bd3611ea768a7eb89bb8d26e8a4b3edde3f4bd2f56dd4d8afe40aaf"
+    },
+    {
+      "path": ".claude/commands/do/scripts/project-resume.cjs",
+      "sha256": "01339526aafead2f040b2d3d0ab460975bd1ea61a0f60f39288682dd601ae892"
+    },
+    {
+      "path": ".claude/commands/do/scripts/project-scaffold.cjs",
+      "sha256": "816467d43033ccbe0af0fbc1cb2db2f7a11e753ae5481f77212af66dd03fadf8"
+    },
+    {
+      "path": ".claude/commands/do/scripts/project-state.cjs",
+      "sha256": "c9d084cbfcc8b560e69be6a92a98559aa382b4654a97e4a76f7027d01e60b958"
+    },
+    {
+      "path": ".claude/commands/do/scripts/read-config.cjs",
+      "sha256": "67efadf4b4b36e7ef4e7bf2dca5f12d1c3bf4f0a7675fdc05c84cc1dd66b74c0"
+    },
+    {
+      "path": ".claude/commands/do/scripts/scan-project.cjs",
+      "sha256": "1c96f37cacbfd0c10a07e37845a3f74ff32ade8e053e6d28b851c33b428c2300"
+    },
+    {
+      "path": ".claude/commands/do/scripts/stage-decision.cjs",
+      "sha256": "2c0cbb28642f1b369bbee1346f48639abfaf657e9e5e434142090197e6247213"
+    },
+    {
+      "path": ".claude/commands/do/scripts/task-abandon.cjs",
+      "sha256": "000b11f000d27ff70bfbcbdae1f767e55479464bc282018fa3baf6c6332bd9c5"
+    },
+    {
+      "path": ".claude/commands/do/scripts/update-task-frontmatter.cjs",
+      "sha256": "13977502a6d63a56aa5642a795f37c877c783074407c95b74d9400d11a1f6242"
+    },
+    {
+      "path": ".claude/commands/do/scripts/validate-delivery-contract.cjs",
+      "sha256": "d4896b248a21d9e71cbd0040900ba167a03c9155efe4ce9903ac5ce25081ba09"
+    },
+    {
+      "path": ".claude/commands/do/scripts/workspace-health.cjs",
+      "sha256": "6a377a073c4efed9112827452e0b28ce1c4b7b7b087d0c205726a4df8695b67a"
+    },
+    {
+      "path": ".claude/commands/do/task.md",
+      "sha256": "87304cbb67667b2920e1d6b1e967929ced76e90d2f4bb6b477eebda3665a344a"
+    },
+    {
+      "path": ".claude/commands/do/update.md",
+      "sha256": "374bb694aba420321d8074a11d2b2e981ee94cd2537f628152207c1ad9b645bd"
+    }
+  ]
+}

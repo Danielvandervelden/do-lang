@@ -111,28 +111,6 @@ Scope: new file `skills/do/scripts/lib/agent-harness.cjs` + a `__tests__/integra
 
 ---
 
-### ~~stage-fast-exec.md: load-task-context.cjs invocation missing description argument~~
-**id:** fast-exec-load-context-arg
-**Status:** DONE (2026-04-28) — task file: `.do/tasks/260428-fix-three-backlog-bug-items.md`
-
-**Problem:** `stage-fast-exec.md` FE-2 shows `node ~/.claude/commands/do/scripts/load-task-context.cjs` without passing the task description as an argument. The script requires a description string for keyword matching and exits with `"No task description provided"` when called bare. This causes agents to fail on first try, then have to guess that a description argument is needed.
-
-**Fix:** Update `stage-fast-exec.md` FE-2 to show the description argument explicitly:
-```bash
-node ~/.claude/commands/do/scripts/load-task-context.cjs "<description>"
-```
-Where `<description>` is the in-session variable already available from the caller contract. One-line fix in the reference file.
-
----
-
-### ~~Rewrite do-lang agent interactions to use AskUserQuestion~~
-**id:** ask-user-question-rewrite
-**Status:** DONE (2026-04-23) — task file: `.do/tasks/260423-ask-user-question-rewrite.md`
-
-**Scope:** All agent definitions in `agents/`, orchestrator skills in `skills/do/`, and reference files in `skills/do/references/`.
-
----
-
 ### Fast-path FE-2 context scan should keyword-match project docs
 **id:** fast-exec-keyword-context
 
@@ -150,33 +128,16 @@ Where `<description>` is the in-session variable already available from the call
 
 ---
 
-### ~~Fix YAML frontmatter parsing for exclude_paths and @scripts/ path resolution~~
-**id:** yaml-frontmatter-parsing
-**Status:** DONE (2026-04-28) — task file: `.do/tasks/260428-fix-three-backlog-bug-items.md`
-
-**Problem:** Two issues surface when `/do:continue` tries to read task frontmatter via `update-task-frontmatter.cjs`:
-
-1. **YAML parsing failure on `exclude_paths`** — The delivery contract writes `exclude_paths: "[\\".do/\\"]"` into task frontmatter. The double-escaped quotes inside the YAML string break the parser: `Error: can not read an implicit mapping pair; a colon is missed`. This blocks any frontmatter read/write operation on tasks with `exclude_paths` set.
-
-2. **`@scripts/` path prefix doesn't resolve from consumer projects** — Skill docs reference scripts as `@scripts/update-task-frontmatter.cjs`, but this `@scripts/` prefix only resolves within the do-lang repo itself. When running from a consumer project (e.g., leaselinq-frontend), the path fails with `MODULE_NOT_FOUND`. The script needs to be locatable via the globally installed `@danielvandervelden/do-lang` npm package.
-
-**Fix:**
-1. Change how `exclude_paths` is written to frontmatter — use YAML array syntax (`exclude_paths: [".do/"]`) or single-quoted strings instead of double-escaped JSON-in-YAML. Also audit other delivery contract fields for similar quoting issues.
-2. For `@scripts/` resolution: either document the correct `require.resolve('@danielvandervelden/do-lang/skills/do/scripts/...')` path in skill docs, or add a runtime resolver that maps `@scripts/` to the installed package path automatically.
-
----
-
-### ~~Reference skills don't support non-.md extensions (e.g. config-template.json)~~
-**id:** json-reference-skill
-**Status:** DONE (2026-04-28) — task file: `.do/tasks/260428-fix-three-backlog-bug-items.md`
-**Problem:** `/do:init` project setup references `@references/config-template.json` but invoking `do:references:config-template.json` as a skill fails with "Unknown skill". The skill system only registers `.md` files as loadable references, so JSON templates can't be loaded via the `@references/` convention. During `/do:init` in go-ai-reviewer-github-app, the template had to be found manually via `find` and read directly — breaking the self-contained reference loading pattern.
-**Fix:** Either register `.json` files as valid reference skills (skill loader strips extension and serves raw content), or convert `config-template.json` to a fenced JSON block inside a `.md` wrapper (e.g. `config-template.md` containing the JSON in a code fence). The `.md` wrapper approach is simpler and requires no skill-loader changes.
----
-
 ### /do:optimise fails at workspace level — checks .do/config.json but workspace uses .do-workspace.json
 **id:** optimise-workspace-init
 **Problem:** Step 1 of `optimise.md` checks for `.do/config.json` only. Workspace-level init (`/do:init` at workspace root) creates `.do-workspace.json` instead. Running `/do:optimise` at `~/workspace` reports "not initialized" and aborts, even though the workspace has `.do-workspace.json` and `.do/tasks/`.
 **Fix:** 1. `optimise.md` Step 1: check for both `.do/config.json` AND `.do-workspace.json` — if either exists, treat as initialized and read the appropriate config. 2. `optimise-target.cjs` `gatherProjectContext` (line 365): also check `.do-workspace.json` as a context file candidate.
+---
+
+### project-scaffold.cjs overwrites phase.md and project.md frontmatter when seeding waves
+**id:** scaffold-frontmatter-overwrite
+**Problem:** When `project-scaffold.cjs` seeds waves into a phase, it overwrites both `phase.md` and `project.md` frontmatter, stripping most fields that were already populated. After running the scaffold for Phase 00 waves, both files had to be manually restored. The scaffold should only update the fields it owns (e.g., `waves[]` array, `active_wave`) without touching other frontmatter fields.
+**Fix:** Change the scaffold's frontmatter write logic to merge new fields into existing frontmatter rather than replacing the entire frontmatter block. Use a read-modify-write pattern: parse existing frontmatter with gray-matter, merge scaffold-owned fields, re-stringify. Audit for the same bug in other scaffold operations (phase seeding into project.md, etc.).
 ---
 
 ### Research de-duplication strategy for Claude/Codex skill files
@@ -185,4 +146,23 @@ Where `<description>` is the in-session variable already available from the call
 **Fix:** Evaluate two approaches: (1) shared reference files + template build step with `{{SPAWN_AGENT planner}}` markers expanding to platform-specific syntax at install time; (2) accepting markdown duplication with a manual sync discipline and tooling to diff the two sets. Make a proper architectural decision before the file count grows further.
 ---
 
+### Runtime-opposite council reviewer selection without Gemini fallback
+**id:** codex-claude-council-reviewer
+**Problem:** Council review should use the opposite AI runtime as the external reviewer: when the primary session is Codex, use Claude; when the primary session is Claude, use Codex. Gemini should not be selected unless the workspace explicitly configures it. The current council invocation path does not honor that ownership boundary: `council-invoke.cjs` has no real Claude invocation implementation, and `case "claude"` falls back to Gemini. Runtime detection also only checks `CODEX_RUNTIME`, while this Codex environment exposes `CODEX_CI`, `CODEX_THREAD_ID`, and `CODEX_MANAGED_BY_NPM`, so the selector can misclassify Codex as Claude and make the wrong reviewer choices.
 
+**Impact:** A workspace/project config that lists `availableTools: ["codex", "claude"]` with `reviewer: "random"` should naturally pick the non-current runtime, but today it can still invoke Gemini or accidentally self-review if runtime detection is wrong. This violates user preference, makes review behavior surprising, and tempts consumer projects or installed command copies to patch do-lang-owned `council-invoke.cjs` directly.
+
+**Fix:** Implement this in do-lang proper:
+1. Add an `invokeClaude` path using the `claude` CLI in headless print mode, with the same timeout/output/verdict parsing behavior as other reviewers.
+2. Update `case "claude"` to call Claude directly and never fall back to Gemini.
+3. Update runtime detection to recognize Codex CLI environment markers such as `CODEX_CI`, `CODEX_THREAD_ID`, and `CODEX_MANAGED_BY_NPM`.
+4. Add tests for reviewer selection and invocation routing: Codex runtime with `availableTools: ["codex", "claude"]` selects Claude; Claude runtime with the same config selects Codex; Gemini is not invoked as fallback.
+5. Update workspace/project health validation so `claude` is accepted anywhere `council_reviews.reviewer` is configured and `availableTools` may list `codex` plus `claude` without requiring Gemini.
+---
+
+### /do:project complete should offer commit, push, release, tag, and update flow
+**id:** project-complete-release-prompt
+**Problem:** After `/do:project complete`, the project state is archived but the user still has to remember the operational release steps manually: commit the feature branch, push it, tag/release/publish if appropriate, and run `/do:update` to refresh installed skills. This is easy to forget because completion feels like the end of the workflow even though the shipped package is not updated yet.
+
+**Fix:** Add a post-completion prompt to the `/do:project complete` flow asking whether the user wants to commit and push the completed feature, then release/tag/publish and run `/do:update`. If accepted, route into the existing release workflow rather than reimplementing release logic inside `/do:project`.
+---

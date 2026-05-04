@@ -1,0 +1,148 @@
+---
+project_schema_version: 1
+project_slug: {{PROJECT_SLUG}}
+phase_slug: {{PHASE_SLUG}}
+wave_slug: {{WAVE_SLUG}}
+title: "{{TITLE}}"
+created: {{CREATED_AT}}
+updated: {{CREATED_AT}}
+status: planning
+scope: in_scope
+pre_abandon_status: null
+backlog_item: null
+parent_project: {{PROJECT_SLUG}}
+parent_phase: {{PHASE_SLUG}}
+stage: refinement
+stages:
+  refinement: pending
+  grilling: pending
+  execution: pending
+  verification: pending
+  abandoned: false
+council_review_ran:
+  plan: false
+  code: false
+confidence:
+  score: null
+  factors:
+    context: null
+    scope: null
+    complexity: null
+    familiarity: null
+modified_files: []
+unresolved_concerns: []
+discovered_followups: []
+wave_summary: null
+# Delivery contract (inherited from parent task or populated by project pipeline)
+# delivery:
+#   branch: null
+#   commit_prefix: null
+#   push_policy: "push"
+#   pr_policy: "create"
+#   stop_after_push: true
+#   exclude_paths: [".do/"]
+---
+
+# {{TITLE}}
+
+## Problem Statement
+
+{{PROBLEM_STATEMENT}}
+
+<!--
+Per D-01: Comprehensive problem statement for session resumption.
+Include: symptoms, impact, related context, any prior attempts.
+This section should have enough detail that /do:project resume can
+fully understand the wave without additional context.
+-->
+
+## Delivery Contract
+
+<!--
+Inherited from parent task or populated by the project pipeline.
+The executioner reads ONLY this section for branch, commit, and push rules.
+
+If empty, the executioner follows project defaults from project.md
+(only when the user explicitly dismissed the onboarding flow).
+Population of this section by the project pipeline is deferred.
+-->
+
+## Approach
+
+{{APPROACH}}
+
+<!--
+Proposed solution and implementation steps.
+Include: proposed solution, files to modify, key decisions.
+-->
+
+## Concerns
+
+{{CONCERNS}}
+
+<!--
+Potential issues, uncertainties, or risks identified during refinement.
+Format:
+- Concern 1: description and potential mitigation
+-->
+
+## Execution Log
+
+<!--
+Populated during implementation (codex-executioner writes here).
+
+Entry format:
+### YYYY-MM-DD HH:MM
+**Files:**
+- `path/to/file.ts` - Change summary
+
+**Decisions:**
+- Plan said X — chose approach Y because Z
+
+**Status:** In progress / Execution complete
+-->
+
+## Verification Results
+
+<!--
+Populated during verification (codex-verifier writes here).
+
+### Approach Checklist
+- [x] Step 1 from Approach section
+- [ ] Step 2 (INCOMPLETE: reason)
+
+### Quality Checks
+- **Lint:** PASS|FAIL
+- **Tests:** PASS|FAIL
+
+### Result: PASS|FAIL
+-->
+
+## Clarifications
+
+<!--
+Populated by codex-griller during per-wave confidence rescue when confidence is below threshold.
+Format:
+### Q1: <question>
+<answer>
+-->
+
+## Review Notes
+
+<!--
+Populated by codex-plan-reviewer and codex-code-reviewer.
+-->
+
+## Council Review
+
+<!--
+Populated by council review stages.
+
+### Plan Review
+- **Reviewer:** <advisor name>
+- **Verdict:** LOOKS_GOOD | CONCERNS | RETHINK
+
+### Code Review
+- **Reviewer:** <advisor name>
+- **Verdict:** APPROVED | NITPICKS_ONLY | CHANGES_REQUESTED
+-->

@@ -12,7 +12,7 @@ Token-efficient meta programming language for Claude Code.
 - **Quality gates**: Parallel plan review + council review (a second AI checks the plan from outside) before execution; code review + verification after
 - **State persistence**: Progress saved in `.do/` so sessions can resume at any stage
 - **Direct user interaction**: Agents ask questions inline via a structured prompt — no going through an intermediary
-- **Installs to Claude Code**: Requires Node.js ≥18 and npm for installation; no separate runtime needed at usage time
+- **Installs to Claude Code or Codex**: Requires Node.js ≥18 and npm for installation; no separate runtime needed at usage time
 
 ## Workspace Architecture
 
@@ -59,7 +59,8 @@ This package is published to **GitHub Packages** under the `@danielvandervelden`
 >
 > 1. Ensure `~/.npmrc` contains the line `@danielvandervelden:registry=https://npm.pkg.github.com` (add it if missing, don't overwrite existing content)
 > 2. Run `npm install -g @danielvandervelden/do-lang --registry https://npm.pkg.github.com`
-> 3. Verify the install by checking that `~/.claude/commands/do/` and `~/.claude/agents/` were populated by the postinstall script
+> 3. When prompted, choose which agent to install for: Claude Code, Codex, or Both
+> 4. Verify the install by checking that the appropriate directories were populated (`~/.claude/commands/do/` for Claude Code, `~/.codex/skills/do/` for Codex)
 
 </details>
 
@@ -75,9 +76,24 @@ This package is published to **GitHub Packages** under the `@danielvandervelden`
 npm install -g @danielvandervelden/do-lang
 ```
 
-The postinstall script copies files to:
-- `~/.claude/commands/do/` — skill files (`/do:*` commands)
-- `~/.claude/agents/` — agent definitions
+The postinstall script prompts you to choose an install target:
+
+```
+do-lang: Install for which agent?
+  [1] Claude Code
+  [2] Codex
+  [3] Both (default)
+Choice:
+```
+
+Files are copied to the selected target(s):
+
+| Target      | Skills                   | Agents              |
+| ----------- | ------------------------ | ------------------- |
+| Claude Code | `~/.claude/commands/do/` | `~/.claude/agents/` |
+| Codex       | `~/.codex/skills/do/`    | `~/.codex/agents/`  |
+
+In non-interactive environments (CI, piped installs), the prompt is skipped and both targets are installed automatically.
 
 ## Quick Start
 
@@ -137,20 +153,20 @@ Reads the task file's YAML frontmatter and picks up at the last completed stage.
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `/do:init` | Initialize workspace or project (database structure, config) |
-| `/do:scan` | Scan a project and create a database entry |
-| `/do:task` | Smart router — auto-selects fast or full pipeline based on task assessment |
-| `/do:fast` | Mid-tier fast path — skip router, run fast-path directly (1-3 files, trivial changes) |
-| `/do:quick` | Tightest tier — inline execution + single council review, no task file on happy path |
-| `/do:continue` | Resume a task from its last completed stage |
-| `/do:abandon` | Pause a task and preserve its state for later |
-| `/do:debug` | Scientific method debugging with persistent session state |
-| `/do:update` | Check for a newer version and self-update |
-| `/do:optimise` | Audit any target (agent, skill, script, project) against best practices |
-| `/do:backlog` | Manage the backlog — list, add, start (promote to task), done (remove) |
-| `/do:project` | Multi-phase project orchestrator — intake, phases, waves, resume |
+| Command        | Description                                                                           |
+| -------------- | ------------------------------------------------------------------------------------- |
+| `/do:init`     | Initialize workspace or project (database structure, config)                          |
+| `/do:scan`     | Scan a project and create a database entry                                            |
+| `/do:task`     | Smart router — auto-selects fast or full pipeline based on task assessment            |
+| `/do:fast`     | Mid-tier fast path — skip router, run fast-path directly (1-3 files, trivial changes) |
+| `/do:quick`    | Tightest tier — inline execution + single council review, no task file on happy path  |
+| `/do:continue` | Resume a task from its last completed stage                                           |
+| `/do:abandon`  | Pause a task and preserve its state for later                                         |
+| `/do:debug`    | Scientific method debugging with persistent session state                             |
+| `/do:update`   | Check for a newer version and self-update                                             |
+| `/do:optimise` | Audit any target (agent, skill, script, project) against best practices               |
+| `/do:backlog`  | Manage the backlog — list, add, start (promote to task), done (remove)                |
+| `/do:project`  | Multi-phase project orchestrator — intake, phases, waves, resume                      |
 
 ### Run a project
 
@@ -179,16 +195,16 @@ State persists in `.do/projects/` — fully separate from `/do:task`'s `.do/task
 
 `/do:task` coordinates eight specialized agents:
 
-| Agent | Role |
-|-------|------|
-| `do-planner` | Creates the task plan, loads context, calculates confidence |
-| `do-plan-reviewer` | Self-review of the plan — returns PASS / CONCERNS / RETHINK |
-| `do-council-reviewer` | External AI council review via `council-invoke.cjs` |
-| `do-griller` | Asks clarifying questions directly via AskUserQuestion when confidence falls below threshold |
-| `do-executioner` | Implements the plan step by step; resolves blocking deviations via AskUserQuestion |
-| `do-code-reviewer` | Self-review of the diff — returns APPROVED / NITPICKS_ONLY / CHANGES_REQUESTED |
-| `do-verifier` | Approach checklist, quality checks, UAT sign-off via AskUserQuestion |
-| `do-debugger` | Scientific method debugging (hypothesis → test → confirm/reject) |
+| Agent                 | Role                                                                                         |
+| --------------------- | -------------------------------------------------------------------------------------------- |
+| `do-planner`          | Creates the task plan, loads context, calculates confidence                                  |
+| `do-plan-reviewer`    | Self-review of the plan — returns PASS / CONCERNS / RETHINK                                  |
+| `do-council-reviewer` | External AI council review via `council-invoke.cjs`                                          |
+| `do-griller`          | Asks clarifying questions directly via AskUserQuestion when confidence falls below threshold |
+| `do-executioner`      | Implements the plan step by step; resolves blocking deviations via AskUserQuestion           |
+| `do-code-reviewer`    | Self-review of the diff — returns APPROVED / NITPICKS_ONLY / CHANGES_REQUESTED               |
+| `do-verifier`         | Approach checklist, quality checks, UAT sign-off via AskUserQuestion                         |
+| `do-debugger`         | Scientific method debugging (hypothesis → test → confirm/reject)                             |
 
 ### Full task flow
 

@@ -173,4 +173,16 @@ Where `<description>` is the in-session variable already available from the call
 **Fix:** Either register `.json` files as valid reference skills (skill loader strips extension and serves raw content), or convert `config-template.json` to a fenced JSON block inside a `.md` wrapper (e.g. `config-template.md` containing the JSON in a code fence). The `.md` wrapper approach is simpler and requires no skill-loader changes.
 ---
 
+### /do:optimise fails at workspace level — checks .do/config.json but workspace uses .do-workspace.json
+**id:** optimise-workspace-init
+**Problem:** Step 1 of `optimise.md` checks for `.do/config.json` only. Workspace-level init (`/do:init` at workspace root) creates `.do-workspace.json` instead. Running `/do:optimise` at `~/workspace` reports "not initialized" and aborts, even though the workspace has `.do-workspace.json` and `.do/tasks/`.
+**Fix:** 1. `optimise.md` Step 1: check for both `.do/config.json` AND `.do-workspace.json` — if either exists, treat as initialized and read the appropriate config. 2. `optimise-target.cjs` `gatherProjectContext` (line 365): also check `.do-workspace.json` as a context file candidate.
+---
+
+### Research de-duplication strategy for Claude/Codex skill files
+**id:** skill-dedup-research
+**Problem:** do-lang is growing beyond a personal project, making the maintenance cost of duplicating skill/agent `.md` files across Claude and Codex targets a real concern. The `Agent(...)` call blocks are the only platform-specific parts of reference files — the rest of the prose logic is identical across both skill sets.
+**Fix:** Evaluate two approaches: (1) shared reference files + template build step with `{{SPAWN_AGENT planner}}` markers expanding to platform-specific syntax at install time; (2) accepting markdown duplication with a manual sync discipline and tooling to diff the two sets. Make a proper architectural decision before the file count grows further.
+---
+
 

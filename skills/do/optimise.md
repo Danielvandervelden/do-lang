@@ -46,14 +46,26 @@ Existing review stages focus on plan fitness and code correctness for a specific
 
 ## Step 1: Check Prerequisites
 
-Read `.do/config.json` to confirm the project is initialized and to check ctx7 availability:
+Read `.do/config.json` or `.do-workspace.json` to confirm the target is initialized and to check ctx7 availability:
 
 ```bash
 node -e "
 try {
-  const c = require('./.do/config.json');
+  const fs = require('fs');
+  const candidates = [
+    { path: './.do/config.json', type: 'project' },
+    { path: './.do-workspace.json', type: 'workspace' },
+  ];
+  const match = candidates.find(c => fs.existsSync(c.path));
+  if (!match) throw new Error('No .do/config.json or .do-workspace.json found');
+  const c = JSON.parse(fs.readFileSync(match.path, 'utf8'));
   const ctx7 = c.web_search?.context7 !== false;
-  console.log(JSON.stringify({ initialized: true, ctx7_enabled: ctx7 }));
+  console.log(JSON.stringify({
+    initialized: true,
+    config_type: match.type,
+    config_path: match.path,
+    ctx7_enabled: ctx7
+  }));
 } catch (e) {
   console.log(JSON.stringify({ initialized: false, ctx7_enabled: false, error: e.message }));
 }
@@ -148,7 +160,7 @@ Use the `peer_file_patterns` from the script output to find similar files in the
 Glob("<pattern>", path: "<project_root>")
 ```
 
-Use the directory containing `.do/config.json` as `<project_root>` — this ensures correct results regardless of CWD.
+Use the directory containing `.do/config.json` or `.do-workspace.json` as `<project_root>` — this ensures correct results regardless of CWD.
 
 Read up to 5 peer files. Compare against the target:
 - What sections/keys do peers have that the target is missing?

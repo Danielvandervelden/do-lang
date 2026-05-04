@@ -121,10 +121,12 @@ function serializeFrontmatter(data, bodyContent) {
 function atomicAppendToIndex(indexPath, arrayField, entry) {
   const parsed = parseFrontmatter(indexPath);
   const data = parsed.data || {};
-  if (!Array.isArray(data[arrayField])) data[arrayField] = [];
-  data[arrayField].push(entry);
-  data.updated = new Date().toISOString();
-  const newContent = serializeFrontmatter(data, parsed.content);
+  const existingEntries = Array.isArray(data[arrayField]) ? data[arrayField] : [];
+  const newContent = serializeFrontmatter({
+    ...data,
+    [arrayField]: [...existingEntries, entry],
+    updated: new Date().toISOString(),
+  }, parsed.content);
   atomicWrite(indexPath, newContent);
 }
 

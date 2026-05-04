@@ -480,6 +480,22 @@ describe('gatherProjectContext — effort medium', () => {
     }
   });
 
+  test('includes workspace config for workspace-level optimisation', () => {
+    const tmpDir = createTempDir({
+      '.do-workspace.json': '{"version": "1", "workspace": "/tmp/workspace"}',
+      'package.json': '{"name": "workspace-root"}',
+    });
+    try {
+      const result = gatherProjectContext(tmpDir, 'medium');
+      assert.ok(
+        result.context_files.includes('.do-workspace.json'),
+        'workspace-level config should be included in medium context files'
+      );
+    } finally {
+      removeTempDir(tmpDir);
+    }
+  });
+
   test('context_files capped at 10', () => {
     // Create a project with many files
     const structure = {};

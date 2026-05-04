@@ -365,6 +365,9 @@ function gatherProjectContext(projectPath, effort) {
     const configPath = path.join(projectPath, '.do', 'config.json');
     if (fileExists(configPath)) candidates.push('.do/config.json');
 
+    const workspaceConfigPath = path.join(projectPath, '.do-workspace.json');
+    if (fileExists(workspaceConfigPath)) candidates.push('.do-workspace.json');
+
     const pkgPath = path.join(projectPath, 'package.json');
     if (fileExists(pkgPath)) candidates.push('package.json');
 

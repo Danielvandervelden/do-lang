@@ -1,6 +1,6 @@
 {
   "name": "@danielvandervelden/do-lang",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Token-efficient meta programming language for Claude Code and Codex",
   "files": [
     "skills",

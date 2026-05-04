@@ -61,37 +61,6 @@
 
 ---
 
-### /do:continue — skip context reload when context is demonstrably fresh
-**id:** continue-skip-reload
-
-**Problem:** `resume-preamble.md` Step R0.2 says "Since Claude cannot reliably introspect its context window, always proceed to R0.3" — meaning `load-task-context.cjs` runs unconditionally on every `/do:continue`. This re-reads `project.md` + all matched docs even immediately after a `/do:task` where the planner just loaded them in the same session. The workaround note ("Skip reload ONLY IF context was explicitly loaded earlier in this conversation") is aspirational — in practice it's always skipped due to the override.
-
-**Before implementing:** Verify whether this is actually causing noticeable token waste in real sessions. Check if Claude's context window does reliably contain prior load-task-context output after a plan stage. If the "always reload" behavior is intentional and the cost is low, this may not be worth the added complexity.
-
-**Potential fix:** Add a `--no-reload` flag to the `/do:continue` invocation that the orchestrator can pass when it knows context is fresh (e.g., immediately after plan approval before handing off to execution). Alternatively, detect whether the task description appears verbatim in the current conversation to short-circuit the reload. Keep the unconditional reload as the safe default.
-
-**Scope:** `skills/do/references/resume-preamble.md` + potentially `skills/do/continue.md` and `skills/do/task.md` for flag threading.
-
----
-
-### test-check-database-entry-empty — test coverage for 100-byte empty detection
-**id:** test-check-database-entry-empty
-
-**Problem:** `scripts/check-database-entry.cjs` has a "100-byte empty file" detection path that is not covered by tests. The logic was added/changed during a recent task but no unit test was written for it.
-
-**Fix:** Add a test in `scripts/__tests__/` that creates a stub file under 100 bytes and asserts `check-database-entry.cjs` treats it as empty/missing.
-
----
-
-### test-task-abandon-deep-clone — test coverage for task-abandon.cjs deep-clone fix
-**id:** test-task-abandon-deep-clone
-
-**Problem:** `scripts/task-abandon.cjs` received a deep-clone bug fix (gray-matter cache mutation) in a recent task but no unit test was written for the mutation-free path.
-
-**Fix:** Add a test in `scripts/__tests__/` that calls the abandon logic twice on the same task file and asserts the frontmatter of the original file object is not mutated by the second call.
-
----
-
 ### Agent-behavior integration test harness — end-to-end do-executioner / do-verifier testing
 **id:** agent-behavior-harness
 
@@ -128,27 +97,8 @@ Scope: new file `skills/do/scripts/lib/agent-harness.cjs` + a `__tests__/integra
 
 ---
 
-### /do:optimise fails at workspace level — checks .do/config.json but workspace uses .do-workspace.json
-**id:** optimise-workspace-init
-**Problem:** Step 1 of `optimise.md` checks for `.do/config.json` only. Workspace-level init (`/do:init` at workspace root) creates `.do-workspace.json` instead. Running `/do:optimise` at `~/workspace` reports "not initialized" and aborts, even though the workspace has `.do-workspace.json` and `.do/tasks/`.
-**Fix:** 1. `optimise.md` Step 1: check for both `.do/config.json` AND `.do-workspace.json` — if either exists, treat as initialized and read the appropriate config. 2. `optimise-target.cjs` `gatherProjectContext` (line 365): also check `.do-workspace.json` as a context file candidate.
----
-
-### project-scaffold.cjs overwrites phase.md and project.md frontmatter when seeding waves
-**id:** scaffold-frontmatter-overwrite
-**Problem:** When `project-scaffold.cjs` seeds waves into a phase, it overwrites both `phase.md` and `project.md` frontmatter, stripping most fields that were already populated. After running the scaffold for Phase 00 waves, both files had to be manually restored. The scaffold should only update the fields it owns (e.g., `waves[]` array, `active_wave`) without touching other frontmatter fields.
-**Fix:** Change the scaffold's frontmatter write logic to merge new fields into existing frontmatter rather than replacing the entire frontmatter block. Use a read-modify-write pattern: parse existing frontmatter with gray-matter, merge scaffold-owned fields, re-stringify. Audit for the same bug in other scaffold operations (phase seeding into project.md, etc.).
----
-
 ### Research de-duplication strategy for Claude/Codex skill files
 **id:** skill-dedup-research
 **Problem:** do-lang is growing beyond a personal project, making the maintenance cost of duplicating skill/agent `.md` files across Claude and Codex targets a real concern. The `Agent(...)` call blocks are the only platform-specific parts of reference files — the rest of the prose logic is identical across both skill sets.
 **Fix:** Evaluate two approaches: (1) shared reference files + template build step with `{{SPAWN_AGENT planner}}` markers expanding to platform-specific syntax at install time; (2) accepting markdown duplication with a manual sync discipline and tooling to diff the two sets. Make a proper architectural decision before the file count grows further.
----
-
-### /do:project complete should offer commit, push, release, tag, and update flow
-**id:** project-complete-release-prompt
-**Problem:** After `/do:project complete`, the project state is archived but the user still has to remember the operational release steps manually: commit the feature branch, push it, tag/release/publish if appropriate, and run `/do:update` to refresh installed skills. This is easy to forget because completion feels like the end of the workflow even though the shipped package is not updated yet.
-
-**Fix:** Add a post-completion prompt to the `/do:project complete` flow asking whether the user wants to commit and push the completed feature, then release/tag/publish and run `/do:update`. If accepted, route into the existing release workflow rather than reimplementing release logic inside `/do:project`.
 ---

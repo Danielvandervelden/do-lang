@@ -18,6 +18,7 @@ const assert = require("node:assert");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const matter = require("gray-matter");
 
 // Import functions after file is created
 let checkActiveTask, abandonTask;
@@ -232,6 +233,41 @@ stages:
       const result = abandonTask(configPath, "nonexistent-task.md");
       assert.strictEqual(result.success, false);
       assert.match(result.error, /not found/i);
+    });
+
+    it("does not mutate previously parsed frontmatter objects across abandon calls", () => {
+      const taskFile = "260413-test-task.md";
+      const taskPath = path.join(tasksDir, taskFile);
+      const taskContent = `---
+stage: execution
+stages:
+  refinement: complete
+  execution: in_progress
+  abandoned: false
+---
+# Test
+`;
+      fs.writeFileSync(taskPath, taskContent);
+      fs.writeFileSync(configPath, JSON.stringify({ active_task: taskFile }));
+
+      const parsedOriginal = matter(taskContent);
+
+      const firstResult = abandonTask(configPath, taskFile);
+      assert.strictEqual(firstResult.success, true);
+      assert.strictEqual(parsedOriginal.data.stage, "execution");
+      assert.strictEqual(parsedOriginal.data.stages.execution, "in_progress");
+      assert.strictEqual(parsedOriginal.data.stages.abandoned, false);
+      assert.strictEqual(parsedOriginal.data.pre_abandon_stage, undefined);
+
+      const abandonedContent = fs.readFileSync(taskPath, "utf-8");
+      const parsedAbandoned = matter(abandonedContent);
+
+      const secondResult = abandonTask(configPath, taskFile);
+      assert.strictEqual(secondResult.success, true);
+      assert.strictEqual(parsedAbandoned.data.stage, "abandoned");
+      assert.strictEqual(parsedAbandoned.data.stages.execution, "abandoned");
+      assert.strictEqual(parsedAbandoned.data.stages.abandoned, true);
+      assert.strictEqual(parsedAbandoned.data.pre_abandon_stage, "execution");
     });
   });
 });

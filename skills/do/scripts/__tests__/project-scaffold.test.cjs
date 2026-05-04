@@ -37,6 +37,7 @@ const {
 } = require('../project-scaffold.cjs');
 
 const { parseFrontmatter } = require('../project-state.cjs');
+const { updateFrontmatterField } = require('../project-state.cjs');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -275,6 +276,35 @@ describe('opPhase', () => {
     assert.strictEqual(fm.phases[0].status, 'planning');
   });
 
+  it('preserves existing project.md frontmatter when appending phases[]', () => {
+    const projectMdPath = path.join(projectsDir, 'my-proj', 'project.md');
+    updateFrontmatterField(projectMdPath, {
+      status: 'planning',
+      active_phase: '00-existing',
+      database_entry: true,
+      tech_stack: ['node', 'markdown'],
+      confidence: {
+        score: 0.93,
+        factors: { context: 0.9, scope: 0.95, complexity: 0.88, familiarity: 0.99 },
+      },
+      custom_field: { keep: true },
+    });
+
+    captureStdout(() => opPhase(projectsDir, 'my-proj', 'discovery'));
+
+    const fm = readFm(projectMdPath);
+    assert.strictEqual(fm.status, 'planning');
+    assert.strictEqual(fm.active_phase, '00-existing');
+    assert.strictEqual(fm.database_entry, true);
+    assert.deepStrictEqual(fm.tech_stack, ['node', 'markdown']);
+    assert.deepStrictEqual(fm.confidence, {
+      score: 0.93,
+      factors: { context: 0.9, scope: 0.95, complexity: 0.88, familiarity: 0.99 },
+    });
+    assert.deepStrictEqual(fm.custom_field, { keep: true });
+    assert.deepStrictEqual(fm.phases, [{ slug: '01-discovery', status: 'planning' }]);
+  });
+
   it('appends scaffold changelog entry for phase', () => {
     captureStdout(() => opPhase(projectsDir, 'my-proj', 'discovery'));
     const changelog = fs.readFileSync(path.join(projectsDir, 'my-proj', 'changelog.md'), 'utf-8');
@@ -373,6 +403,35 @@ describe('opWave', () => {
     assert.strictEqual(fm.waves.length, 1);
     assert.strictEqual(fm.waves[0].slug, '01-intake');
     assert.strictEqual(fm.waves[0].status, 'planning');
+  });
+
+  it('preserves existing phase.md frontmatter when appending waves[]', () => {
+    const phaseMdPath = path.join(projectsDir, 'my-proj', 'phases', '01-discovery', 'phase.md');
+    updateFrontmatterField(phaseMdPath, {
+      status: 'in_progress',
+      active_wave: '00-existing',
+      backlog_item: 'BL-123',
+      council_review_ran: { plan: true },
+      confidence: {
+        score: 0.91,
+        factors: { context: 0.92, scope: 0.9, complexity: 0.87, familiarity: 0.95 },
+      },
+      custom_phase_field: { keep: true },
+    });
+
+    captureStdout(() => opWave(projectsDir, 'my-proj', '01-discovery', 'intake'));
+
+    const fm = readFm(phaseMdPath);
+    assert.strictEqual(fm.status, 'in_progress');
+    assert.strictEqual(fm.active_wave, '00-existing');
+    assert.strictEqual(fm.backlog_item, 'BL-123');
+    assert.deepStrictEqual(fm.council_review_ran, { plan: true });
+    assert.deepStrictEqual(fm.confidence, {
+      score: 0.91,
+      factors: { context: 0.92, scope: 0.9, complexity: 0.87, familiarity: 0.95 },
+    });
+    assert.deepStrictEqual(fm.custom_phase_field, { keep: true });
+    assert.deepStrictEqual(fm.waves, [{ slug: '01-intake', status: 'planning' }]);
   });
 
   it('appends scaffold changelog entry for wave', () => {

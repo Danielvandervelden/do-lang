@@ -7,6 +7,8 @@ description: "Template for .do/config.json. Used by /do:init project setup."
 
 Copy the JSON below into `.do/config.json`. Substitute `{{PROJECT_NAME}}` with the confirmed project name and apply user choices for council, models, threshold, and database fields.
 
+Supported `council_reviews.reviewer` values: `claude`, `codex`, `gemini`, `both`, `random`.
+
 ```json
 {
   "version": "0.3.0",

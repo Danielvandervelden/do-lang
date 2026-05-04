@@ -173,7 +173,15 @@ function resolveConfig(
  * @returns {'claude'|'codex'} Current runtime
  */
 function detectRuntime() {
-  return process.env.CODEX_RUNTIME ? "codex" : "claude";
+  const codexMarkers = [
+    "CODEX_RUNTIME",
+    "CODEX_CI",
+    "CODEX_THREAD_ID",
+    "CODEX_MANAGED_BY_NPM",
+  ];
+  return codexMarkers.some((marker) => Boolean(process.env[marker]))
+    ? "codex"
+    : "claude";
 }
 
 /**
@@ -248,12 +256,17 @@ function selectReviewer(configured, currentRuntime, availableOverride = null) {
     return selectRandomReviewer(available);
   }
 
-  // Check if configured reviewer is available
+  // Check if configured reviewer is available.
   if (available.includes(configured)) {
     return configured;
   }
 
-  // Invalid or unavailable reviewer - fall back to random
+  // Explicit valid reviewers must not silently fall back to a different advisor.
+  if (VALID_REVIEWERS.includes(configured)) {
+    return null;
+  }
+
+  // Invalid reviewer values fall back to random for backward compatibility.
   return selectRandomReviewer(available);
 }
 
@@ -737,12 +750,116 @@ async function invokeGemini(
 }
 
 /**
+ * Invoke Claude CLI in non-interactive print mode.
+ * @param {string} briefPath - Path to briefing file
+ * @param {number} timeout - Timeout in milliseconds
+ * @param {string} reviewType - Review type: 'plan' or 'code'
+ * @returns {Promise<Object>} Invocation result
+ */
+async function invokeClaude(
+  briefPath,
+  timeout = DEFAULT_TIMEOUT,
+  reviewType = "plan",
+) {
+  return new Promise((resolve) => {
+    let briefContent;
+    try {
+      briefContent = fs.readFileSync(briefPath, "utf-8");
+    } catch (err) {
+      resolve({
+        success: false,
+        error: `Failed to read brief: ${err.message}`,
+        output: "",
+      });
+      return;
+    }
+
+    let settled = false;
+    const settle = (value) => {
+      if (!settled) {
+        settled = true;
+        resolve(value);
+      }
+    };
+
+    const ac = new AbortController();
+    const timer = setTimeout(() => {
+      ac.abort();
+      settle({ success: false, error: "Timeout", output: "" });
+    }, timeout);
+
+    const proc = spawn("claude", ["--print"], {
+      stdio: ["pipe", "pipe", "pipe"],
+      signal: ac.signal,
+    });
+
+    let stdout = "";
+    let stderr = "";
+    proc.stdout.on("data", (d) => (stdout += d));
+    proc.stderr.on("data", (d) => (stderr += d));
+
+    proc.stdin.on("error", () => {});
+    try {
+      proc.stdin.write(briefContent);
+      proc.stdin.end();
+    } catch {
+      clearTimeout(timer);
+      ac.abort();
+      settle({ success: false, error: "EPIPE", output: "" });
+    }
+
+    proc.on("close", (code) => {
+      clearTimeout(timer);
+      if (code === 0 && stdout.trim()) {
+        settle({
+          success: true,
+          output: stdout,
+          verdict: parseVerdict(stdout, reviewType),
+          findings: parseFindings(stdout),
+          recommendations: parseRecommendations(stdout),
+        });
+      } else {
+        settle({
+          success: false,
+          error: stderr || "Empty output",
+          output: stdout,
+        });
+      }
+    });
+
+    proc.on("error", (err) => {
+      clearTimeout(timer);
+      if (err.name !== "AbortError") {
+        settle({ success: false, error: err.message, output: "" });
+      }
+    });
+  });
+}
+
+function getAdvisorInvoker(advisor) {
+  switch (advisor) {
+    case "codex":
+      return ({ briefPath, timeout, reviewType }) =>
+        invokeCodex(briefPath, timeout, reviewType);
+    case "gemini":
+      return ({ briefPath, workspace, timeout, reviewType }) =>
+        invokeGemini(briefPath, workspace, timeout, reviewType);
+    case "claude":
+      return ({ briefPath, timeout, reviewType }) =>
+        invokeClaude(briefPath, timeout, reviewType);
+    default:
+      return null;
+  }
+}
+
+/**
  * Run both available advisors in parallel (per D-43, D-42)
  * Runtime-aware: excludes current runtime from advisors to prevent self-review
  * @param {string} briefPath - Path to briefing file
  * @param {string} workspace - Workspace path
  * @param {number} timeout - Timeout in milliseconds
  * @param {string} reviewType - Review type: 'plan' or 'code'
+ * @param {string[]|null} availableReviewers - Available external reviewers from resolved config
  * @returns {Promise<Object>} Combined result
  */
 async function invokeBoth(
@@ -750,56 +867,59 @@ async function invokeBoth(
   workspace,
   timeout = DEFAULT_TIMEOUT,
   reviewType = "plan",
+  availableReviewers = null,
 ) {
   const currentRuntime = detectRuntime();
+  const reviewers = availableReviewers || getAvailableReviewers(currentRuntime);
+  const advisorEntries = reviewers
+    .filter((advisor) => advisor !== currentRuntime)
+    .map((advisor) => ({ advisor, invoke: getAdvisorInvoker(advisor) }))
+    .filter((entry) => entry.invoke);
 
-  // Per D-42: In Claude Code, use Codex + Gemini. In Codex runtime, use Claude + Gemini.
-  // Claude-as-reviewer deferred to Phase 12, so for now always use Codex + Gemini
-  // but skip Codex if we're in Codex runtime (use Gemini only)
-  let advisorPromises;
-  let advisorNames;
-
-  if (currentRuntime === "codex") {
-    // In Codex runtime: only Gemini available (Claude support deferred to Phase 12)
-    advisorPromises = [invokeGemini(briefPath, workspace, timeout, reviewType)];
-    advisorNames = ["gemini"];
-  } else {
-    // In Claude Code runtime: Codex + Gemini
-    advisorPromises = [
-      invokeCodex(briefPath, timeout, reviewType),
-      invokeGemini(briefPath, workspace, timeout, reviewType),
-    ];
-    advisorNames = ["codex", "gemini"];
+  if (advisorEntries.length === 0) {
+    return {
+      success: true,
+      skipped: true,
+      reason:
+        "No external reviewers available for this runtime/config combination",
+      advisor: "both",
+      verdict: null,
+      findings: [],
+      recommendations: [],
+      raw: {},
+    };
   }
 
-  const results = await Promise.allSettled(advisorPromises);
+  const results = await Promise.allSettled(
+    advisorEntries.map((entry) =>
+      entry.invoke({ briefPath, workspace, timeout, reviewType }),
+    ),
+  );
 
-  const codexResult = advisorNames.includes("codex") ? results[0] : null;
-  const geminiResult = advisorNames.includes("codex") ? results[1] : results[0];
-
-  const codex = codexResult
-    ? codexResult.status === "fulfilled"
-      ? codexResult.value
-      : { success: false, error: codexResult.reason }
-    : null;
-  const gemini =
-    geminiResult.status === "fulfilled"
-      ? geminiResult.value
-      : { success: false, error: geminiResult.reason };
+  const raw = {};
+  for (const [idx, entry] of advisorEntries.entries()) {
+    const result = results[idx];
+    raw[entry.advisor] =
+      result.status === "fulfilled"
+        ? result.value
+        : { success: false, error: result.reason };
+  }
 
   // Synthesize results
   const verdicts = [];
-  if (codex && codex.success) verdicts.push(codex.verdict);
-  if (gemini.success) verdicts.push(gemini.verdict);
+  for (const result of Object.values(raw)) {
+    if (result.success) verdicts.push(result.verdict);
+  }
 
   // Determine combined verdict
   let combinedVerdict = "CONCERNS"; // Default
-  if (verdicts.length === 2) {
-    if (verdicts[0] === verdicts[1]) {
-      // Agreement
+  if (verdicts.length === 1) {
+    combinedVerdict = verdicts[0];
+  } else if (verdicts.length > 1) {
+    const uniqueVerdicts = new Set(verdicts);
+    if (uniqueVerdicts.size === 1) {
       combinedVerdict = verdicts[0];
     } else {
-      // Disagreement - use more cautious verdict
       const cautionOrder = [
         "RETHINK",
         "CHANGES_REQUESTED",
@@ -812,24 +932,23 @@ async function invokeBoth(
         (a, b) => cautionOrder.indexOf(a) - cautionOrder.indexOf(b),
       )[0];
     }
-  } else if (verdicts.length === 1) {
-    combinedVerdict = verdicts[0];
   }
 
   // Combine findings and recommendations
-  const allFindings = [...(codex?.findings || []), ...(gemini.findings || [])];
-  const allRecs = [
-    ...(codex?.recommendations || []),
-    ...(gemini.recommendations || []),
-  ];
+  const allFindings = Object.values(raw).flatMap(
+    (result) => result.findings || [],
+  );
+  const allRecs = Object.values(raw).flatMap(
+    (result) => result.recommendations || [],
+  );
 
   return {
-    success: codex?.success || gemini.success,
+    success: Object.values(raw).some((result) => result.success),
     advisor: "both",
     verdict: combinedVerdict,
     findings: allFindings,
     recommendations: allRecs,
-    raw: { codex, gemini },
+    raw,
   };
 }
 
@@ -895,11 +1014,16 @@ async function invokeCouncil(options) {
 
   // Handle case where no reviewers are available (e.g., single-tool setup)
   if (selectedReviewer === null) {
+    const explicitUnavailable =
+      VALID_REVIEWERS.includes(effectiveReviewer) &&
+      !["random", "both", currentRuntime].includes(effectiveReviewer) &&
+      !available.includes(effectiveReviewer);
     return {
       success: true,
       skipped: true,
-      reason:
-        "No external reviewers available for this runtime/config combination",
+      reason: explicitUnavailable
+        ? `Configured reviewer '${effectiveReviewer}' is not available for this runtime/config combination`
+        : "No external reviewers available for this runtime/config combination",
       advisor: null,
       verdict: null,
     };
@@ -943,16 +1067,17 @@ async function invokeCouncil(options) {
         result.advisor = "gemini";
         break;
       case "claude":
-        // Claude-as-reviewer only valid in Codex runtime (Phase 12)
-        // For now, fall back to gemini
-        process.stderr.write(
-          "council: claude reviewer not available, falling back to gemini\n",
-        );
-        result = await invokeGemini(briefPath, workspace, timeout, type);
-        result.advisor = "gemini";
+        result = await invokeClaude(briefPath, timeout, type);
+        result.advisor = "claude";
         break;
       case "both":
-        result = await invokeBoth(briefPath, workspace, timeout, type);
+        result = await invokeBoth(
+          briefPath,
+          workspace,
+          timeout,
+          type,
+          available,
+        );
         break;
       default:
         return {
@@ -1072,6 +1197,7 @@ module.exports = {
   // Invocation functions
   invokeCodex,
   invokeGemini,
+  invokeClaude,
   invokeBoth,
   invokeCouncil,
   // Config functions (D-49, D-54, D-55, D-56)

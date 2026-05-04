@@ -18,7 +18,14 @@ const { test, describe, mock, beforeEach, afterEach } = require("node:test");
 const assert = require("node:assert");
 const path = require("path");
 const os = require("os");
-const { mkdtempSync, writeFileSync, rmSync, mkdirSync } = require("fs");
+const {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  writeFileSync,
+  rmSync,
+  mkdirSync,
+} = require("fs");
 
 // Import the module
 const modulePath = path.join(__dirname, "..", "council-invoke.cjs");
@@ -27,6 +34,8 @@ let detectRuntime,
   parseVerdict,
   invokeCodex,
   invokeGemini,
+  invokeClaude,
+  invokeBoth,
   invokeCouncil,
   getAvailableReviewers,
   findWorkspaceConfig,
@@ -46,6 +55,8 @@ try {
   parseVerdict = mod.parseVerdict;
   invokeCodex = mod.invokeCodex;
   invokeGemini = mod.invokeGemini;
+  invokeClaude = mod.invokeClaude;
+  invokeBoth = mod.invokeBoth;
   invokeCouncil = mod.invokeCouncil;
   getAvailableReviewers = mod.getAvailableReviewers;
   findWorkspaceConfig = mod.findWorkspaceConfig;
@@ -67,6 +78,8 @@ try {
   parseVerdict = notImplemented;
   invokeCodex = notImplemented;
   invokeGemini = notImplemented;
+  invokeClaude = notImplemented;
+  invokeBoth = notImplemented;
   invokeCouncil = notImplemented;
   getAvailableReviewers = notImplemented;
   findWorkspaceConfig = notImplemented;
@@ -83,48 +96,52 @@ try {
 
 describe("detectRuntime", () => {
   let originalEnv;
+  const codexMarkers = [
+    "CODEX_RUNTIME",
+    "CODEX_CI",
+    "CODEX_THREAD_ID",
+    "CODEX_MANAGED_BY_NPM",
+  ];
 
   beforeEach(() => {
-    originalEnv = process.env.CODEX_RUNTIME;
-  });
-
-  afterEach(() => {
-    if (originalEnv === undefined) {
-      delete process.env.CODEX_RUNTIME;
-    } else {
-      process.env.CODEX_RUNTIME = originalEnv;
+    originalEnv = Object.fromEntries(
+      codexMarkers.map((marker) => [marker, process.env[marker]]),
+    );
+    for (const marker of codexMarkers) {
+      delete process.env[marker];
     }
   });
 
-  test("returns 'claude' when CODEX_RUNTIME not set", () => {
-    delete process.env.CODEX_RUNTIME;
+  afterEach(() => {
+    for (const marker of codexMarkers) {
+      if (originalEnv[marker] === undefined) {
+        delete process.env[marker];
+      } else {
+        process.env[marker] = originalEnv[marker];
+      }
+    }
+  });
+
+  test("returns 'claude' when no Codex markers are set", () => {
     const result = detectRuntime();
     assert.strictEqual(
       result,
       "claude",
-      "should return 'claude' when CODEX_RUNTIME is not set",
+      "should return 'claude' when no Codex marker is set",
     );
   });
 
-  test("returns 'codex' when CODEX_RUNTIME=1", () => {
-    process.env.CODEX_RUNTIME = "1";
-    const result = detectRuntime();
-    assert.strictEqual(
-      result,
-      "codex",
-      "should return 'codex' when CODEX_RUNTIME is set",
-    );
-  });
-
-  test("returns 'codex' when CODEX_RUNTIME is any truthy value", () => {
-    process.env.CODEX_RUNTIME = "true";
-    const result = detectRuntime();
-    assert.strictEqual(
-      result,
-      "codex",
-      "should return 'codex' when CODEX_RUNTIME is truthy",
-    );
-  });
+  for (const marker of codexMarkers) {
+    test(`returns 'codex' when ${marker} is set`, () => {
+      process.env[marker] = "1";
+      const result = detectRuntime();
+      assert.strictEqual(
+        result,
+        "codex",
+        `should return 'codex' when ${marker} is set`,
+      );
+    });
+  }
 });
 
 // ============================================================================
@@ -200,6 +217,33 @@ describe("selectReviewer", () => {
       result === "codex" || result === "gemini",
       `invalid reviewer should fall back to random, got '${result}'`,
     );
+  });
+
+  test("explicit available-but-filtered Claude reviewer does not fall back to Gemini", () => {
+    const result = selectReviewer("claude", "codex", ["gemini"]);
+    assert.strictEqual(
+      result,
+      null,
+      "explicit unavailable Claude reviewer should skip instead of selecting Gemini",
+    );
+  });
+
+  test('random selects Claude in Codex runtime with availableTools ["codex", "claude"]', () => {
+    const available = getAvailableReviewers("codex", {
+      availableTools: ["codex", "claude"],
+    });
+    const result = selectReviewer("random", "codex", available);
+    assert.deepStrictEqual(available, ["claude"]);
+    assert.strictEqual(result, "claude");
+  });
+
+  test('random selects Codex in Claude runtime with availableTools ["codex", "claude"]', () => {
+    const available = getAvailableReviewers("claude", {
+      availableTools: ["codex", "claude"],
+    });
+    const result = selectReviewer("random", "claude", available);
+    assert.deepStrictEqual(available, ["codex"]);
+    assert.strictEqual(result, "codex");
   });
 });
 
@@ -433,6 +477,22 @@ describe("Module exports", () => {
     );
   });
 
+  test("exports invokeClaude function", () => {
+    assert.strictEqual(
+      typeof invokeClaude,
+      "function",
+      "invokeClaude should be a function",
+    );
+  });
+
+  test("exports invokeBoth function", () => {
+    assert.strictEqual(
+      typeof invokeBoth,
+      "function",
+      "invokeBoth should be a function",
+    );
+  });
+
   test("exports invokeCouncil function", () => {
     assert.strictEqual(
       typeof invokeCouncil,
@@ -457,6 +517,229 @@ describe("Module exports", () => {
       "function",
       "resolveConfig should be a function",
     );
+  });
+});
+
+// ============================================================================
+// Invocation routing tests
+// ============================================================================
+
+describe("invokeCouncil reviewer routing", () => {
+  let tempDir;
+  let originalPath;
+  let originalCodexRuntime;
+  let originalCodexCi;
+  let originalCodexThreadId;
+  let originalCodexManagedByNpm;
+
+  beforeEach(() => {
+    tempDir = mkdtempSync(path.join(os.tmpdir(), "council-routing-test-"));
+    originalPath = process.env.PATH;
+    originalCodexRuntime = process.env.CODEX_RUNTIME;
+    originalCodexCi = process.env.CODEX_CI;
+    originalCodexThreadId = process.env.CODEX_THREAD_ID;
+    originalCodexManagedByNpm = process.env.CODEX_MANAGED_BY_NPM;
+    delete process.env.CODEX_RUNTIME;
+    delete process.env.CODEX_CI;
+    delete process.env.CODEX_THREAD_ID;
+    delete process.env.CODEX_MANAGED_BY_NPM;
+  });
+
+  afterEach(() => {
+    process.env.PATH = originalPath;
+    if (originalCodexRuntime === undefined) {
+      delete process.env.CODEX_RUNTIME;
+    } else {
+      process.env.CODEX_RUNTIME = originalCodexRuntime;
+    }
+    if (originalCodexCi === undefined) {
+      delete process.env.CODEX_CI;
+    } else {
+      process.env.CODEX_CI = originalCodexCi;
+    }
+    if (originalCodexThreadId === undefined) {
+      delete process.env.CODEX_THREAD_ID;
+    } else {
+      process.env.CODEX_THREAD_ID = originalCodexThreadId;
+    }
+    if (originalCodexManagedByNpm === undefined) {
+      delete process.env.CODEX_MANAGED_BY_NPM;
+    } else {
+      process.env.CODEX_MANAGED_BY_NPM = originalCodexManagedByNpm;
+    }
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  function writeExecutable(name, body) {
+    const binDir = path.join(tempDir, "bin");
+    mkdirSync(binDir, { recursive: true });
+    const filePath = path.join(binDir, name);
+    writeFileSync(filePath, body);
+    chmodSync(filePath, 0o755);
+    process.env.PATH = `${binDir}${path.delimiter}${originalPath}`;
+    return filePath;
+  }
+
+  function writeTaskAndConfig(config) {
+    const doDir = path.join(tempDir, ".do");
+    mkdirSync(doDir, { recursive: true });
+    const taskFile = path.join(tempDir, "task.md");
+    const configPath = path.join(doDir, "config.json");
+    writeFileSync(taskFile, "# Test task\n");
+    writeFileSync(configPath, JSON.stringify(config));
+    return { taskFile, configPath };
+  }
+
+  test("reviewer claude invokes Claude CLI directly and never Gemini", async () => {
+    process.env.CODEX_CI = "1";
+    const geminiMarker = path.join(tempDir, "gemini-called");
+    writeExecutable(
+      "claude",
+      `#!/bin/sh
+cat >/dev/null
+printf '### Verdict\\nLOOKS_GOOD\\n\\n### Key Findings\\n- claude reviewed\\n'
+`,
+    );
+    writeExecutable(
+      "gemini",
+      `#!/bin/sh
+touch "${geminiMarker}"
+exit 42
+`,
+    );
+    const { taskFile, configPath } = writeTaskAndConfig({
+      availableTools: ["claude", "gemini"],
+      council_reviews: { reviewer: "claude" },
+    });
+
+    const result = await invokeCouncil({
+      type: "plan",
+      taskFile,
+      reviewer: "claude",
+      workspace: tempDir,
+      projectConfigPath: configPath,
+      timeout: 5000,
+    });
+
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.advisor, "claude");
+    assert.strictEqual(result.verdict, "LOOKS_GOOD");
+    assert.strictEqual(
+      existsSync(geminiMarker),
+      false,
+      "Gemini must not be invoked for explicit Claude reviewer",
+    );
+  });
+
+  test("explicit Claude unavailable skips and never invokes available Gemini", async () => {
+    process.env.CODEX_CI = "1";
+    const geminiMarker = path.join(tempDir, "gemini-called");
+    writeExecutable(
+      "gemini",
+      `#!/bin/sh
+touch "${geminiMarker}"
+printf '### Verdict\\nLOOKS_GOOD\\n'
+`,
+    );
+    const { taskFile, configPath } = writeTaskAndConfig({
+      availableTools: ["gemini"],
+      council_reviews: { reviewer: "claude" },
+    });
+
+    const result = await invokeCouncil({
+      type: "plan",
+      taskFile,
+      reviewer: "claude",
+      workspace: tempDir,
+      projectConfigPath: configPath,
+      timeout: 5000,
+    });
+
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.skipped, true);
+    assert.notStrictEqual(result.advisor, "gemini");
+    assert.match(result.reason, /Configured reviewer 'claude' is not available/);
+    assert.strictEqual(
+      existsSync(geminiMarker),
+      false,
+      "Gemini must not be invoked when explicit Claude is unavailable",
+    );
+  });
+
+  test("both with configured Codex+Claude in Codex runtime invokes Claude only, no Gemini", async () => {
+    process.env.CODEX_THREAD_ID = "thread-test";
+    const geminiMarker = path.join(tempDir, "gemini-called");
+    writeExecutable(
+      "claude",
+      `#!/bin/sh
+cat >/dev/null
+printf '### Verdict\\nLOOKS_GOOD\\n\\n### Key Findings\\n- claude reviewed\\n'
+`,
+    );
+    writeExecutable(
+      "gemini",
+      `#!/bin/sh
+touch "${geminiMarker}"
+exit 42
+`,
+    );
+    const { taskFile, configPath } = writeTaskAndConfig({
+      availableTools: ["codex", "claude"],
+      council_reviews: { reviewer: "both" },
+    });
+
+    const result = await invokeCouncil({
+      type: "plan",
+      taskFile,
+      reviewer: "both",
+      workspace: tempDir,
+      projectConfigPath: configPath,
+      timeout: 5000,
+    });
+
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.advisor, "both");
+    assert.deepStrictEqual(Object.keys(result.raw), ["claude"]);
+    assert.strictEqual(result.raw.claude.success, true);
+    assert.strictEqual(
+      existsSync(geminiMarker),
+      false,
+      "Gemini must not be invoked when it is not configured",
+    );
+  });
+
+  test("no-config both in Codex runtime invokes fallback Claude and Gemini advisors", async () => {
+    process.env.CODEX_MANAGED_BY_NPM = "1";
+    writeExecutable(
+      "claude",
+      `#!/bin/sh
+cat >/dev/null
+printf '### Verdict\\nLOOKS_GOOD\\n\\n### Key Findings\\n- claude reviewed\\n'
+`,
+    );
+    writeExecutable(
+      "gemini",
+      `#!/bin/sh
+cat >/dev/null
+printf '### Verdict\\nLOOKS_GOOD\\n\\n### Key Findings\\n- gemini reviewed\\n'
+`,
+    );
+    const taskFile = path.join(tempDir, "task.md");
+    writeFileSync(taskFile, "# Test task\n");
+
+    const result = await invokeCouncil({
+      type: "plan",
+      taskFile,
+      reviewer: "both",
+      workspace: tempDir,
+      timeout: 5000,
+    });
+
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.advisor, "both");
+    assert.deepStrictEqual(Object.keys(result.raw).sort(), ["claude", "gemini"]);
+    assert.strictEqual(result.raw.claude.success, true);
+    assert.strictEqual(result.raw.gemini.success, true);
   });
 });
 
@@ -735,11 +1018,28 @@ describe("CLI project config auto-detection", () => {
     }
   });
 
-  test("invokeCouncil respects projectConfigPath reviewer override", async () => {
-    // Create project config with reviewer: codex
+  test("projectConfigPath reviewer override skips when config only contains current runtime", async () => {
+    const codexMarkers = [
+      "CODEX_RUNTIME",
+      "CODEX_CI",
+      "CODEX_THREAD_ID",
+      "CODEX_MANAGED_BY_NPM",
+    ];
+    const originalEnv = Object.fromEntries(
+      codexMarkers.map((marker) => [marker, process.env[marker]]),
+    );
+    for (const marker of codexMarkers) {
+      delete process.env[marker];
+    }
+
+    // Create project config with reviewer: claude and only self available.
+    // This reaches config-driven reviewer selection without invoking live CLIs.
     const doDir = path.join(tempDir, ".do");
     mkdirSync(doDir);
-    const projectConfig = { council_reviews: { reviewer: "codex" } };
+    const projectConfig = {
+      availableTools: ["claude"],
+      council_reviews: { reviewer: "claude" },
+    };
     writeFileSync(
       path.join(doDir, "config.json"),
       JSON.stringify(projectConfig),
@@ -751,33 +1051,33 @@ describe("CLI project config auto-detection", () => {
 
     const projectConfigPath = path.join(doDir, "config.json");
 
-    // We cannot actually spawn a reviewer in unit tests, but we can verify
-    // that invokeCouncil does not return an error for an unknown reviewer when
-    // projectConfigPath is passed — it should at least reach reviewer selection
-    // and fail because codex/gemini runtime is not available in test env, not
-    // because of a missing config. A structurally valid call should return a
-    // result object (possibly with success: false due to missing runtime).
-    const result = await invokeCouncil({
-      type: "plan",
-      taskFile: taskFilePath,
-      reviewer: "random",
-      workspace: tempDir,
-      timeout: 5000,
-      projectConfigPath,
-    });
+    let result;
+    try {
+      result = await invokeCouncil({
+        type: "plan",
+        taskFile: taskFilePath,
+        reviewer: "random",
+        workspace: tempDir,
+        timeout: 5000,
+        projectConfigPath,
+      });
+    } finally {
+      for (const marker of codexMarkers) {
+        if (originalEnv[marker] === undefined) {
+          delete process.env[marker];
+        } else {
+          process.env[marker] = originalEnv[marker];
+        }
+      }
+    }
 
     // The result must be a proper object (not undefined/null)
     assert.ok(
       typeof result === "object" && result !== null,
       "result should be an object",
     );
-    // It will likely fail due to no runtime, but the error should not be config-related
-    if (!result.success) {
-      assert.ok(
-        typeof result.error === "string",
-        "failure should have string error message",
-      );
-    }
+    assert.strictEqual(result.skipped, true);
+    assert.strictEqual(result.advisor, null);
   });
 });
 

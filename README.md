@@ -248,13 +248,13 @@ Created at the workspace root by `/do:init`. Tells do-lang where your database a
   "database": "/absolute/path/to/workspace/database",
   "githubProjects": "/absolute/path/to/workspace/github-projects",
   "initializedAt": "2026-04-13T20:45:00.000Z",
-  "availableTools": ["codex", "gemini"],
+  "availableTools": ["codex", "claude", "gemini"],
   "defaultReviewer": "random",
   "council_reviews": { "planning": true, "execution": true }
 }
 ```
 
-**`availableTools`** — AI CLIs detected during init (used for council reviews). **`defaultReviewer`** — which tool to use: `"codex"`, `"gemini"`, `"both"`, or `"random"`. These serve as workspace-level defaults — project config in `.do/config.json` overrides them.
+**`availableTools`** — AI CLIs detected during init (used for council reviews). **`defaultReviewer`** — which tool to use: `"claude"`, `"codex"`, `"gemini"`, `"both"`, or `"random"`. These serve as workspace-level defaults — project config in `.do/config.json` overrides them.
 
 ### Project — `.do/config.json`
 
@@ -289,7 +289,7 @@ Project-level configuration lives in `.do/config.json`. The JSON below shows the
 
 **`project_name`** — human-readable name for this project (used in reports and prompts).
 
-**`council_reviews.reviewer`** — which external AI to use for council reviews: `"codex"`, `"gemini"`, `"both"`, or `"random"`. Set `planning` and `execution` to `false` to disable council reviews for those stages. The nested `project` object controls review gates for `/do:project` workflows (plan, phase plan, wave plan, and code review).
+**`council_reviews.reviewer`** — which external AI to use for council reviews: `"claude"`, `"codex"`, `"gemini"`, `"both"`, or `"random"`. Set `planning` and `execution` to `false` to disable council reviews for those stages. The nested `project` object controls review gates for `/do:project` workflows (plan, phase plan, wave plan, and code review).
 
 **`web_search.context7`** — enables ctx7 documentation lookups during planning (do-planner), debugging (do-debugger), and `/do:optimise` audits. Set to `false` to skip library-doc fetching.
 

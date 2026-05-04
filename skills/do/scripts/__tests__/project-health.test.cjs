@@ -292,6 +292,19 @@ describe('council_reviews.project config validation', () => {
     const projectIssues = result.issues.filter(i => i.details && i.details.includes('council_reviews.project'));
     assert.strictEqual(projectIssues.length, 0);
   });
+
+  it('accepts claude as a council_reviews.reviewer value', () => {
+    mkBase(tempDir, {
+      council_reviews: {
+        planning: true,
+        execution: true,
+        reviewer: 'claude',
+        project: { plan: true, phase_plan: true, wave_plan: true, code: true },
+      },
+    });
+    const result = checkProjectHealth(tempDir);
+    assert.ok(!result.issues.some(i => i.details && i.details.includes('council_reviews.reviewer')));
+  });
 });
 
 // ---------------------------------------------------------------------------

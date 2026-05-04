@@ -146,20 +146,6 @@ Scope: new file `skills/do/scripts/lib/agent-harness.cjs` + a `__tests__/integra
 **Fix:** Evaluate two approaches: (1) shared reference files + template build step with `{{SPAWN_AGENT planner}}` markers expanding to platform-specific syntax at install time; (2) accepting markdown duplication with a manual sync discipline and tooling to diff the two sets. Make a proper architectural decision before the file count grows further.
 ---
 
-### Runtime-opposite council reviewer selection without Gemini fallback
-**id:** codex-claude-council-reviewer
-**Problem:** Council review should use the opposite AI runtime as the external reviewer: when the primary session is Codex, use Claude; when the primary session is Claude, use Codex. Gemini should not be selected unless the workspace explicitly configures it. The current council invocation path does not honor that ownership boundary: `council-invoke.cjs` has no real Claude invocation implementation, and `case "claude"` falls back to Gemini. Runtime detection also only checks `CODEX_RUNTIME`, while this Codex environment exposes `CODEX_CI`, `CODEX_THREAD_ID`, and `CODEX_MANAGED_BY_NPM`, so the selector can misclassify Codex as Claude and make the wrong reviewer choices.
-
-**Impact:** A workspace/project config that lists `availableTools: ["codex", "claude"]` with `reviewer: "random"` should naturally pick the non-current runtime, but today it can still invoke Gemini or accidentally self-review if runtime detection is wrong. This violates user preference, makes review behavior surprising, and tempts consumer projects or installed command copies to patch do-lang-owned `council-invoke.cjs` directly.
-
-**Fix:** Implement this in do-lang proper:
-1. Add an `invokeClaude` path using the `claude` CLI in headless print mode, with the same timeout/output/verdict parsing behavior as other reviewers.
-2. Update `case "claude"` to call Claude directly and never fall back to Gemini.
-3. Update runtime detection to recognize Codex CLI environment markers such as `CODEX_CI`, `CODEX_THREAD_ID`, and `CODEX_MANAGED_BY_NPM`.
-4. Add tests for reviewer selection and invocation routing: Codex runtime with `availableTools: ["codex", "claude"]` selects Claude; Claude runtime with the same config selects Codex; Gemini is not invoked as fallback.
-5. Update workspace/project health validation so `claude` is accepted anywhere `council_reviews.reviewer` is configured and `availableTools` may list `codex` plus `claude` without requiring Gemini.
----
-
 ### /do:project complete should offer commit, push, release, tag, and update flow
 **id:** project-complete-release-prompt
 **Problem:** After `/do:project complete`, the project state is archived but the user still has to remember the operational release steps manually: commit the feature branch, push it, tag/release/publish if appropriate, and run `/do:update` to refresh installed skills. This is easy to forget because completion feels like the end of the workflow even though the shipped package is not updated yet.

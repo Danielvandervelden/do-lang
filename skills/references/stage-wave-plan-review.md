@@ -1,0 +1,372 @@
+---
+name: stage-wave-plan-review
+description: "Wave plan review block for /do:project. Council gate check, parallel reviewer spawning (when enabled), verdict combination, iteration loop via <<DO:AGENT_PREFIX>>-planner, and escalation rules. Target file: wave.md."
+---
+
+<<DO:IF CODEX>>
+**Agent authorization:** The caller workflow has authorized spawning all agents
+referenced in this file (<<DO:AGENT_PREFIX>>-planner for curate step, <<DO:AGENT_PREFIX>>-plan-reviewer,
+<<DO:AGENT_PREFIX>>-council-reviewer, <<DO:AGENT_PREFIX>>-planner on ITERATE). Spawn them as subagents — do NOT
+execute their work inline. If spawning fails, STOP and report; do not fall back to
+inline execution.
+
+<<DO:ENDIF>>
+# Wave Plan Review Stage
+
+This reference file is loaded by `skills/project.md` `wave next` after the per-wave confidence rescue check. It encodes the full plan review logic for `wave.md`.
+
+**Caller contract:** The caller provides `<wave_path>` = abs path to `wave.md`, `<active_project>` slug, `<phase_slug>`, and `<wave_slug>`. When this stage returns APPROVED, `council_review_ran.plan: true` has been written into `wave.md`'s frontmatter — the `wave next` handler then proceeds to `stage-wave-exec.md`. If ESCALATE or MAX_ITERATIONS, stop and present to the user.
+
+---
+
+## PR-0: Resume Guard
+
+Check if wave plan review already ran:
+
+```bash
+node <<DO:SCRIPTS_PATH>>/update-task-frontmatter.cjs check '<wave_path>' council_review_ran.plan
+```
+
+**If already ran (exit 1):** Skip this entire stage. Return control to caller (proceed to `stage-wave-exec.md`).
+
+---
+
+## PR-1: Council Gate Check
+
+```bash
+node <<DO:SCRIPTS_PATH>>/council-gate.cjs project.wave_plan planning
+```
+
+Store result as `council_enabled` (enabled/disabled).
+
+---
+
+## PR-2: Initialize Iteration Counter
+
+Set `review_iterations = 0` (in-session variable, not persisted).
+
+---
+
+## PR-2b: Initial Plan Curation (idempotent)
+
+Check if `wave.md` body still contains scaffold placeholders:
+
+```bash
+node <<DO:SCRIPTS_PATH>>/update-task-frontmatter.cjs read-body '<wave_path>' | grep -q '{{[A-Z_]*}}'
+# exit 0 = placeholders found, exit 1 = no placeholders
+```
+
+**If no placeholders (exit 1):** Skip to PR-3 — body is already curated (manual edit, re-entry, or `--from-backlog` already filled all sections).
+
+**If placeholders remain (exit 0):** Spawn <<DO:AGENT_PREFIX>>-planner to curate the wave body from phase and project context before reviewers see it:
+
+<<DO:IF CLAUDE>>
+```javascript
+Agent({
+  description: "Curate wave plan from phase context",
+  subagent_type: "<<DO:AGENT_PREFIX>>-planner",
+  model: "<models.overrides.planner || models.default>",
+  prompt: `
+Curate the wave plan body sections from phase and project context.
+
+Target file: <wave_path>
+Phase file: .do/projects/<active_project>/phases/<phase_slug>/phase.md
+Project file: .do/projects/<active_project>/project.md
+
+Read the phase's Goal, Wave Plan (to understand this wave's position and purpose),
+and the project's Vision for broader context. Also check if \`## Problem Statement\`
+already has non-placeholder content (may be pre-seeded from a backlog entry via
+--from-backlog). Fill in the wave body sections:
+
+- Replace \`# {{TITLE}}\` H1 with a descriptive wave title
+- ## Problem Statement — what this wave solves (preserve existing content if non-placeholder)
+- ## Approach — proposed solution and implementation steps (numbered list of concrete actions)
+- ## Concerns — potential issues or risks (numbered list with mitigations)
+
+Write the wave title to frontmatter field \`title\`.
+Calculate confidence and write to frontmatter.
+Do NOT change status, scope, stage, stages, or other metadata fields.
+
+Return summary of sections populated.
+`
+})
+```
+<<DO:ENDIF>>
+<<DO:IF CODEX>>
+Spawn the <<DO:AGENT_PREFIX>>-planner subagent with model `<models.overrides.planner || models.default>` and the description "Curate wave plan from phase context". Pass the following prompt:
+
+Curate the wave plan body sections from phase and project context.
+
+Target file: <wave_path>
+Phase file: .do/projects/<active_project>/phases/<phase_slug>/phase.md
+Project file: .do/projects/<active_project>/project.md
+
+Read the phase's Goal, Wave Plan (to understand this wave's position and purpose),
+and the project's Vision for broader context. Also check if `## Problem Statement`
+already has non-placeholder content (may be pre-seeded from a backlog entry via
+--from-backlog). Fill in the wave body sections:
+
+- Replace `# {{TITLE}}` H1 with a descriptive wave title
+- ## Problem Statement — what this wave solves (preserve existing content if non-placeholder)
+- ## Approach — proposed solution and implementation steps (numbered list of concrete actions)
+- ## Concerns — potential issues or risks (numbered list with mitigations)
+
+Write the wave title to frontmatter field `title`.
+Calculate confidence and write to frontmatter.
+Do NOT change status, scope, stage, stages, or other metadata fields.
+
+Return summary of sections populated.
+<<DO:ENDIF>>
+
+**Wait for <<DO:AGENT_PREFIX>>-planner to complete before proceeding to PR-3.** Reviewers must see curated content, not scaffold placeholders — sending reviewers against a template with `{{PROBLEM_STATEMENT}}` / `{{APPROACH}}` markers would cause an automatic RETHINK verdict on every first pass.
+
+---
+
+## PR-3: Spawn Reviewers
+
+### PR-3a: If council enabled
+
+<<DO:IF CLAUDE>>
+Spawn TWO agents in a SINGLE message (both Agent calls in one response):
+<<DO:ENDIF>>
+<<DO:IF CODEX>>
+In a single response, spawn BOTH of the following subagents (parallel dispatch — do NOT wait between them):
+<<DO:ENDIF>>
+
+<<DO:IF CLAUDE>>
+```javascript
+Agent({
+  description: "Self-review wave plan",
+  subagent_type: "<<DO:AGENT_PREFIX>>-plan-reviewer",
+  model: "<models.overrides.plan_reviewer || models.default>",
+  prompt: `
+Review the wave plan in this target file.
+
+Target file: <wave_path>
+
+Read the target file, evaluate the wave plan against the 5 criteria
+(Clarity, Completeness, Feasibility, Atomicity, Risks), and return PASS,
+CONCERNS, or RETHINK with evidence. Focus on: problem statement precision,
+approach step atomicity, acceptance criteria testability, file scope
+(soft cap: >10 files → split wave), blockers identified.
+`
+})
+
+Agent({
+  description: "Council review wave plan",
+  subagent_type: "<<DO:AGENT_PREFIX>>-council-reviewer",
+  model: "<models.overrides.plan_reviewer || models.default>",
+  prompt: `
+Run council review for this wave plan.
+
+Target file: <wave_path>
+Review type: plan
+Workspace: <pwd>
+
+Run council-invoke.cjs --type plan --task-file "<wave_path>" --workspace "<pwd>"
+and return the structured verdict.
+`
+})
+```
+<<DO:ENDIF>>
+<<DO:IF CODEX>>
+Spawn the <<DO:AGENT_PREFIX>>-plan-reviewer subagent with model `<models.overrides.plan_reviewer || models.default>` and the description "Self-review wave plan". Pass the following prompt:
+
+Review the wave plan in this target file.
+
+Target file: <wave_path>
+
+Read the target file, evaluate the wave plan against the 5 criteria
+(Clarity, Completeness, Feasibility, Atomicity, Risks), and return PASS,
+CONCERNS, or RETHINK with evidence. Focus on: problem statement precision,
+approach step atomicity, acceptance criteria testability, file scope
+(soft cap: >10 files → split wave), blockers identified.
+
+Spawn the <<DO:AGENT_PREFIX>>-council-reviewer subagent with model `<models.overrides.plan_reviewer || models.default>` and the description "Council review wave plan". Pass the following prompt:
+<<DO:ENDIF>>
+
+<<DO:IF CLAUDE>>
+Wait for BOTH agents to complete before proceeding to PR-4.
+<<DO:ENDIF>>
+<<DO:IF CODEX>>
+Run council review for this wave plan.
+
+Target file: <wave_path>
+Review type: plan
+Workspace: <pwd>
+
+Run council-invoke.cjs --type plan --task-file "<wave_path>" --workspace "<pwd>"
+and return the structured verdict.
+
+Wait for BOTH subagents to complete before proceeding to PR-4.
+<<DO:ENDIF>>
+
+### PR-3b: If council disabled
+
+<<DO:IF CLAUDE>>
+Spawn only <<DO:AGENT_PREFIX>>-plan-reviewer:
+
+```javascript
+Agent({
+  description: "Self-review wave plan (council disabled)",
+  subagent_type: "<<DO:AGENT_PREFIX>>-plan-reviewer",
+  model: "<models.overrides.plan_reviewer || models.default>",
+  prompt: `
+Review the wave plan in this target file.
+
+Target file: <wave_path>
+
+Read the target file, evaluate the wave plan against the 5 criteria
+(Clarity, Completeness, Feasibility, Atomicity, Risks), and return PASS,
+CONCERNS, or RETHINK with evidence.
+`
+})
+```
+
+Apply single-review fallback in PR-4b (skip PR-4a).
+<<DO:ENDIF>>
+<<DO:IF CODEX>>
+Spawn the <<DO:AGENT_PREFIX>>-plan-reviewer subagent with model `<models.overrides.plan_reviewer || models.default>` and the description "Self-review wave plan (council disabled)". Pass the following prompt:
+
+Review the wave plan in this target file.
+
+Target file: <wave_path>
+
+Read the target file, evaluate the wave plan against the 5 criteria
+(Clarity, Completeness, Feasibility, Atomicity, Risks), and return PASS,
+CONCERNS, or RETHINK with evidence.
+
+Apply single-review fallback in PR-4b (skip PR-4a).
+<<DO:ENDIF>>
+
+---
+
+## PR-4: Combine Verdicts
+
+### PR-4a: Two-reviewer combination (council enabled)
+
+| Self-Review | Council | Combined |
+|-------------|---------|----------|
+| PASS | LOOKS_GOOD | **APPROVED** |
+| PASS | CONCERNS | **ITERATE** |
+| PASS | RETHINK | **ITERATE** |
+| CONCERNS | LOOKS_GOOD | **ITERATE** |
+| CONCERNS | CONCERNS | **ITERATE** |
+| CONCERNS | RETHINK | **ESCALATE** |
+| RETHINK | any | **ESCALATE** |
+
+### PR-4b: Single-reviewer fallback (council disabled)
+
+| Self-Review | Combined |
+|-------------|----------|
+| PASS | **APPROVED** |
+| CONCERNS | **ITERATE** |
+| RETHINK | **ESCALATE** |
+
+---
+
+## PR-5: Handle Combined Verdict
+
+### If APPROVED
+
+Update `wave.md` frontmatter:
+```yaml
+council_review_ran:
+  plan: true
+```
+
+Return control to caller (proceed to `stage-wave-exec.md`).
+
+### If ITERATE (and review_iterations < 3)
+
+1. Increment `review_iterations`
+2. Compile combined findings
+3. Log iteration in `wave.md`:
+   ```markdown
+   ## Review Iterations
+
+   ### Iteration <N>
+   - **Self-review:** <verdict> - <summary>
+   - **Council:** <verdict> - <summary> (or "disabled")
+   - **Changes made:** (pending — <<DO:AGENT_PREFIX>>-planner will revise)
+   ```
+4. Spawn <<DO:AGENT_PREFIX>>-planner with reviewer feedback:
+<<DO:IF CLAUDE>>
+   ```javascript
+   Agent({
+     description: "Revise wave plan based on review feedback",
+     subagent_type: "<<DO:AGENT_PREFIX>>-planner",
+     model: "<models.overrides.planner || models.default>",
+     prompt: `
+   Revise the wave plan based on review feedback.
+
+   Target file: <wave_path>
+   Reviewer feedback: <combined findings from self-review and council>
+
+   Update the Problem Statement, Approach, and/or Concerns sections to address
+   the issues. Do not change the wave slug, scope, or frontmatter metadata
+   (status, project_schema_version, etc.).
+   Return a summary of changes made.
+   `
+   })
+   ```
+5. Wait for <<DO:AGENT_PREFIX>>-planner to complete
+6. Update iteration log with "Changes made: <planner summary>"
+7. Return to PR-3 and re-spawn reviewers
+<<DO:ENDIF>>
+<<DO:IF CODEX>>
+
+   Spawn the <<DO:AGENT_PREFIX>>-planner subagent with model `<models.overrides.planner || models.default>` and the description "Revise wave plan based on review feedback". Pass the following prompt:
+
+   Revise the wave plan based on review feedback.
+
+   Target file: <wave_path>
+   Reviewer feedback: <combined findings from self-review and council>
+
+   Update the Problem Statement, Approach, and/or Concerns sections to address
+   the issues. Do not change the wave slug, scope, or frontmatter metadata
+   (status, project_schema_version, etc.).
+   Return a summary of changes made.
+
+5. Wait for <<DO:AGENT_PREFIX>>-planner to complete
+6. Update iteration log with "Changes made: <planner summary>"
+7. Return to PR-3 and re-spawn reviewers
+<<DO:ENDIF>>
+
+### If ITERATE (and review_iterations = 3)
+
+```markdown
+## WAVE PLAN REVIEW: MAX ITERATIONS
+
+**Iterations:** 3/3
+**Status:** Could not resolve all concerns after 3 attempts
+
+### Outstanding Issues
+<list remaining concerns from latest reviewer feedback>
+
+### Options
+1. Proceed anyway (acknowledge risks)
+2. Revise wave plan manually and re-invoke
+3. Abandon wave (`/do:project wave abandon <slug>`)
+```
+
+Stop and await user decision.
+
+### If ESCALATE
+
+```markdown
+## WAVE PLAN REVIEW: NEEDS USER INPUT
+
+**Self-Review:** <verdict>
+**Council:** <verdict> (or "disabled")
+
+### Critical Issues
+<list the RETHINK-level concerns with evidence>
+
+### Reviewer Recommendations
+<list suggestions from reviewers>
+
+User decision required before proceeding.
+```
+
+Stop and await user decision.

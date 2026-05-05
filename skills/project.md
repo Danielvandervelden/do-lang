@@ -1,0 +1,373 @@
+---
+name: do:project
+description: "Multi-phase project orchestration for <<DO:CLAUDE:Claude Code>><<DO:CODEX:Codex>>. Routes to subcommands: new <slug>, phase (new/abandon/complete), wave (new/complete/abandon/next), status, complete, abandon. Use when starting a large greenfield or massive-feature initiative that requires multiple phases and waves of work."
+argument-hint: "<subcommand> [args]"
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Glob
+  - Grep
+<<DO:IF CLAUDE>>
+  - Agent
+<<DO:ENDIF>>
+  - AskUserQuestion
+---
+
+# /do:project
+
+Orchestrate a large multi-phase project: intake grilling → project plan → phase plans → wave execution → phase transitions → project completion.
+
+<<DO:IF CODEX>>
+## Agent Authorization
+
+By invoking this workflow, the user explicitly authorizes spawning the following
+internal agents. These agents are integral to the workflow contract and MUST be
+spawned as subagents — they are not optional. `/do:project` orchestrates the full
+pipeline across multiple waves and phases, so the complete agent set is authorized.
+
+| Agent | Role |
+|-------|------|
+| <<DO:AGENT_PREFIX>>-planner | Curates project.md / phase.md body sections; revises plans on ITERATE |
+| <<DO:AGENT_PREFIX>>-plan-reviewer | Reviews project, phase, and wave plans against quality criteria |
+| <<DO:AGENT_PREFIX>>-council-reviewer | Independent council review during plan and code review stages |
+| <<DO:AGENT_PREFIX>>-griller | Project intake grilling (Pass 1 + Pass 2); per-phase re-grill (Pass 3); per-wave confidence rescue |
+| <<DO:AGENT_PREFIX>>-executioner | Executes wave work against wave.md step by step |
+| <<DO:AGENT_PREFIX>>-code-reviewer | Reviews wave code changes after execution |
+| <<DO:AGENT_PREFIX>>-verifier | Verifies wave implementation (approach checklist, quality checks, UAT) |
+
+**No inline fallback:** If agent spawning is unavailable or blocked, STOP immediately
+and report: "Cannot spawn required agents. This workflow requires <<DO:CLAUDE:agent spawning>><<DO:CODEX:subagent spawning>> to
+function correctly. Please ensure agent spawning is enabled and retry." Do NOT fall back
+to inline execution — inline execution bypasses review gates and breaks the workflow
+contract.
+
+<<DO:ENDIF>>
+## Why this exists
+
+Large initiatives span dozens of tasks across multiple phases and sessions. `/do:project` manages the full lifecycle: intake, phase-boundary confidence checks, per-wave execution pipelines, and state tracking across cold-start resumes. Waves use `wave.md` as the execution target — not task files.
+
+## Usage
+
+```
+/do:project new <slug>                    Start a new project
+/do:project phase new <slug>              Create a new phase (optional: --from-backlog <id>)
+/do:project phase abandon <slug>          Abandon a phase (cascades to its waves)
+/do:project phase complete                Complete the active phase and advance
+/do:project wave new <slug>               Create a new wave (optional: --from-backlog <id>)
+/do:project wave complete <slug>          Mark a wave completed
+/do:project wave abandon <slug>           Abandon a wave
+/do:project wave next                     Activate next planning wave and run its execution pipeline
+/do:project status                        Display project/phase/wave status summary
+/do:project complete                      Finalise and archive the project
+/do:project abandon                       Abandon the active project
+/do:project resume                        Resume from cold start (reload context + route to active stage)
+```
+
+## Authoritative state reads — LEAF FILES ONLY
+
+All control-flow decisions read state from **leaf files**, never from parent indexes:
+- project → `.do/projects/<slug>/project.md`
+- phase → `.do/projects/<slug>/phases/<phase-slug>/phase.md`
+- wave → `.do/projects/<slug>/phases/<phase-slug>/waves/<wave-slug>/wave.md`
+
+`project.md.phases[]` and `phase.md.waves[]` are scaffold-seeded once and never updated on status transitions. They are display-only. For enumeration, use `project-state.cjs check` which walks leaf files sorted by NN-prefixed slug.
+
+## Prerequisites
+
+1. **do workspace initialized** — `.do/config.json` exists (run `/do:init` first)
+2. **For all subcommands except `new`** — `active_project` is non-null in config
+
+---
+
+## Step 0: Read Config
+
+```bash
+node <<DO:SCRIPTS_PATH>>/read-config.cjs project-config
+```
+
+Store `active_project`, `models`, and `project_intake_threshold` for downstream steps.
+
+---
+
+## Step 1: Dispatch Subcommand
+
+Parse `$ARGUMENTS` to extract `argv[0]` (primary subcommand) and remaining args.
+
+### `new <slug>`
+
+1. **Single-active guard:** if `active_project` is non-null, error:
+   ```
+   A project is already active (`<current_slug>`).
+   Run `/do:project complete` or `/do:project abandon` first.
+   ```
+2. Call `project-scaffold.cjs project <slug>`:
+   ```bash
+   node <<DO:SCRIPTS_PATH>>/project-scaffold.cjs project <slug>
+   ```
+3. Write `active_project: <slug>` to `.do/config.json` (atomic temp-file + rename):
+   ```bash
+   node -e "
+   const fs = require('fs'), os = require('os'), path = require('path');
+   const cfg = JSON.parse(fs.readFileSync('.do/config.json', 'utf8'));
+   cfg.active_project = '<slug>';
+   const tmp = path.join(os.tmpdir(), 'config-' + Date.now() + '.json');
+   fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2));
+   fs.renameSync(tmp, '.do/config.json');
+   "
+   ```
+4. Invoke `@references/stage-project-intake.md`.
+5. On intake completion, invoke `@references/stage-project-plan-review.md`.
+
+---
+
+### `phase`
+
+Parse `argv[1]` ∈ `{new, abandon, complete}`:
+
+#### `phase new <slug> [--from-backlog <id>]`
+
+1. Call scaffold:
+   ```bash
+   node <<DO:SCRIPTS_PATH>>/project-scaffold.cjs phase <active_project> <slug>
+   ```
+2. If `--from-backlog <id>` flag present: invoke `@references/backlog-seed.md` with target_type=`phase`, target_file=`phase.md`.
+3. Append changelog entry for scaffold: `<ISO> scaffold:phase:<slug>`.
+4. Invoke `@references/stage-phase-plan-review.md` targeting the new phase.
+
+#### `phase abandon <slug>`
+
+1. Call:
+   ```bash
+   node <<DO:SCRIPTS_PATH>>/project-state.cjs abandon phase <slug> --project <active_project>
+   ```
+   This cascades `status: abandoned` to phase + every in-scope wave (records `pre_abandon_status`).
+2. Append changelog entry: `<ISO> abandon:phase:<slug>`.
+
+#### `phase complete`
+
+Completes the active phase and advances to the next one.
+
+1. **Read active phase** from `project.md` frontmatter (`active_phase`). Error if null.
+
+2. **Precondition check** — every in-scope wave must be completed:
+   ```bash
+   node <<DO:SCRIPTS_PATH>>/project-state.cjs check waves-complete <active_phase> --project <active_project>
+   ```
+   If `complete: false`, abort with the `incomplete` list from the JSON output.
+
+3. **State transition:**
+   ```bash
+   node <<DO:SCRIPTS_PATH>>/project-state.cjs set phase <active_phase> status=completed --project <active_project>
+   ```
+
+4. **Clear active pointers** (`active_wave` lives on `phase.md`, `active_phase` lives on `project.md`):
+   - Set `active_wave: null` on the completing phase's `phase.md` (atomic temp-file + rename).
+   - Set `active_phase: null` on `project.md` (atomic temp-file + rename).
+   - Append changelog entries for both clears.
+
+5. **Backlog cleanup:** read `phase.md` `backlog_item`. If non-null, invoke `/do:backlog done <id>`.
+
+6. **Phase transition:** invoke `@references/stage-phase-transition.md` with `<active_project>`, `<completed_phase_slug>` (captured in step 1), `<models>`, and `<project_intake_threshold>`. This handles: handoff artefact rendering, next-phase discovery, optional re-grill, plan review routing, and handoff result display.
+
+---
+
+### `wave`
+
+Parse `argv[1]` ∈ `{new, complete, abandon, next}`:
+
+#### `wave new <slug> [--from-backlog <id>]`
+
+1. Read `active_phase` from `project.md`.
+2. Call scaffold:
+   ```bash
+   node <<DO:SCRIPTS_PATH>>/project-scaffold.cjs wave <active_project> <active_phase> <slug>
+   ```
+3. If `--from-backlog <id>` flag present: invoke `@references/backlog-seed.md` with target_type=`wave`, target_file=`wave.md`.
+4. Append changelog: `<ISO> scaffold:wave:<active_phase>:<slug>`.
+
+#### `wave complete <slug>`
+
+1. Call:
+   ```bash
+   node <<DO:SCRIPTS_PATH>>/project-state.cjs set wave <active_phase>/<slug> status=completed --project <active_project>
+   ```
+2. Append changelog: `<ISO> complete:wave:<slug>`.
+
+> **No backlog cleanup here.** Backlog cleanup is verification-gated: it only runs in `stage-wave-verify.md` (wave-level) and `phase complete` (phase-level). Manual wave completion skips verification, so it must not touch the backlog.
+
+#### `wave abandon <slug>`
+
+1. Call:
+   ```bash
+   node <<DO:SCRIPTS_PATH>>/project-state.cjs abandon wave <active_phase>/<slug> --project <active_project>
+   ```
+   Records `pre_abandon_status`, sets `status: abandoned`. Does NOT cascade to parent phase.
+2. Append changelog: `<ISO> abandon:wave:<slug>`.
+
+#### `wave next`
+
+Activates the next planning wave and runs it through plan → review → execute → code review → verify.
+
+1. Read `active_project` + `active_phase` from config and `project.md`.
+2. Find the next planning wave:
+   ```bash
+   node <<DO:SCRIPTS_PATH>>/project-state.cjs check next-planning-wave <active_phase> --project <active_project>
+   ```
+3. If `found: false`: display "No planning waves in current phase; run `/do:project wave new <slug>` to create one." Stop.
+4. Set wave status to `in_progress`:
+   ```bash
+   node <<DO:SCRIPTS_PATH>>/project-state.cjs set wave <active_phase>/<wave_slug> status=in_progress --project <active_project>
+   ```
+5. Update `phase.md` `active_wave: <wave_slug>` (atomic). Append changelog.
+<<DO:IF CLAUDE>>
+6. **Per-wave confidence rescue:** read `wave.md` confidence score. If below `project_intake_threshold`, spawn `<<DO:AGENT_PREFIX>>-griller` (pass the project threshold explicitly):
+   ```javascript
+   Agent({
+     description: "Wave confidence rescue: grill for clarity",
+     subagent_type: "<<DO:AGENT_PREFIX>>-griller",
+     model: "<models.overrides.griller || models.default>",
+     prompt: `Wave confidence is below threshold. Ask clarifying questions.
+   Target file: .do/projects/<active_project>/phases/<active_phase>/waves/<wave_slug>/wave.md
+   Current confidence: <score>
+   Threshold: <project_intake_threshold>
+   Ask targeted questions for lowest-scoring factors. Stop when threshold reached or user overrides.`
+   })
+   ```
+7. Invoke `@references/stage-wave-plan-review.md` (targets `wave.md`).
+8. Then `@references/stage-wave-exec.md`.
+9. Then `@references/stage-wave-code-review.md`.
+10. Then `@references/stage-wave-verify.md`.
+<<DO:ENDIF>>
+<<DO:IF CODEX>>
+6. **Per-wave confidence rescue:** read `wave.md` confidence score. If below `project_intake_threshold`, spawn <<DO:AGENT_PREFIX>>-griller (pass the project threshold explicitly):
+
+   Spawn the <<DO:AGENT_PREFIX>>-griller subagent with model `<models.overrides.griller || models.default>` and the description "Wave confidence rescue: grill for clarity". Pass the following prompt:
+
+   Wave confidence is below threshold. Ask clarifying questions.
+   Target file: .do/projects/<active_project>/phases/<active_phase>/waves/<wave_slug>/wave.md
+   Current confidence: <score>
+   Threshold: <project_intake_threshold>
+   Ask targeted questions for lowest-scoring factors. Stop when threshold reached or user overrides.
+
+7. Invoke `@references/stage-wave-plan-review.md` (targets `wave.md`).
+8. Then `@references/stage-wave-exec.md`.
+9. Then `@references/stage-wave-code-review.md`.
+10. Then `@references/stage-wave-verify.md`.
+<<DO:ENDIF>>
+
+---
+
+### `status`
+
+Read-only. Invoke state script and render summary:
+
+```bash
+node <<DO:SCRIPTS_PATH>>/project-state.cjs status <active_project>
+```
+
+Render a markdown table:
+
+```
+## Project Status: <slug>
+
+| Node | Slug | Status | Scope | Notes |
+|------|------|--------|-------|-------|
+| Project | <slug> | <status> | — | <phase count> phases |
+| Phase | <phase_slug> | <status> | in_scope | <wave count> waves |
+| Wave | <wave_slug> | <status> | in_scope | active |
+| … | … | … | … | … |
+```
+
+No writes.
+
+---
+
+### `complete`
+
+Invoke `@references/stage-project-complete.md`.
+
+---
+
+### `abandon`
+
+Top-level project abandon — α's `project-state.cjs abandon project <slug>` is the single owner of all side effects (cascade abandon of in-scope phases + waves, rename to `.do/projects/archived/<slug>/`, clear `active_project` in config). Do NOT re-implement these inline; following this step after the script runs would attempt to move a folder that no longer exists.
+
+1. If `active_project` null, error: "No active project to abandon."
+2. Prompt for one-line abandon reason (inline text prompt).
+3. Call α's single-owner abandon operation:
+   ```bash
+   node <<DO:SCRIPTS_PATH>>/project-state.cjs abandon project <active_project>
+
+   # Note: `abandon project` does NOT take --project (project slug is the path arg).
+   ```
+   This cascades `status: abandoned` on project + every in-scope phase + wave (records `pre_abandon_status`; out-of-scope untouched), renames the project folder into `.do/projects/archived/<slug>/`, and clears `active_project` in `.do/config.json` — all atomic, all in one script invocation.
+
+4. Append abandon-reason changelog:
+   ```
+   <ISO> abandon:project:<slug>: <reason>
+   ```
+   (α's script appends its own state-transition changelog line; this step adds the user-provided reason on top. Writing to the changelog in the archived location: `.do/projects/archived/<active_project>/changelog.md`.)
+
+5. Display: "Project `<slug>` abandoned and archived at `.do/projects/archived/<slug>/`. To re-activate: move it back to `.do/projects/<slug>/`, set `active_project: <slug>` in `.do/config.json`, then run `/do:project resume`."
+
+---
+
+### `resume`
+
+Resume the active project from cold start. Delegates all routing to `stage-project-resume.md`.
+
+1. Invoke `@references/stage-project-resume.md`.
+   The stage reference handles: config read, state computation via `project-resume.cjs`,
+   preamble loading per target file (project.md → phase.md → wave.md), resume summary
+   display, and routing to the correct stage reference.
+2. Return whatever the stage reference returns (COMPLETE or STOP propagates to user).
+
+---
+
+### Unknown subcommand
+
+Display usage and stop:
+
+```
+Unknown subcommand: <argv[0]>
+
+Usage: /do:project <new|phase|wave|status|complete|abandon|resume>
+Run /do:project without arguments to see this help.
+```
+
+---
+
+## Failure Handling
+
+On any failure: report which subcommand/step failed, the last known good state, and the project file path. No automatic retries — user decides next step.
+
+---
+
+## Files
+
+- **Scripts:**
+  - `@scripts/project-scaffold.cjs` — Creates project/phase/wave folders and files
+  - `@scripts/project-state.cjs` — State transitions, abandon cascade, status reads, `check` queries (waves-complete, next-planning-phase, next-planning-wave)
+  - `@scripts/project-health.cjs` — Health checks (used by `/do:init`)
+  - `@scripts/project-resume.cjs` — State reader, returns next-action JSON for resume routing
+- **Stage references (called inline via `@references/...`):**
+  - `@references/stage-project-intake.md` — Pass 1 + 2 grilling flow
+  - `@references/stage-project-plan-review.md` — PR-0..PR-5, targets `project.md`
+  - `@references/stage-phase-plan-review.md` — PR-0..PR-5, targets `phase.md`
+  - `@references/stage-wave-plan-review.md` — PR-0..PR-5, targets `wave.md`
+  - `@references/stage-wave-exec.md` — Spawns `<<DO:AGENT_PREFIX>>-executioner` against `wave.md`
+  - `@references/stage-wave-code-review.md` — Spawns `<<DO:AGENT_PREFIX>>-code-reviewer` + council
+  - `@references/stage-wave-verify.md` — Spawns `<<DO:AGENT_PREFIX>>-verifier` against `wave.md`
+  - `@references/stage-project-complete.md` — Renders `completion-summary.md`
+  - `@references/stage-project-resume.md` — Cold-start resume orchestrator
+  - `@references/stage-phase-exit.md` — Render-only handoff artefact writer
+  - `@references/stage-phase-transition.md` — Post-completion phase transition (handoff → next phase → re-grill → plan review)
+  - `@references/backlog-seed.md` — Shared `--from-backlog` handler for phase/wave creation
+  - `@references/resume-preamble-project.md` — Per-file context reload (project pipeline sibling)
+- **Templates (α artefacts):**
+  - `@references/project-master-template.md`
+  - `@references/phase-template.md`
+  - `@references/wave-template.md`
+  - `@references/completion-summary-template.md`

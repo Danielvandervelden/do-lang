@@ -6,9 +6,12 @@ const path = require("path");
 const os = require("os");
 const readline = require("readline");
 
+const { expandTemplate } = require("./expand-templates.cjs");
+
 const packageRoot = path.join(__dirname, "..");
-const source = path.join(packageRoot, "skills", "do");
-const codexSource = path.join(packageRoot, "skills", "codex");
+const skillsSource = path.join(packageRoot, "skills");
+const refsSource = path.join(skillsSource, "references");
+const scriptsSource = path.join(skillsSource, "scripts");
 const agentsSource = path.join(packageRoot, "agents");
 
 const codexWrapperSkills = [
@@ -94,12 +97,55 @@ const codexWrapperSkills = [
 
 // Check if source exists (may not during dev installs before skills/ created)
 if (require.main === module) {
-  if (!fs.existsSync(source)) {
+  if (!fs.existsSync(skillsSource)) {
     console.log(
-      "do-lang: skills/do/ not found (dev install?), skipping installation",
+      "do-lang: skills/ not found (dev install?), skipping installation",
     );
     process.exit(0);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * List all .md files directly in a directory (non-recursive).
+ * Returns absolute paths sorted alphabetically.
+ */
+function listMdFiles(dir) {
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith(".md"))
+    .sort()
+    .map((f) => path.join(dir, f));
+}
+
+/**
+ * Copy scripts/ tree from srcDir to destDir, excluding __tests__/ entirely.
+ * This replaces the old shouldInstallRuntimeScriptFile which only excluded
+ * install-* prefixed test files.
+ */
+function copyScripts(srcDir, destDir) {
+  if (!fs.existsSync(srcDir)) return;
+  fs.mkdirSync(destDir, { recursive: true });
+  fs.cpSync(srcDir, destDir, {
+    recursive: true,
+    filter: shouldInstallRuntimeScriptFile,
+  });
+}
+
+/**
+ * Filter function for fs.cpSync: exclude the entire __tests__/ directory.
+ * The old filter only excluded install-* prefixed files; this widened version
+ * excludes all of __tests__/ so new test files (template-regression, expand-templates)
+ * are also excluded from the installed runtime tree.
+ */
+function shouldInstallRuntimeScriptFile(src) {
+  // Normalize to forward slashes for consistent matching on all platforms
+  const posixSrc = src.split(path.sep).join("/");
+  return !posixSrc.includes("/__tests__/") && !posixSrc.endsWith("/__tests__");
 }
 
 // ---------------------------------------------------------------------------
@@ -124,22 +170,48 @@ function installClaudeCode() {
   }
 
   fs.mkdirSync(path.join(claudeDir, "commands"), { recursive: true });
-  fs.cpSync(source, target, {
-    recursive: true,
-    filter: shouldInstallRuntimeScriptFile,
-  });
+  fs.mkdirSync(target, { recursive: true });
+
+  // Expand and install top-level skill templates
+  for (const srcPath of listMdFiles(skillsSource)) {
+    const fileName = path.basename(srcPath);
+    const content = fs.readFileSync(srcPath, "utf8");
+    const expanded = expandTemplate(content, "claude");
+    fs.writeFileSync(path.join(target, fileName), expanded, "utf8");
+  }
+
+  // Expand and install reference templates
+  const refsTarget = path.join(target, "references");
+  fs.mkdirSync(refsTarget, { recursive: true });
+  for (const srcPath of listMdFiles(refsSource)) {
+    const fileName = path.basename(srcPath);
+    const content = fs.readFileSync(srcPath, "utf8");
+    const expanded = expandTemplate(content, "claude");
+    fs.writeFileSync(path.join(refsTarget, fileName), expanded, "utf8");
+  }
+
+  // Copy scripts as-is (no expansion), excluding __tests__/
+  copyScripts(scriptsSource, path.join(target, "scripts"));
+
   console.log(`do commands installed to ${target}`);
 
-  // Install agents to ~/.claude/agents/
+  // Expand and install agent templates to ~/.claude/agents/
   if (fs.existsSync(agentsSource)) {
     fs.mkdirSync(agentsTarget, { recursive: true });
-    for (const file of fs.readdirSync(agentsSource)) {
-      if (file.startsWith("do-") && file.endsWith(".md")) {
-        fs.copyFileSync(
-          path.join(agentsSource, file),
-          path.join(agentsTarget, file),
-        );
+    for (const srcPath of listMdFiles(agentsSource)) {
+      const roleName = path.basename(srcPath); // e.g. "planner.md"
+      // Skip prefixed files (do-*.md, codex-*.md) — only bare role names are templates
+      if (
+        roleName.startsWith("do-") ||
+        roleName.startsWith("codex-")
+      ) {
+        continue;
       }
+      const content = fs.readFileSync(srcPath, "utf8");
+      const expanded = expandTemplate(content, "claude");
+      // Output filename: do-{role}.md (e.g. do-planner.md)
+      const outputName = `do-${roleName}`;
+      fs.writeFileSync(path.join(agentsTarget, outputName), expanded, "utf8");
     }
     console.log(`do agents installed to ${agentsTarget}`);
   }
@@ -151,24 +223,33 @@ function installCodex() {
   const skillsTarget = path.join(codexDir, "skills");
   const agentsTarget = path.join(codexDir, "agents");
 
-  // Guard: codexSource must exist — it contains Codex-flavored skill files
-  if (!fs.existsSync(codexSource)) {
-    console.error(
-      `do-lang: skills/codex/ not found at ${codexSource}; Codex installation cannot proceed. The codex source tree must be present in the package. Skipping Codex install.`,
-    );
-    return;
+  fs.mkdirSync(skillsTarget, { recursive: true });
+  fs.mkdirSync(target, { recursive: true });
+
+  // Expand and install top-level skill templates
+  for (const srcPath of listMdFiles(skillsSource)) {
+    const fileName = path.basename(srcPath);
+    const content = fs.readFileSync(srcPath, "utf8");
+    const expanded = expandTemplate(content, "codex");
+    fs.writeFileSync(path.join(target, fileName), expanded, "utf8");
   }
 
-  fs.mkdirSync(skillsTarget, { recursive: true });
-  // Copy Codex-flavored skills (no Agent() calls, codex- agent names, ~/.codex paths)
-  fs.cpSync(codexSource, target, { recursive: true });
-  // scripts/ lives only in skills/do/ — copy it explicitly so ~/.codex/skills/do/scripts/ is populated
-  fs.cpSync(path.join(source, "scripts"), path.join(target, "scripts"), {
-    recursive: true,
-    filter: shouldInstallRuntimeScriptFile,
-  });
+  // Expand and install reference templates
+  const refsTarget = path.join(target, "references");
+  fs.mkdirSync(refsTarget, { recursive: true });
+  for (const srcPath of listMdFiles(refsSource)) {
+    const fileName = path.basename(srcPath);
+    const content = fs.readFileSync(srcPath, "utf8");
+    const expanded = expandTemplate(content, "codex");
+    fs.writeFileSync(path.join(refsTarget, fileName), expanded, "utf8");
+  }
+
+  // Copy scripts as-is (no expansion), excluding __tests__/
+  copyScripts(scriptsSource, path.join(target, "scripts"));
+
   console.log(`do skills installed to ${target}`);
 
+  // Generate SKILL.md wrapper entries for Codex skill picker
   for (const wrapper of codexWrapperSkills) {
     const wrapperTarget = path.join(skillsTarget, wrapper.skillName);
     fs.mkdirSync(wrapperTarget, { recursive: true });
@@ -180,26 +261,26 @@ function installCodex() {
   }
   console.log(`do Codex wrapper skills installed to ${skillsTarget}`);
 
-  // Install agents to ~/.codex/agents/
+  // Expand and install agent templates to ~/.codex/agents/
   if (fs.existsSync(agentsSource)) {
     fs.mkdirSync(agentsTarget, { recursive: true });
-    for (const file of fs.readdirSync(agentsSource)) {
-      if (file.startsWith("codex-") && file.endsWith(".md")) {
-        fs.copyFileSync(
-          path.join(agentsSource, file),
-          path.join(agentsTarget, file),
-        );
+    for (const srcPath of listMdFiles(agentsSource)) {
+      const roleName = path.basename(srcPath); // e.g. "planner.md"
+      // Skip prefixed files (do-*.md, codex-*.md) — only bare role names are templates
+      if (
+        roleName.startsWith("do-") ||
+        roleName.startsWith("codex-")
+      ) {
+        continue;
       }
+      const content = fs.readFileSync(srcPath, "utf8");
+      const expanded = expandTemplate(content, "codex");
+      // Output filename: codex-{role}.md (e.g. codex-planner.md)
+      const outputName = `codex-${roleName}`;
+      fs.writeFileSync(path.join(agentsTarget, outputName), expanded, "utf8");
     }
     console.log(`do agents installed to ${agentsTarget}`);
   }
-}
-
-function shouldInstallRuntimeScriptFile(src) {
-  const relativePath = path.relative(source, src);
-  const posixPath = relativePath.split(path.sep).join("/");
-
-  return !posixPath.startsWith("scripts/__tests__/install-");
 }
 
 function renderCodexWrapperSkill(wrapper) {

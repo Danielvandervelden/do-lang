@@ -1,6 +1,6 @@
 {
   "name": "@danielvandervelden/do-lang",
-  "version": "2.0.3",
+  "version": "2.1.0",
   "description": "Token-efficient meta programming language for Claude Code and Codex",
   "files": [
     "skills",
@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "postinstall": "node bin/install.cjs",
-    "test": "node --test skills/do/scripts/__tests__/*.test.cjs"
+    "test": "node --test skills/scripts/__tests__/*.test.cjs"
   },
   "dependencies": {
     "gray-matter": "^4.0.3"

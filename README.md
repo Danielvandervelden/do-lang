@@ -338,7 +338,7 @@ yalc remove @danielvandervelden/do-lang
 ### Running tests
 
 ```bash
-node --test skills/do/scripts/__tests__/*.test.cjs
+node --test skills/scripts/__tests__/*.test.cjs
 ```
 
 ## License

@@ -1,6 +1,6 @@
 {
   "name": "@danielvandervelden/do-lang",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description": "Token-efficient meta programming language for Claude Code and Codex",
   "files": [
     "skills",
@@ -14,6 +14,9 @@
   "dependencies": {
     "gray-matter": "^4.0.3"
   },
+  "bundledDependencies": [
+    "gray-matter"
+  ],
   "keywords": [
     "claude-code",
     "skills",

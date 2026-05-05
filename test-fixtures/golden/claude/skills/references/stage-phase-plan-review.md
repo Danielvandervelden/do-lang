@@ -86,6 +86,7 @@ Return summary of sections populated.
 
 **Wait for do-planner to complete before proceeding to PR-3.** Reviewers must see curated content, not scaffold placeholders — sending reviewers against a template with `{{GOAL}}` / `{{WAVE_PLAN}}` markers would cause an automatic RETHINK verdict on every first pass.
 
+
 ---
 
 ## PR-3: Spawn Reviewers
@@ -183,6 +184,7 @@ Apply single-review fallback in PR-4b (skip PR-4a).
 ## PR-5: Handle Combined Verdict
 
 ### If APPROVED
+
 
 1. **Phase-pointer non-hijack guard (FIRST — gates all subsequent writes):** This must be the very first step so that none of writes 2-6 leak onto a future phase whose promotion is deferred. Read `project.md.active_phase`. If another phase is already active (`active_phase` is set to a different, non-null slug), this plan-review was triggered by `/do:project phase new` during an in-progress phase (planning a future phase while the current one is still active). In that case log to changelog, `exit 0`, and let `/do:project phase complete` on the currently-active phase be what re-invokes this stage for the now-becoming-active phase. On re-entry: PR-0 passes (flag still false because we wrote nothing), review re-runs idempotently, this guard passes (pointer is null after phase-complete cleared it), and steps 2-7 land. Cost: one redundant review pass per deferred phase. Benefit: no state leaks and no complex resume guard.
 

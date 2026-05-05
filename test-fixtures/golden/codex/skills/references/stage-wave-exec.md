@@ -82,6 +82,8 @@ Handle result:
   ```
 - **FAILED**: Surface error and last good state to user
 
+**Codex cleanup:** The codex-executioner subagent has completed and its output has been fully consumed. Close (dismiss) the codex-executioner subagent now to free the thread slot before proceeding to WE-3.
+
 ---
 
 ## WE-3: Verify Execution Complete

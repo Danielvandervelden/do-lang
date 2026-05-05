@@ -58,6 +58,7 @@ Handle result:
 
 ### If PASS (UAT confirmed)
 
+
 Proceed to WV-3 (success path).
 
 ### If FAIL (quality check failure, incomplete checklist, or UAT failed)
@@ -77,6 +78,7 @@ Choose option (1-4):
 ```
 
 Wait for user response:
+
 
 - **Option 1 (Retry):** Ask "What was fixed?" — log answer in `wave.md` Execution Log as a deviation note, then return to WV-1 and re-spawn do-verifier.
 - **Option 2 (Debug):** Display: "Run `/do:debug` to investigate. After debugging, return to this wave by re-invoking `/do:project wave next`."

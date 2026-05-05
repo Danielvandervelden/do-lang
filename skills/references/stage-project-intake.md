@@ -134,6 +134,10 @@ For each question:
 Stop and return GRILLING_COMPLETE ONLY when confidence score in the target file's frontmatter is >= <threshold>, OR when all 10 questions have been asked, OR when the user types "proceed anyway". Do NOT stop while confidence is below <threshold> unless one of the other two stop conditions fires. Continue asking questions until one of those three conditions holds.
 <<DO:ENDIF>>
 
+<<DO:IF CODEX>>
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-griller subagent (Pass 1) has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-griller subagent now to free the thread slot before proceeding to PI-3.
+<<DO:ENDIF>>
+
 ---
 
 ## PI-3: Save Pass 1 Transcript
@@ -227,6 +231,10 @@ Append Pass 2 Q&A to the session transcript created in PI-3.
 After Pass 2 completes, `<<DO:AGENT_PREFIX>>-griller` has updated `project.md`'s confidence score with the 3 phase-seed factor contributions (phase list clarity, dependency clarity, MVP marker). Proceed to PI-5b for the mandatory threshold gate — Pass 2 alone does not authorise exiting intake.
 <<DO:ENDIF>>
 
+<<DO:IF CODEX>>
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-griller subagent (Pass 2) has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-griller subagent now to free the thread slot before proceeding to PI-5b.
+<<DO:ENDIF>>
+
 ---
 
 ## PI-5b: Enforce Intake Threshold Gate (authoritative exit from intake)
@@ -249,6 +257,11 @@ process.exit(score >= threshold ? 0 : 1);
 
 **If score < threshold (exit 1):** Intake is not authorised to exit. Surface the delta to the user with three options:
 1. **Re-grill** — spawn `<<DO:AGENT_PREFIX>>-griller` again with the lowest-scoring factors as focus; loop back to PI-5b.
+
+<<DO:IF CODEX>>
+   **Codex cleanup (re-grill path):** After the re-grill <<DO:AGENT_PREFIX>>-griller subagent completes and its output has been consumed, close (dismiss) the subagent before looping back to PI-5b.
+<<DO:ENDIF>>
+
 2. **Proceed anyway (override)** — user explicitly accepts below-threshold exit. Record an `override_note` in the session transcript from PI-3 (`<timestamp> override: user proceeded at confidence=<score>, threshold=<threshold>`) and append an `intake_override: true` flag to `project.md` frontmatter so the project-plan reviewer at the next stage can weigh the override when evaluating the plan. Then proceed to PI-6.
 3. **Abandon intake** — run `project-state.cjs abandon project <active_project>` and stop.
 
@@ -336,6 +349,8 @@ Calculate overall confidence after all answers and write to frontmatter.
 Return summary of sections populated.
 
 **Wait for `<<DO:AGENT_PREFIX>>-planner` to complete before proceeding.** The spawn directive is synchronous in the orchestrator — do NOT fire-and-forget. PI-7 (status advance) and PI-8 (handoff to plan review) both depend on `project.md`'s body sections being populated. Advancing to `planning` or handing off to `stage-project-plan-review.md` before the planner has curated the body would put the project into plan review with empty sections, causing the reviewer to reject on missing content.
+
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-planner subagent has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-planner subagent now to free the thread slot before proceeding to PI-6b.
 <<DO:ENDIF>>
 
 ---

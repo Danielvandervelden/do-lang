@@ -85,6 +85,8 @@ Return summary of sections populated.
 
 **Wait for codex-planner to complete before proceeding to PR-3.** Reviewers must see curated content, not scaffold placeholders — sending reviewers against a template with `{{GOAL}}` / `{{WAVE_PLAN}}` markers would cause an automatic RETHINK verdict on every first pass.
 
+**Codex cleanup:** The codex-planner subagent (curation) has completed and its output has been fully consumed. Close (dismiss) the codex-planner subagent now to free the thread slot before proceeding to PR-3.
+
 ---
 
 ## PR-3: Spawn Reviewers
@@ -161,6 +163,10 @@ Apply single-review fallback in PR-4b (skip PR-4a).
 ## PR-5: Handle Combined Verdict
 
 ### If APPROVED
+
+**Codex cleanup (council enabled path):** Both codex-plan-reviewer and codex-council-reviewer subagents have completed and their output has been fully consumed. Close (dismiss) both subagents now to free thread slots before proceeding with APPROVED writes.
+
+**Codex cleanup (council disabled path):** The codex-plan-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the subagent now to free the thread slot before proceeding with APPROVED writes.
 
 1. **Phase-pointer non-hijack guard (FIRST — gates all subsequent writes):** This must be the very first step so that none of writes 2-6 leak onto a future phase whose promotion is deferred. Read `project.md.active_phase`. If another phase is already active (`active_phase` is set to a different, non-null slug), this plan-review was triggered by `/do:project phase new` during an in-progress phase (planning a future phase while the current one is still active). In that case log to changelog, `exit 0`, and let `/do:project phase complete` on the currently-active phase be what re-invokes this stage for the now-becoming-active phase. On re-entry: PR-0 passes (flag still false because we wrote nothing), review re-runs idempotently, this guard passes (pointer is null after phase-complete cleared it), and steps 2-7 land. Cost: one redundant review pass per deferred phase. Benefit: no state leaks and no complex resume guard.
 
@@ -245,6 +251,9 @@ Apply single-review fallback in PR-4b (skip PR-4a).
    - **Council:** <verdict> - <summary> (or "disabled")
    - **Changes made:** (pending — codex-planner will revise)
    ```
+3.5. **Codex cleanup (council enabled path):** Both codex-plan-reviewer and codex-council-reviewer subagents have completed and their output has been fully consumed. Close (dismiss) both subagents now to free thread slots before spawning codex-planner for revision.
+
+**Codex cleanup (council disabled path):** The codex-plan-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the subagent now to free the thread slot before spawning codex-planner for revision.
 4. Spawn codex-planner with reviewer feedback:
 
    Spawn the codex-planner subagent with model `<models.overrides.planner || models.default>` and the description "Revise phase plan based on review feedback". Pass the following prompt:
@@ -261,7 +270,8 @@ Apply single-review fallback in PR-4b (skip PR-4a).
 
 5. Wait for codex-planner to complete
 6. Update iteration log with "Changes made: <planner summary>"
-7. Return to PR-3 and re-spawn reviewers
+7. **Codex cleanup:** The codex-planner subagent has completed and its output has been fully consumed. Close (dismiss) the codex-planner subagent now to free the thread slot before returning to PR-3.
+8. Return to PR-3 and re-spawn reviewers
 
 ### If ITERATE (and review_iterations = 3)
 

@@ -251,6 +251,8 @@ Activates the next planning wave and runs it through plan → review → execute
    Threshold: <project_intake_threshold>
    Ask targeted questions for lowest-scoring factors. Stop when threshold reached or user overrides.
 
+   **Codex cleanup:** After the <<DO:AGENT_PREFIX>>-griller subagent completes the confidence rescue and its output has been fully consumed, close (dismiss) the <<DO:AGENT_PREFIX>>-griller subagent now to free the thread slot before proceeding to step 7.
+
 7. Invoke `@references/stage-wave-plan-review.md` (targets `wave.md`).
 8. Then `@references/stage-wave-exec.md`.
 9. Then `@references/stage-wave-code-review.md`.

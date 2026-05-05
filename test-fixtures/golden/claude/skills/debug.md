@@ -108,6 +108,7 @@ Return structured summary.
 
 Parse the agent's return:
 
+
 **ROOT_CAUSE_FOUND:**
 ```
 ## Debug Complete

@@ -142,6 +142,7 @@ Handle result:
 - **BLOCKED**: Show blocker, ask user for resolution. Stop — do not attempt to continue automatically.
 - **FAILED**: Show error with last good state and task file path for `/do:continue` resume. Stop.
 
+
 ---
 
 ## FE-4: Fast-path Stage Override
@@ -215,9 +216,11 @@ council_review_ran:
 stage: complete
 ```
 
+
 Continue to FE-7.
 
 ### If CHANGES_REQUESTED (first time)
+
 
 Spawn do-executioner with the fix instructions:
 
@@ -240,6 +243,7 @@ Fix each issue. Log changes in the Execution Log. Return summary when complete.
 ```
 
 After executioner completes, re-run FE-4 (override stage back to `execution: review_pending`), then re-spawn do-code-reviewer once more (go back to the top of FE-6).
+
 
 ### If CHANGES_REQUESTED (second time — escalation)
 

@@ -168,6 +168,7 @@ Run council-invoke.cjs --type code and return the structured verdict (APPROVED, 
 
 Store the returned verdict and findings as in-session `quick_council_r1`.
 
+
 ---
 
 ## QE-7: Interpret Round-1 Verdict
@@ -221,6 +222,7 @@ Also update the `## Approach` line to `(Inline execution — orchestrator made c
 Spawn council review using the same Agent() pattern as QE-6, with description updated to `"Quick-path council review (round 2 of 2)"` and the prompt including round-1 findings as additional context (note: "second and final round", and that the transient file now contains the round-1 council findings and the updated diff).
 
 Store the returned verdict and findings as in-session `quick_council_r2`.
+
 
 ---
 

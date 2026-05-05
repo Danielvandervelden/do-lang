@@ -217,6 +217,10 @@ The task file already exists. Read it, complete any missing sections.
 Return structured summary when done.
 <<DO:ENDIF>>
 
+<<DO:IF CODEX>>
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-planner subagent has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-planner subagent now to free the thread slot before proceeding.
+<<DO:ENDIF>>
+
 ### Plan Review
 
 @references/stage-plan-review.md
@@ -265,6 +269,10 @@ Threshold: <threshold>
 
 **Note:** The griller resolves the full question loop internally via AskUserQuestion (with inline text fallback). It returns only the final GRILLING COMPLETE summary — no relaying of questions through the orchestrator.
 
+<<DO:IF CODEX>>
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-griller subagent has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-griller subagent now to free the thread slot before proceeding.
+<<DO:ENDIF>>
+
 ### Spawn <<DO:AGENT_PREFIX>>-executioner (new or resume)
 
 <<DO:IF CLAUDE>>
@@ -296,6 +304,10 @@ Continue from where it left off.
 <<DO:ENDIF>>
 
 **Note:** Deviation decisions are handled internally — the executioner asks the user directly via AskUserQuestion (with inline text fallback). BLOCKED is only returned when the user explicitly chose "Pause and investigate" or both interaction methods failed. If BLOCKED is returned, display its output as-is — do NOT re-ask the user.
+
+<<DO:IF CODEX>>
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-executioner subagent has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-executioner subagent now to free the thread slot before proceeding to code review.
+<<DO:ENDIF>>
 
 ### Code Review
 
@@ -339,6 +351,10 @@ If stage is verified, resume at UAT flow (Step V5).
 <<DO:ENDIF>>
 
 **Note:** UAT approval and fail handling are resolved internally — the verifier asks the user directly via AskUserQuestion (with inline text fallback). If FAIL or UAT_FAILED is returned, display the verifier's output as-is — it already contains the user's chosen next step. Do NOT re-ask.
+
+<<DO:IF CODEX>>
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-verifier subagent has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-verifier subagent now to free the thread slot before proceeding.
+<<DO:ENDIF>>
 
 ## Step 7: Handle <<DO:CLAUDE:Agent Result>><<DO:CODEX:Subagent Result>>
 

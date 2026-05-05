@@ -55,6 +55,8 @@ Handle result:
 
 ### If PASS (UAT confirmed)
 
+**Codex cleanup:** The codex-verifier subagent has completed and its output has been fully consumed. Close (dismiss) the codex-verifier subagent now to free the thread slot before proceeding to WV-3.
+
 Proceed to WV-3 (success path).
 
 ### If FAIL (quality check failure, incomplete checklist, or UAT failed)
@@ -74,6 +76,8 @@ Choose option (1-4):
 ```
 
 Wait for user response:
+
+**Codex cleanup:** The codex-verifier subagent has completed and its output has been fully consumed. Close (dismiss) the codex-verifier subagent now to free the thread slot before executing the chosen failure path.
 
 - **Option 1 (Retry):** Ask "What was fixed?" — log answer in `wave.md` Execution Log as a deviation note, then return to WV-1 and re-spawn codex-verifier.
 - **Option 2 (Debug):** Display: "Run `/do:debug` to investigate. After debugging, return to this wave by re-invoking `/do:project wave next`."

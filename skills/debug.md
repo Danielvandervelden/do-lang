@@ -164,6 +164,10 @@ Return structured summary.
 
 Parse the agent's return:
 
+<<DO:IF CODEX>>
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-debugger subagent has completed and its output has been fully consumed (all result types are terminal — output is fully consumed when Step 4 is entered). Close (dismiss) the <<DO:AGENT_PREFIX>>-debugger subagent now to free the thread slot before displaying the result to the user.
+<<DO:ENDIF>>
+
 **ROOT_CAUSE_FOUND:**
 ```
 ## Debug Complete

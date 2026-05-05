@@ -84,6 +84,8 @@ Return summary of sections populated.
 
 **Wait for codex-planner to complete before proceeding to PR-3.** Reviewers must see curated content, not scaffold placeholders — sending reviewers against a template with `{{PROBLEM_STATEMENT}}` / `{{APPROACH}}` markers would cause an automatic RETHINK verdict on every first pass.
 
+**Codex cleanup:** The codex-planner subagent (curation) has completed and its output has been fully consumed. Close (dismiss) the codex-planner subagent now to free the thread slot before proceeding to PR-3.
+
 ---
 
 ## PR-3: Spawn Reviewers
@@ -161,6 +163,10 @@ Apply single-review fallback in PR-4b (skip PR-4a).
 
 ### If APPROVED
 
+**Codex cleanup (council enabled path):** Both codex-plan-reviewer and codex-council-reviewer subagents have completed and their output has been fully consumed. Close (dismiss) both subagents now to free thread slots before returning APPROVED to the caller.
+
+**Codex cleanup (council disabled path):** The codex-plan-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the subagent now to free the thread slot before returning APPROVED to the caller.
+
 Update `wave.md` frontmatter:
 ```yaml
 council_review_ran:
@@ -182,6 +188,9 @@ Return control to caller (proceed to `stage-wave-exec.md`).
    - **Council:** <verdict> - <summary> (or "disabled")
    - **Changes made:** (pending — codex-planner will revise)
    ```
+3.5. **Codex cleanup (council enabled path):** Both codex-plan-reviewer and codex-council-reviewer subagents have completed and their output has been fully consumed. Close (dismiss) both subagents now to free thread slots before spawning codex-planner for revision.
+
+**Codex cleanup (council disabled path):** The codex-plan-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the subagent now to free the thread slot before spawning codex-planner for revision.
 4. Spawn codex-planner with reviewer feedback:
 
    Spawn the codex-planner subagent with model `<models.overrides.planner || models.default>` and the description "Revise wave plan based on review feedback". Pass the following prompt:
@@ -198,7 +207,8 @@ Return control to caller (proceed to `stage-wave-exec.md`).
 
 5. Wait for codex-planner to complete
 6. Update iteration log with "Changes made: <planner summary>"
-7. Return to PR-3 and re-spawn reviewers
+7. **Codex cleanup:** The codex-planner subagent has completed and its output has been fully consumed. Close (dismiss) the codex-planner subagent now to free the thread slot before returning to PR-3.
+8. Return to PR-3 and re-spawn reviewers
 
 ### If ITERATE (and review_iterations = 3)
 

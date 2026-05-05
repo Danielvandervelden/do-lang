@@ -120,6 +120,10 @@ Return summary of sections populated.
 
 **Wait for <<DO:AGENT_PREFIX>>-planner to complete before proceeding to PR-3.** Reviewers must see curated content, not scaffold placeholders — sending reviewers against a template with `{{PROBLEM_STATEMENT}}` / `{{APPROACH}}` markers would cause an automatic RETHINK verdict on every first pass.
 
+<<DO:IF CODEX>>
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-planner subagent (curation) has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-planner subagent now to free the thread slot before proceeding to PR-3.
+<<DO:ENDIF>>
+
 ---
 
 ## PR-3: Spawn Reviewers
@@ -269,6 +273,12 @@ Apply single-review fallback in PR-4b (skip PR-4a).
 
 ### If APPROVED
 
+<<DO:IF CODEX>>
+**Codex cleanup (council enabled path):** Both <<DO:AGENT_PREFIX>>-plan-reviewer and <<DO:AGENT_PREFIX>>-council-reviewer subagents have completed and their output has been fully consumed. Close (dismiss) both subagents now to free thread slots before returning APPROVED to the caller.
+
+**Codex cleanup (council disabled path):** The <<DO:AGENT_PREFIX>>-plan-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the subagent now to free the thread slot before returning APPROVED to the caller.
+<<DO:ENDIF>>
+
 Update `wave.md` frontmatter:
 ```yaml
 council_review_ran:
@@ -290,6 +300,11 @@ Return control to caller (proceed to `stage-wave-exec.md`).
    - **Council:** <verdict> - <summary> (or "disabled")
    - **Changes made:** (pending — <<DO:AGENT_PREFIX>>-planner will revise)
    ```
+<<DO:IF CODEX>>
+3.5. **Codex cleanup (council enabled path):** Both <<DO:AGENT_PREFIX>>-plan-reviewer and <<DO:AGENT_PREFIX>>-council-reviewer subagents have completed and their output has been fully consumed. Close (dismiss) both subagents now to free thread slots before spawning <<DO:AGENT_PREFIX>>-planner for revision.
+
+**Codex cleanup (council disabled path):** The <<DO:AGENT_PREFIX>>-plan-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the subagent now to free the thread slot before spawning <<DO:AGENT_PREFIX>>-planner for revision.
+<<DO:ENDIF>>
 4. Spawn <<DO:AGENT_PREFIX>>-planner with reviewer feedback:
 <<DO:IF CLAUDE>>
    ```javascript
@@ -330,7 +345,8 @@ Return control to caller (proceed to `stage-wave-exec.md`).
 
 5. Wait for <<DO:AGENT_PREFIX>>-planner to complete
 6. Update iteration log with "Changes made: <planner summary>"
-7. Return to PR-3 and re-spawn reviewers
+7. **Codex cleanup:** The <<DO:AGENT_PREFIX>>-planner subagent has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-planner subagent now to free the thread slot before returning to PR-3.
+8. Return to PR-3 and re-spawn reviewers
 <<DO:ENDIF>>
 
 ### If ITERATE (and review_iterations = 3)

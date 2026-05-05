@@ -125,12 +125,18 @@ Apply single-review fallback in CR-4b (skip CR-4a).
    council_review_ran:
      code: true
    ```
+2.5. **Codex cleanup (council enabled path):** Both codex-code-reviewer and codex-council-reviewer subagents have completed and their output has been fully consumed. Close (dismiss) both subagents now to free thread slots before returning VERIFIED to the caller.
+
+**Codex cleanup (council disabled path):** The codex-code-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the subagent now to free the thread slot before returning VERIFIED to the caller.
 3. Return control to caller (continue to `stage-wave-verify.md`).
 
 ### If ITERATE (and code_review_iterations < 3)
 
 1. Increment `code_review_iterations`
 2. Compile combined findings
+2.5. **Codex cleanup (council enabled path):** Both codex-code-reviewer and codex-council-reviewer subagents have completed and their output has been fully consumed. Close (dismiss) both subagents now to free thread slots before spawning codex-executioner for fixes.
+
+**Codex cleanup (council disabled path):** The codex-code-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the subagent now to free the thread slot before spawning codex-executioner for fixes.
 3. Spawn codex-executioner with combined findings:
 
    Spawn the codex-executioner subagent with model `<models.overrides.executioner || models.default>` and the description "Fix wave code review issues (iteration <N>)". Pass the following prompt:
@@ -155,7 +161,8 @@ Apply single-review fallback in CR-4b (skip CR-4a).
    - **Council:** <verdict> (or "disabled")
    - **Action:** Spawned codex-executioner with combined findings; executor completed
    ```
-6. Return to CR-3 and re-spawn both review agents
+6. **Codex cleanup:** The codex-executioner subagent has completed and its output has been fully consumed. Close (dismiss) the codex-executioner subagent now to free the thread slot before returning to CR-3.
+7. Return to CR-3 and re-spawn both review agents
 
 ### If ITERATE (and code_review_iterations = 3)
 

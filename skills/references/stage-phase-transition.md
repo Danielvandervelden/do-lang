@@ -53,6 +53,8 @@ Current confidence: <score>
 Threshold: <project_intake_threshold>
 Ask targeted questions for lowest-scoring factors. Stop when threshold reached, 10 questions asked, or user overrides.
 
+**Codex cleanup:** After the <<DO:AGENT_PREFIX>>-griller subagent completes its re-grill and its output has been fully consumed, close (dismiss) the <<DO:AGENT_PREFIX>>-griller subagent now to free the thread slot before invoking `stage-phase-plan-review.md`.
+
 After re-grill (or immediately if at threshold), invoke `@references/stage-phase-plan-review.md` for the next phase.
 <<DO:ENDIF>>
 

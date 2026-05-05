@@ -120,6 +120,10 @@ Return summary of sections populated.
 
 **Wait for <<DO:AGENT_PREFIX>>-planner to complete before proceeding to PR-3.** Reviewers must see curated content, not scaffold placeholders — sending reviewers against a template with `{{GOAL}}` / `{{WAVE_PLAN}}` markers would cause an automatic RETHINK verdict on every first pass.
 
+<<DO:IF CODEX>>
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-planner subagent (curation) has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-planner subagent now to free the thread slot before proceeding to PR-3.
+<<DO:ENDIF>>
+
 ---
 
 ## PR-3: Spawn Reviewers
@@ -269,6 +273,12 @@ Apply single-review fallback in PR-4b (skip PR-4a).
 
 ### If APPROVED
 
+<<DO:IF CODEX>>
+**Codex cleanup (council enabled path):** Both <<DO:AGENT_PREFIX>>-plan-reviewer and <<DO:AGENT_PREFIX>>-council-reviewer subagents have completed and their output has been fully consumed. Close (dismiss) both subagents now to free thread slots before proceeding with APPROVED writes.
+
+**Codex cleanup (council disabled path):** The <<DO:AGENT_PREFIX>>-plan-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the subagent now to free the thread slot before proceeding with APPROVED writes.
+<<DO:ENDIF>>
+
 1. **Phase-pointer non-hijack guard (FIRST — gates all subsequent writes):** This must be the very first step so that none of writes 2-6 leak onto a future phase whose promotion is deferred. Read `project.md.active_phase`. If another phase is already active (`active_phase` is set to a different, non-null slug), this plan-review was triggered by `/do:project phase new` during an in-progress phase (planning a future phase while the current one is still active). In that case log to changelog, `exit 0`, and let `/do:project phase complete` on the currently-active phase be what re-invokes this stage for the now-becoming-active phase. On re-entry: PR-0 passes (flag still false because we wrote nothing), review re-runs idempotently, this guard passes (pointer is null after phase-complete cleared it), and steps 2-7 land. Cost: one redundant review pass per deferred phase. Benefit: no state leaks and no complex resume guard.
 
    ```bash
@@ -352,6 +362,11 @@ Apply single-review fallback in PR-4b (skip PR-4a).
    - **Council:** <verdict> - <summary> (or "disabled")
    - **Changes made:** (pending — <<DO:AGENT_PREFIX>>-planner will revise)
    ```
+<<DO:IF CODEX>>
+3.5. **Codex cleanup (council enabled path):** Both <<DO:AGENT_PREFIX>>-plan-reviewer and <<DO:AGENT_PREFIX>>-council-reviewer subagents have completed and their output has been fully consumed. Close (dismiss) both subagents now to free thread slots before spawning <<DO:AGENT_PREFIX>>-planner for revision.
+
+**Codex cleanup (council disabled path):** The <<DO:AGENT_PREFIX>>-plan-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the subagent now to free the thread slot before spawning <<DO:AGENT_PREFIX>>-planner for revision.
+<<DO:ENDIF>>
 4. Spawn <<DO:AGENT_PREFIX>>-planner with reviewer feedback:
 <<DO:IF CLAUDE>>
    ```javascript
@@ -392,7 +407,8 @@ Apply single-review fallback in PR-4b (skip PR-4a).
 
 5. Wait for <<DO:AGENT_PREFIX>>-planner to complete
 6. Update iteration log with "Changes made: <planner summary>"
-7. Return to PR-3 and re-spawn reviewers
+7. **Codex cleanup:** The <<DO:AGENT_PREFIX>>-planner subagent has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-planner subagent now to free the thread slot before returning to PR-3.
+8. Return to PR-3 and re-spawn reviewers
 <<DO:ENDIF>>
 
 ### If ITERATE (and review_iterations = 3)

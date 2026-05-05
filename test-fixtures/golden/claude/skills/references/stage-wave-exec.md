@@ -85,6 +85,7 @@ Handle result:
   ```
 - **FAILED**: Surface error and last good state to user
 
+
 ---
 
 ## WE-3: Verify Execution Complete

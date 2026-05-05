@@ -111,6 +111,10 @@ Handle result:
   ```
 - **FAILED**: Surface error and last good state to user
 
+<<DO:IF CODEX>>
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-executioner subagent has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-executioner subagent now to free the thread slot before proceeding to WE-3.
+<<DO:ENDIF>>
+
 ---
 
 ## WE-3: Verify Execution Complete

@@ -194,6 +194,10 @@ Run council-invoke.cjs --type code and return the structured verdict (APPROVED, 
 
 Store the returned verdict and findings as in-session `quick_council_r1`.
 
+<<DO:IF CODEX>>
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-council-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-council-reviewer subagent now to free the thread slot before proceeding to QE-7.
+<<DO:ENDIF>>
+
 ---
 
 ## QE-7: Interpret Round-1 Verdict
@@ -252,6 +256,10 @@ Spawn council review using the same spawn directive pattern as QE-6, with descri
 <<DO:ENDIF>>
 
 Store the returned verdict and findings as in-session `quick_council_r2`.
+
+<<DO:IF CODEX>>
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-council-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-council-reviewer subagent now to free the thread slot before proceeding to QE-12.
+<<DO:ENDIF>>
 
 ---
 

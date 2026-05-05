@@ -85,6 +85,7 @@ Return summary of sections populated.
 
 **Wait for do-planner to complete before proceeding to PR-3.** Reviewers must see curated content, not scaffold placeholders — sending reviewers against a template with `{{PROBLEM_STATEMENT}}` / `{{APPROACH}}` markers would cause an automatic RETHINK verdict on every first pass.
 
+
 ---
 
 ## PR-3: Spawn Reviewers
@@ -182,6 +183,7 @@ Apply single-review fallback in PR-4b (skip PR-4a).
 ## PR-5: Handle Combined Verdict
 
 ### If APPROVED
+
 
 Update `wave.md` frontmatter:
 ```yaml

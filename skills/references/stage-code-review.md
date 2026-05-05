@@ -201,6 +201,11 @@ Load and follow `@references/classify-findings.md`. The self-review output comes
    council_review_ran:
      code: true   # merge into existing object — plan: true is already set
    ```
+<<DO:IF CODEX>>
+2.5. **Codex cleanup (council enabled path):** Both <<DO:AGENT_PREFIX>>-code-reviewer and <<DO:AGENT_PREFIX>>-council-reviewer subagents have completed and their output has been fully consumed. Close (dismiss) both subagents now to free thread slots before returning VERIFIED to the caller.
+
+**Codex cleanup (council disabled path):** The <<DO:AGENT_PREFIX>>-code-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the subagent now to free the thread slot before returning VERIFIED to the caller.
+<<DO:ENDIF>>
 3. Return control to caller (continue to <<DO:AGENT_PREFIX>>-verifier).
 
 ### If ITERATE
@@ -239,6 +244,11 @@ Increment `code_review_iterations` BEFORE deciding which branch to take. This en
 
    Store the parsed result as `classified_findings` (an object with `blockers` and `nitpicks` arrays).
 
+<<DO:IF CODEX>>
+3.5. **Codex cleanup (council enabled path):** Both <<DO:AGENT_PREFIX>>-code-reviewer and <<DO:AGENT_PREFIX>>-council-reviewer subagents have completed and their output has been fully consumed. Close (dismiss) both subagents now to free thread slots before spawning <<DO:AGENT_PREFIX>>-executioner for fixes.
+
+**Codex cleanup (council disabled path):** The <<DO:AGENT_PREFIX>>-code-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the subagent now to free the thread slot before spawning <<DO:AGENT_PREFIX>>-executioner for fixes.
+<<DO:ENDIF>>
 4. Spawn <<DO:AGENT_PREFIX>>-executioner with classified findings as a prioritized fix brief:
 <<DO:IF CLAUDE>>
    ```javascript
@@ -304,7 +314,8 @@ Increment `code_review_iterations` BEFORE deciding which branch to take. This en
      - <issue 1> at file:line
    - **Action:** Spawned <<DO:AGENT_PREFIX>>-executioner with prioritized findings (blockers: <N>, nitpicks: <M>); executor completed
    ```
-7. Return to CR-3 and re-spawn both review agents
+7. **Codex cleanup:** The <<DO:AGENT_PREFIX>>-executioner subagent has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-executioner subagent now to free the thread slot before returning to CR-3.
+8. Return to CR-3 and re-spawn both review agents
 <<DO:ENDIF>>
 
 ### MAX_ITERATIONS (code_review_iterations = 3)

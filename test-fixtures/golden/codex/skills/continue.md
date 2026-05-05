@@ -193,6 +193,8 @@ Task file: .do/tasks/<active_task>
 The task file already exists. Read it, complete any missing sections.
 Return structured summary when done.
 
+**Codex cleanup:** The codex-planner subagent has completed and its output has been fully consumed. Close (dismiss) the codex-planner subagent now to free the thread slot before proceeding.
+
 ### Plan Review
 
 @references/stage-plan-review.md
@@ -223,6 +225,8 @@ Threshold: <threshold>
 
 **Note:** The griller resolves the full question loop internally via AskUserQuestion (with inline text fallback). It returns only the final GRILLING COMPLETE summary — no relaying of questions through the orchestrator.
 
+**Codex cleanup:** The codex-griller subagent has completed and its output has been fully consumed. Close (dismiss) the codex-griller subagent now to free the thread slot before proceeding.
+
 ### Spawn codex-executioner (new or resume)
 
 Spawn the codex-executioner subagent with model `<models.overrides.executioner || models.default>` and the description "Execute task". Pass the following prompt:
@@ -235,6 +239,8 @@ Check Execution Log for prior progress.
 Continue from where it left off.
 
 **Note:** Deviation decisions are handled internally — the executioner asks the user directly via AskUserQuestion (with inline text fallback). BLOCKED is only returned when the user explicitly chose "Pause and investigate" or both interaction methods failed. If BLOCKED is returned, display its output as-is — do NOT re-ask the user.
+
+**Codex cleanup:** The codex-executioner subagent has completed and its output has been fully consumed. Close (dismiss) the codex-executioner subagent now to free the thread slot before proceeding to code review.
 
 ### Code Review
 
@@ -258,6 +264,8 @@ Run verification: approach checklist, quality checks, UAT.
 If stage is verified, resume at UAT flow (Step V5).
 
 **Note:** UAT approval and fail handling are resolved internally — the verifier asks the user directly via AskUserQuestion (with inline text fallback). If FAIL or UAT_FAILED is returned, display the verifier's output as-is — it already contains the user's chosen next step. Do NOT re-ask.
+
+**Codex cleanup:** The codex-verifier subagent has completed and its output has been fully consumed. Close (dismiss) the codex-verifier subagent now to free the thread slot before proceeding.
 
 ## Step 7: Handle Subagent Result
 

@@ -96,6 +96,7 @@ Stop and return GRILLING_COMPLETE ONLY when confidence score in the target file'
 })
 ```
 
+
 ---
 
 ## PI-3: Save Pass 1 Transcript
@@ -163,6 +164,7 @@ Append Pass 2 Q&A to the session transcript created in PI-3.
 
 After Pass 2 completes, `do-griller` has updated `project.md`'s confidence score with the 3 phase-seed factor contributions (phase list clarity, dependency clarity, MVP marker). Proceed to PI-5b for the mandatory threshold gate — Pass 2 alone does not authorise exiting intake.
 
+
 ---
 
 ## PI-5b: Enforce Intake Threshold Gate (authoritative exit from intake)
@@ -185,6 +187,8 @@ process.exit(score >= threshold ? 0 : 1);
 
 **If score < threshold (exit 1):** Intake is not authorised to exit. Surface the delta to the user with three options:
 1. **Re-grill** — spawn `do-griller` again with the lowest-scoring factors as focus; loop back to PI-5b.
+
+
 2. **Proceed anyway (override)** — user explicitly accepts below-threshold exit. Record an `override_note` in the session transcript from PI-3 (`<timestamp> override: user proceeded at confidence=<score>, threshold=<threshold>`) and append an `intake_override: true` flag to `project.md` frontmatter so the project-plan reviewer at the next stage can weigh the override when evaluating the plan. Then proceed to PI-6.
 3. **Abandon intake** — run `project-state.cjs abandon project <active_project>` and stop.
 

@@ -199,12 +199,22 @@ Apply single-review fallback in CR-4b (skip CR-4a).
    council_review_ran:
      code: true
    ```
+<<DO:IF CODEX>>
+2.5. **Codex cleanup (council enabled path):** Both <<DO:AGENT_PREFIX>>-code-reviewer and <<DO:AGENT_PREFIX>>-council-reviewer subagents have completed and their output has been fully consumed. Close (dismiss) both subagents now to free thread slots before returning VERIFIED to the caller.
+
+**Codex cleanup (council disabled path):** The <<DO:AGENT_PREFIX>>-code-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the subagent now to free the thread slot before returning VERIFIED to the caller.
+<<DO:ENDIF>>
 3. Return control to caller (continue to `stage-wave-verify.md`).
 
 ### If ITERATE (and code_review_iterations < 3)
 
 1. Increment `code_review_iterations`
 2. Compile combined findings
+<<DO:IF CODEX>>
+2.5. **Codex cleanup (council enabled path):** Both <<DO:AGENT_PREFIX>>-code-reviewer and <<DO:AGENT_PREFIX>>-council-reviewer subagents have completed and their output has been fully consumed. Close (dismiss) both subagents now to free thread slots before spawning <<DO:AGENT_PREFIX>>-executioner for fixes.
+
+**Codex cleanup (council disabled path):** The <<DO:AGENT_PREFIX>>-code-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the subagent now to free the thread slot before spawning <<DO:AGENT_PREFIX>>-executioner for fixes.
+<<DO:ENDIF>>
 3. Spawn <<DO:AGENT_PREFIX>>-executioner with combined findings:
 <<DO:IF CLAUDE>>
    ```javascript
@@ -262,7 +272,8 @@ Apply single-review fallback in CR-4b (skip CR-4a).
    - **Council:** <verdict> (or "disabled")
    - **Action:** Spawned <<DO:AGENT_PREFIX>>-executioner with combined findings; executor completed
    ```
-6. Return to CR-3 and re-spawn both review agents
+6. **Codex cleanup:** The <<DO:AGENT_PREFIX>>-executioner subagent has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-executioner subagent now to free the thread slot before returning to CR-3.
+7. Return to CR-3 and re-spawn both review agents
 <<DO:ENDIF>>
 
 ### If ITERATE (and code_review_iterations = 3)

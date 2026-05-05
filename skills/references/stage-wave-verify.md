@@ -85,6 +85,10 @@ Handle result:
 
 ### If PASS (UAT confirmed)
 
+<<DO:IF CODEX>>
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-verifier subagent has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-verifier subagent now to free the thread slot before proceeding to WV-3.
+<<DO:ENDIF>>
+
 Proceed to WV-3 (success path).
 
 ### If FAIL (quality check failure, incomplete checklist, or UAT failed)
@@ -104,6 +108,10 @@ Choose option (1-4):
 ```
 
 Wait for user response:
+
+<<DO:IF CODEX>>
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-verifier subagent has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-verifier subagent now to free the thread slot before executing the chosen failure path.
+<<DO:ENDIF>>
 
 - **Option 1 (Retry):** Ask "What was fixed?" — log answer in `wave.md` Execution Log as a deviation note, then return to WV-1 and re-spawn <<DO:AGENT_PREFIX>>-verifier.
 - **Option 2 (Debug):** Display: "Run `/do:debug` to investigate. After debugging, return to this wave by re-invoking `/do:project wave next`."

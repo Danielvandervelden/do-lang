@@ -153,6 +153,7 @@ Collect `self_verdict` (PASS/CONCERNS/RETHINK) from do-plan-reviewer and `counci
 
 ### If APPROVED
 
+
 Update `project.md` frontmatter:
 ```yaml
 council_review_ran:

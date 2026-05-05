@@ -126,6 +126,10 @@ Load and follow `@references/classify-findings.md`. The self-review output comes
 
 ### If APPROVED
 
+**Codex cleanup (council enabled path):** Both codex-plan-reviewer and codex-council-reviewer subagents have completed and their output has been fully consumed. Close (dismiss) both subagents now to free thread slots before returning APPROVED to the caller.
+
+**Codex cleanup (council disabled path):** The codex-plan-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the subagent now to free the thread slot before returning APPROVED to the caller.
+
 Update task frontmatter:
 ```yaml
 council_review_ran:
@@ -206,6 +210,9 @@ Then convert to APPROVED for the caller: set `council_review_ran.plan: true` and
    - **Council:** <verdict> - <summary> (or "disabled")
    - **Changes made:** (pending — codex-planner will revise)
    ```
+1.5. **Codex cleanup (council enabled path):** Both codex-plan-reviewer and codex-council-reviewer subagents have completed and their output has been fully consumed. Close (dismiss) both subagents now to free thread slots before spawning codex-planner for revision.
+
+**Codex cleanup (council disabled path):** The codex-plan-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the subagent now to free the thread slot before spawning codex-planner for revision.
 2. Spawn codex-planner with ALL findings (blockers + nitpicks bundled):
 
    Spawn the codex-planner subagent with model `<models.overrides.planner || models.default>` and the description "Revise plan based on review feedback". Pass the following prompt:
@@ -224,7 +231,8 @@ Then convert to APPROVED for the caller: set `council_review_ran.plan: true` and
 
 3. Wait for codex-planner to complete
 4. Update the iteration log entry with "Changes made: <planner summary>"
-5. Return to PR-3 and re-spawn both reviewers
+5. **Codex cleanup:** The codex-planner subagent has completed and its output has been fully consumed. Close (dismiss) the codex-planner subagent now to free the thread slot before returning to PR-3.
+6. Return to PR-3 and re-spawn both reviewers
 
 #### If `MAX_ITERATIONS`
 

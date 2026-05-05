@@ -165,6 +165,10 @@ Handle result:
 - **BLOCKED**: Show blocker, ask user for resolution. Stop — do not attempt to continue automatically.
 - **FAILED**: Show error with last good state and task file path for `/do:continue` resume. Stop.
 
+<<DO:IF CODEX>>
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-executioner subagent has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-executioner subagent now to free the thread slot before proceeding to FE-4.
+<<DO:ENDIF>>
+
 ---
 
 ## FE-4: Fast-path Stage Override
@@ -254,9 +258,17 @@ council_review_ran:
 stage: complete
 ```
 
+<<DO:IF CODEX>>
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-code-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-code-reviewer subagent now to free the thread slot before proceeding to FE-7.
+<<DO:ENDIF>>
+
 Continue to FE-7.
 
 ### If CHANGES_REQUESTED (first time)
+
+<<DO:IF CODEX>>
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-code-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-code-reviewer subagent now to free the thread slot before spawning <<DO:AGENT_PREFIX>>-executioner.
+<<DO:ENDIF>>
 
 Spawn <<DO:AGENT_PREFIX>>-executioner with the fix instructions:
 
@@ -294,6 +306,10 @@ Issues to fix:
 Fix each issue. Log changes in the Execution Log. Return summary when complete.
 
 After executioner completes, re-run FE-4 (override stage back to `execution: review_pending`), then re-spawn <<DO:AGENT_PREFIX>>-code-reviewer once more (go back to the top of FE-6).
+<<DO:ENDIF>>
+
+<<DO:IF CODEX>>
+**Codex cleanup:** The <<DO:AGENT_PREFIX>>-executioner subagent (fix round) has completed and its output has been fully consumed. Close (dismiss) the <<DO:AGENT_PREFIX>>-executioner subagent now to free the thread slot before re-spawning <<DO:AGENT_PREFIX>>-code-reviewer.
 <<DO:ENDIF>>
 
 ### If CHANGES_REQUESTED (second time — escalation)

@@ -307,6 +307,8 @@ Parse the returned summary for:
 - Approach summary
 - Concerns count
 
+**Codex cleanup:** The codex-planner subagent has completed and its output has been fully consumed. Close (dismiss) the codex-planner subagent now to free the thread slot before proceeding to plan review.
+
 ## Step 6: Plan Review
 
 @references/stage-plan-review.md
@@ -352,6 +354,8 @@ Present all questions at once. After receiving combined answer, update confidenc
 
 **Note:** The griller resolves the full question loop internally via AskUserQuestion (with inline text fallback). It returns only the final GRILLING COMPLETE summary to the orchestrator — no relaying of questions through the orchestrator.
 
+**Codex cleanup:** The codex-griller subagent has completed and its output has been fully consumed. Close (dismiss) the codex-griller subagent now to free the thread slot before proceeding.
+
 ## Step 8: User Approval Checkpoint
 
 Display summary and ask for execution approval:
@@ -390,6 +394,8 @@ Handle result:
 - **BLOCKED**: The executioner has already asked the user via AskUserQuestion (with inline fallback). BLOCKED is only returned when the user explicitly chose "Pause and investigate" or both interaction methods failed. Display the executioner's output as-is — it already contains the issue context and the user's decision (or interaction failure note). Do NOT re-ask the user.
 - **FAILED**: Show error, offer recovery options
 
+**Codex cleanup:** The codex-executioner subagent has completed and its output has been fully consumed. Close (dismiss) the codex-executioner subagent now to free the thread slot before proceeding to code review.
+
 ## Step 10: Code Review
 
 @references/stage-code-review.md
@@ -415,6 +421,8 @@ Handle result:
 - **PASS**: Task marked complete by codex-verifier; continue to Step 12
 - **FAIL**: The verifier has already asked the user which fix option they prefer (via AskUserQuestion with inline fallback). Display the verifier's output as-is — it already contains the failure details and the user's chosen next step. Do NOT re-ask.
 - **UAT_FAILED**: The verifier has already asked the user about loop-back vs new task (or generated the handoff prompt for >= 80% context). Display the verifier's output as-is — it already contains the user's decision or the handoff prompt. Do NOT re-ask.
+
+**Codex cleanup:** The codex-verifier subagent has completed and its output has been fully consumed. Close (dismiss) the codex-verifier subagent now to free the thread slot before proceeding to completion.
 
 ## Step 12: Completion
 

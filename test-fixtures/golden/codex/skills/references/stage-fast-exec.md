@@ -138,6 +138,8 @@ Handle result:
 - **BLOCKED**: Show blocker, ask user for resolution. Stop — do not attempt to continue automatically.
 - **FAILED**: Show error with last good state and task file path for `/do:continue` resume. Stop.
 
+**Codex cleanup:** The codex-executioner subagent has completed and its output has been fully consumed. Close (dismiss) the codex-executioner subagent now to free the thread slot before proceeding to FE-4.
+
 ---
 
 ## FE-4: Fast-path Stage Override
@@ -204,9 +206,13 @@ council_review_ran:
 stage: complete
 ```
 
+**Codex cleanup:** The codex-code-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the codex-code-reviewer subagent now to free the thread slot before proceeding to FE-7.
+
 Continue to FE-7.
 
 ### If CHANGES_REQUESTED (first time)
+
+**Codex cleanup:** The codex-code-reviewer subagent has completed and its output has been fully consumed. Close (dismiss) the codex-code-reviewer subagent now to free the thread slot before spawning codex-executioner.
 
 Spawn codex-executioner with the fix instructions:
 
@@ -222,6 +228,8 @@ Issues to fix:
 Fix each issue. Log changes in the Execution Log. Return summary when complete.
 
 After executioner completes, re-run FE-4 (override stage back to `execution: review_pending`), then re-spawn codex-code-reviewer once more (go back to the top of FE-6).
+
+**Codex cleanup:** The codex-executioner subagent (fix round) has completed and its output has been fully consumed. Close (dismiss) the codex-executioner subagent now to free the thread slot before re-spawning codex-code-reviewer.
 
 ### If CHANGES_REQUESTED (second time — escalation)
 

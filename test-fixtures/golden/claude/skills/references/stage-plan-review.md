@@ -143,6 +143,7 @@ Load and follow `@references/classify-findings.md`. The self-review output comes
 
 ### If APPROVED
 
+
 Update task frontmatter:
 ```yaml
 council_review_ran:

@@ -109,6 +109,8 @@ Return structured summary.
 
 Parse the agent's return:
 
+**Codex cleanup:** The codex-debugger subagent has completed and its output has been fully consumed (all result types are terminal — output is fully consumed when Step 4 is entered). Close (dismiss) the codex-debugger subagent now to free the thread slot before displaying the result to the user.
+
 **ROOT_CAUSE_FOUND:**
 ```
 ## Debug Complete

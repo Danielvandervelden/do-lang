@@ -125,7 +125,7 @@ do-lang has three execution tiers:
 /do:task "add pagination to the user list"
 ```
 
-The orchestrator assesses the task and auto-routes between fast-path and the full pipeline. Full pipeline: plan → review → grill (if unclear) → user approval → execute → code review → verify. The router only picks between fast and full — `/do:quick` is manual-only.
+The orchestrator assesses the task and auto-routes between quick, fast, and the full pipeline. Full pipeline: plan → review → grill (if unclear) → user approval → execute → code review → verify. The router picks between quick, fast, and full based on task assessment.
 
 **`/do:fast` — mid-tier fast path (skip the router)**
 
@@ -135,7 +135,7 @@ The orchestrator assesses the task and auto-routes between fast-path and the ful
 
 For trivial changes (1-3 files, no shared abstractions). Skips planning ceremony — entry criteria check, execute, validate, single code review round.
 
-**`/do:quick` — tightest tier (manual-only)**
+**`/do:quick` — tightest tier (router-eligible or manual)**
 
 ```
 /do:quick "add the null-check we just discussed in parseToken"
@@ -157,7 +157,7 @@ Reads the task file's YAML frontmatter and picks up at the last completed stage.
 | -------------- | ------------------------------------------------------------------------------------- |
 | `/do:init`     | Initialize workspace or project (database structure, config)                          |
 | `/do:scan`     | Scan a project and create a database entry                                            |
-| `/do:task`     | Smart router — auto-selects fast or full pipeline based on task assessment            |
+| `/do:task`     | Smart router — auto-selects quick, fast, or full pipeline based on task assessment    |
 | `/do:fast`     | Mid-tier fast path — skip router, run fast-path directly (1-3 files, trivial changes) |
 | `/do:quick`    | Tightest tier — inline execution + single council review, no task file on happy path  |
 | `/do:continue` | Resume a task from its last completed stage                                           |

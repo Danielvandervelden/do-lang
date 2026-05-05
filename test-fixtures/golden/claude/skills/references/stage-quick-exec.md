@@ -1,15 +1,17 @@
 ---
 name: stage-quick-exec
-description: Quick-path execution block. Inline execution, validation, single council review, one-iteration budget, lazy task-file materialization on escalation. Invoked by do:quick only (after single confirmation prompt). Never invoked from the do:task router.
+description: Quick-path execution block. Inline execution, validation, single council review, one-iteration budget, lazy task-file materialization on escalation. Invoked by do:quick only (after single confirmation prompt). Can be reached via the do:task router (when user accepts the quick recommendation) or by direct /do:quick invocation.
 ---
+
 
 # Quick Execution Stage
 
-This reference file is loaded by `do:quick` only (after the single confirmation prompt). It is **not** invoked from the `do:task` router — `/do:quick` is a manual-only tier.
+This reference file is loaded by `do:quick` only (after the single confirmation prompt). It can be reached via the `do:task` router (when user accepts the `quick` recommendation) or by direct `/do:quick` invocation.
 
 **Caller contract:** Caller has already validated prerequisites, checked for an active task, and confirmed the single entry-criteria prompt. Caller passes `<description>` as an in-session variable (the `$ARGUMENTS` value) substituted into the prompt at load time. No scratch files, no config mutation by the caller. Model config (`models` object) is also passed as an in-session variable having been read in the caller's model-config step. Working directory is the project root at invocation time; this reference assumes relative paths from there.
 
 When this stage returns:
+
 - **Happy path:** task is complete, no task file written.
 - **Escalation path:** task file materialized, `active_task` set, escalation message printed, execution stopped.
 
@@ -106,9 +108,10 @@ This file is a temporary sentinel for council review. It will be deleted after r
 ## Execution Log
 
 ### Round 1 diff
-
 ```
+
 <quick_diff_r1>
+
 ```
 
 ### Validation results (round 1)
@@ -144,6 +147,7 @@ This file is a temporary sentinel for council review. It will be deleted after r
 
 Invoke `do-council-reviewer` with `--type code` pointing at the transient file. Capture the returned verdict and full findings:
 
+
 ```javascript
 Agent({
   description: "Quick-path council review (round 1)",
@@ -160,6 +164,7 @@ Run council-invoke.cjs --type code and return the structured verdict (APPROVED, 
 `,
 });
 ```
+
 
 Store the returned verdict and findings as in-session `quick_council_r1`.
 
@@ -202,6 +207,7 @@ The delta between `quick_diff_r1` and `quick_diff_r2` represents what changed in
 ## QE-10: Update Transient for Round-2 Council
 
 Update the existing `.do/tasks/.quick-transient.md` — populate the `## Round-1 Review` section (defined in the QE-5 template) with:
+
 - **Round-1 council findings:** `quick_council_r1` findings
 - **Round-2 diff (cumulative from baseline):** `quick_diff_r2`
 - **Validation results (round 2):** re-run the QE-4 validation logic and store results here
@@ -228,6 +234,7 @@ Store the returned verdict and findings as in-session `quick_council_r2`.
 ## QE-13: Happy-Path Completion
 
 1. Delete `.do/tasks/.quick-transient.md`:
+
    ```bash
    rm .do/tasks/.quick-transient.md
    ```
@@ -252,6 +259,7 @@ Store the returned verdict and findings as in-session `quick_council_r2`.
 ## QE-14: Escalation — Capture Findings Bundle
 
 Assemble in-session bundle:
+
 - `quick_diff_r1` — round-1 diff (from QE-3)
 - `quick_diff_r2` — cumulative round-2 diff (from QE-9)
 - Round-1-to-round-2 delta — what changed in the fix round
@@ -294,6 +302,7 @@ council_review_ran:
 **Note on `council_review_ran.code: true`:** This preserves the two-round quick-path history. When `/do:continue` resumes this task, it will flip this flag back to `false` before invoking `@references/stage-code-review.md` so the CR-0 resume guard does not skip the full review. The existing Council Review section with both rounds is preserved as history — `stage-code-review.md` appends new findings, it does not overwrite.
 
 Populate:
+
 - `id` — `<YYMMDD>-<slug>`
 - `description` — `<description>`
 - `created` and `updated` — current ISO timestamp
@@ -371,6 +380,7 @@ Key invariant: `fast_path: true` + `quick_path: true` + `stages.execution: revie
 ## Failure Handling
 
 If any step fails unexpectedly:
+
 - Show what failed and what was last completed
 - Clean up `.do/tasks/.quick-transient.md` if it exists
 - Inform the user they can restart with `/do:quick "<description>"` or escalate with `/do:fast "<description>"`

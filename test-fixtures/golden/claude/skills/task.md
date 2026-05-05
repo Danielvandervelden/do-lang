@@ -17,6 +17,7 @@ allowed-tools:
 
 Orchestrate a complete task workflow using specialized agents.
 
+
 ## Why this exists
 
 Orchestrates 7 specialized agents to ensure every task gets proper planning, review, execution, and verification.
@@ -121,9 +122,9 @@ Rendered `## Delivery Contract` format (when non-null):
 
 ## Step 0: Smart Routing
 
-**Manual entry via `/do:quick` or `/do:fast` skips this step entirely.** This router only chooses between `fast` and the full task pipeline — `/do:quick` is manual-only and never auto-recommended here (see design rationale: entry criteria for quick-path are "vibes-based" and not reliably automatable without judgment).
+**Manual entry via `/do:quick` or `/do:fast` skips this step entirely.** This router chooses between `quick`, `fast`, and the full `task` pipeline. `quick` is recommended when the change is 1-2 files, mechanical, high-confidence, and the conversation already has warm context for the change.
 
-**Note on confidence:** Step 0 uses a single routing heuristic (0.0-1.0 scalar) to decide `fast` vs `task`. This is a routing heuristic only. If routed to full `task`, the planner runs its own 4-factor confidence calculation (context/scope/complexity/familiarity) which supersedes the routing score — the two mechanisms are independent.
+**Note on confidence:** Step 0 uses a single routing heuristic (0.0-1.0 scalar) to decide `quick` vs `fast` vs `task`. This is a routing heuristic only. If routed to `quick`, no planner confidence is calculated — quick-path has no task file on the happy path; the routing confidence is the only score used. If routed to full `task`, the planner runs its own 4-factor confidence calculation (context/scope/complexity/familiarity) which supersedes the routing score — the two mechanisms are independent.
 
 ### Heuristic Assessment
 
@@ -141,16 +142,26 @@ Perform a quick heuristic assessment from `$ARGUMENTS`:
    - Deduct for: business logic clarity unclear (-0.10), affected files unknown (-0.10), edge-case risk present (-0.10), multiple concerns bundled (-0.10)
    - Store as in-session `routing_confidence`. Do NOT write to a task file — no task file exists yet at this point.
 
+4. **Warm-context signal** — yes/no judgment: was `/do:task` invoked mid-conversation after prior discussion of this exact change, or is it a cold start?
+   - **Warm:** the current conversation already contains discussion, code snippets, or reasoning about the specific change described in `$ARGUMENTS`.
+   - **Cold:** `/do:task` is the first mention of this change (cold start from Jira, backlog, or direct invocation with no prior discussion).
+   - This is a soft signal — the user can always override. If warm-context is ambiguous, treat as cold.
+
 ### Decision Matrix
 
-| Files   | Mechanical | Confidence | Recommend                                             |
-| ------- | ---------- | ---------- | ----------------------------------------------------- |
-| 1-3     | yes        | ≥ 0.8      | `fast`                                                |
-| any     | no         | any        | `task`                                                |
-| any     | any        | < 0.8      | `task` (router honesty — default to full when unsure) |
-| unclear | any        | any        | `task`                                                |
+Rows are evaluated top-to-bottom; first match wins.
 
-**Router honesty:** If signals are ambiguous (description is vague, can't estimate file scope), default to `task` — do not gamble on `fast`. Better to over-ceremony a small task than under-ceremony a subtle one. The user can always override down.
+| Files   | Mechanical | Confidence | Warm Context | Recommend                                             |
+| ------- | ---------- | ---------- | ------------ | ----------------------------------------------------- |
+| 1-2     | yes        | ≥ 0.8      | yes          | `quick`                                               |
+| 1-3     | yes        | ≥ 0.8      | any          | `fast`                                                |
+| any     | no         | any        | any          | `task`                                                |
+| any     | any        | < 0.8      | any          | `task` (router honesty — default to full when unsure) |
+| unclear | any        | any        | any          | `task`                                                |
+
+**Router honesty:** If signals are ambiguous (description is vague, can't estimate file scope), default to `task` — do not gamble on `fast` or `quick`. Better to over-ceremony a small task than under-ceremony a subtle one. The user can always override down.
+
+**Quick exclusions:** `quick` is excluded when any of the following apply: backend/API/schema/auth changes, broad generated-type fallout (e.g., a type change that cascades across many consumers), shared behavior/abstraction changes (utilities, hooks, context providers), state-machine modifications, unclear business logic, file scope is 3+, or context is cold.
 
 ### Present Assessment
 
@@ -160,15 +171,26 @@ Display the routing assessment:
 ## Routing assessment
 
 Task: <description>
-Assessment: <N files estimate>, <mechanical/planning>, confidence: <score>
-Recommended: /do:<fast|task>
+Assessment: <N files estimate>, <mechanical/planning>, confidence: <score>, context: <warm/cold>
+Recommended: /do:<quick|fast|task>
 
-Proceed with [fast | task]? [<recommended>]
+Why not <tier>: <one-line reason for each non-recommended tier>
+
+Proceed with [quick | fast | task]? [<recommended>]
 ```
 
-Prompt the user with two choices only: `fast` / `task`, with the recommended as default. Do NOT offer `quick` — if the user wants it they should invoke `/do:quick "description"` directly.
+The "Why not" lines explain why each non-recommended tier was rejected. Examples: "Why not quick: cold context (no prior discussion of this change)", "Why not task: mechanical change with clear 2-file scope, no planning needed", "Why not fast: unclear file scope, needs planning".
+
+Present all three tiers with the recommended option as default.
 
 ### Branch on User Choice
+
+**If user chooses `quick`:**
+
+1. Do NOT run Steps 1-4 below. `/do:quick` has its own prerequisite, active-task, and model-config checks built into its flow.
+2. Invoke `/do:quick "<description>"` and **STOP** — the quick skill handles everything from here (prerequisites, active task check, model config, inline execution, council review).
+
+**Note:** The user will see a second confirmation inside `/do:quick` (the "Proceed? [Y/n]" prompt at QE-0) — this is by design. The router prompt confirms workflow tier selection; the `/do:quick` prompt confirms the specific change description and scope after its own prerequisite validation. These are separate concerns and collapsing them would create fragile coupling.
 
 **If user chooses `fast`:**
 
@@ -245,6 +267,7 @@ fs.writeFileSync('.do/config.json', JSON.stringify(c, null, 2));
 
 Spawn planner to fill in the task file:
 
+
 ```javascript
 Agent({
   description: "Plan task: <description>",
@@ -263,6 +286,7 @@ Return a structured summary when complete.
 `,
 });
 ```
+
 
 Parse the returned summary for:
 
@@ -302,6 +326,7 @@ Combine the confidence score from the first command with the threshold from the 
 
 If `score < threshold`:
 
+
 ```javascript
 Agent({
   description: "Grill user for clarity",
@@ -319,6 +344,7 @@ Present all questions at once. After receiving combined answer, update confidenc
 `,
 });
 ```
+
 
 **Note:** The griller resolves the full question loop internally via AskUserQuestion (with inline text fallback). It returns only the final GRILLING COMPLETE summary to the orchestrator — no relaying of questions through the orchestrator.
 
@@ -343,6 +369,7 @@ If user says no, stop. Task file is saved for later `/do:continue`.
 
 ## Step 9: Spawn do-executioner
 
+
 ```javascript
 Agent({
   description: "Execute task",
@@ -357,9 +384,10 @@ Follow the Approach section step by step.
 Log each action to Execution Log.
 Handle deviations appropriately.
 Return summary when complete.
-`
-})
-````
+`,
+});
+```
+
 
 Handle result:
 
@@ -379,6 +407,7 @@ Handle result:
 
 ## Step 11: Spawn do-verifier
 
+
 ```javascript
 Agent({
   description: "Verify implementation",
@@ -394,6 +423,7 @@ Run verification: approach checklist, quality checks, UAT.
 `,
 });
 ```
+
 
 Handle result:
 

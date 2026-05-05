@@ -126,23 +126,3 @@ Scope: new file `skills/do/scripts/lib/agent-harness.cjs` + a `__tests__/integra
 **Fix:** Add a Codex orchestration rule: after a subagent reaches a terminal status and its output has been processed/logged, call the appropriate close-agent operation before spawning later stages. Apply this to planner, plan reviewers, executioner, code reviewers, council reviewers, verifier, and iteration agents. Include a guard that does not close agents whose output has not yet been consumed.
 
 ---
-
-### /do:task smart router should be allowed to recommend /do:quick
-**id:** task-router-can-recommend-quick
-
-**Problem:** The `/do:task` smart router currently only chooses between `fast` and full `task`; `/do:quick` is manual-only and never auto-recommended. This causes tiny follow-up tickets to be over-routed into heavier workflows, especially when Jira handoff defaults to `/do:task` for caution even though the implementation is a one-file mechanical cleanup. Also, human phrasing like "route this to `/do:task`" should mean "hand this to the `/do:task` router", not "force the full planner/reviewer/executioner/verifier pipeline".
-
-**Impact:** Small changes can burn planner/reviewer/verifier cycles and hit agent limits unnecessarily. Users then have to manually correct the workflow tier even when the router has enough information to identify quick-path work.
-
-**Fix:** Extend the `/do:task` smart router decision matrix to include `quick` when the change is warm-context, 1-2 files, mechanical, and has low blast radius. Keep conservative exclusions: no `quick` for uncertain business logic, broad generated-type fallout, shared behavior changes, or unclear file scope. The router should present `quick | fast | task` when quick is a valid candidate, with the recommended option first.
-
-Add a mandatory router assessment output immediately after `/do:task` initialization and before execution:
-- file scope estimate
-- mechanical vs. planning judgment
-- confidence
-- recommended workflow tier
-- why the other tiers were not chosen
-
-The router should wait for user confirmation after showing this assessment. Full task workflow should only start when the router recommends full `task` or the user explicitly chooses it.
-
----

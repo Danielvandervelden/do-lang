@@ -1,6 +1,6 @@
 ---
 name: do:quick
-description: "Tightest execution tier for mid-conversation follow-ups where context is already warm and the change is 1-2 files of mechanical work. Orchestrator executes inline (no sub-agent spawn), runs available validation, then a single council reviewer checks the diff. One fix iteration allowed. If council requests changes twice, materializes a task file and escalates to /do:continue. Manual-only — never auto-recommended by the /do:task router."
+description: "Tightest execution tier for mid-conversation follow-ups where context is already warm and the change is 1-2 files of mechanical work. Orchestrator executes inline (no sub-agent spawn), runs available validation, then a single council reviewer checks the diff. One fix iteration allowed. If council requests changes twice, materializes a task file and escalates to /do:continue. Can be auto-recommended by the /do:task router when warm-context criteria are met, or invoked manually."
 argument-hint: '"brief description"'
 allowed-tools:
   - Read
@@ -20,6 +20,7 @@ Tightest execution tier — orchestrator makes the change inline, council review
 ## Why this exists
 
 The execution-tier hierarchy was bimodal:
+
 - **Inline edit** — zero review, fine for true trivia (typo, rename), risky for anything touching logic
 - **`/do:fast`** — task file, sub-agent spawn, full single-reviewer code review; too ceremonious for small mid-conversation follow-ups where the main session already has all the context
 

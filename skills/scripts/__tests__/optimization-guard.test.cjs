@@ -674,18 +674,30 @@ describe('optimization-guard: task.md', () => {
     ], file);
   });
 
-  it('has smart routing with fast vs task decision', () => {
-    assertKeywordsPresent(content, ['routing_confidence', 'fast', 'Router honesty'], file);
+  it('has smart routing with quick vs fast vs task decision', () => {
+    assertKeywordsPresent(content, ['routing_confidence', 'fast', 'quick', 'Router honesty'], file);
   });
 
-  it('Step 0 never auto-recommends quick', () => {
+  it('Step 0 documents quick as a router-eligible tier with warm-context criteria', () => {
     const step0Section = content.substring(
       content.indexOf('Step 0'),
       content.indexOf('Step 1')
     );
+    // Assert quick row in decision matrix references 1-2 files and warm context
     assert.ok(
-      step0Section.includes('quick') && (step0Section.includes('never') || step0Section.includes('NOT') || step0Section.includes('Do not')),
-      `${file}: Step 0 must document that quick is never auto-recommended`
+      step0Section.includes('quick') && step0Section.includes('1-2') && step0Section.includes('warm'),
+      `${file}: Step 0 must document quick row in decision matrix with 1-2 files and warm context signal`
+    );
+    // Assert the present-assessment prompt offers all three tiers
+    assert.ok(
+      step0Section.includes('quick | fast | task') || (step0Section.includes('quick') && step0Section.includes('fast') && step0Section.includes('task')),
+      `${file}: Step 0 present-assessment must offer all three tiers (quick, fast, task)`
+    );
+    // Assert conservative exclusion note exists with key exclusion categories
+    const hasExclusions = ['generated-type', 'shared behavior', 'state-machine', 'excluded'].filter(kw => step0Section.includes(kw)).length >= 2;
+    assert.ok(
+      hasExclusions,
+      `${file}: Step 0 must document conservative quick exclusions (at least 2 of: generated-type, shared behavior, state-machine, excluded)`
     );
   });
 

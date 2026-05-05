@@ -1,6 +1,6 @@
 ---
 name: do:quick
-description: "Tightest execution tier for mid-conversation follow-ups where context is already warm and the change is 1-2 files of mechanical work. Orchestrator executes inline (no sub-agent spawn), runs available validation, then a single council reviewer checks the diff. One fix iteration allowed. If council requests changes twice, materializes a task file and escalates to /do:continue. Manual-only — never auto-recommended by the /do:task router."
+description: "Tightest execution tier for mid-conversation follow-ups where context is already warm and the change is 1-2 files of mechanical work. Orchestrator executes inline (no sub-agent spawn), runs available validation, then a single council reviewer checks the diff. One fix iteration allowed. If council requests changes twice, materializes a task file and escalates to /do:continue. Can be auto-recommended by the /do:task router when warm-context criteria are met, or invoked manually."
 argument-hint: '"brief description"'
 allowed-tools:
   - Read
@@ -22,8 +22,8 @@ By invoking this workflow, the user explicitly authorizes spawning the following
 internal agents. These agents are integral to the workflow contract and MUST be
 spawned as subagents — they are not optional.
 
-| Agent | Role |
-|-------|------|
+| Agent                                | Role                                                                           |
+| ------------------------------------ | ------------------------------------------------------------------------------ |
 | codex-council-reviewer | Independent council review of the inline diff (round 1, and round 2 if needed) |
 
 **Note on inline execution:** QE-2 executes the change inline in the main conversation
@@ -40,6 +40,7 @@ unreviewed — that defeats the purpose of the quick-path tier.
 ## Why this exists
 
 The execution-tier hierarchy was bimodal:
+
 - **Inline edit** — zero review, fine for true trivia (typo, rename), risky for anything touching logic
 - **`/do:fast`** — task file, sub-agent spawn, full single-reviewer code review; too ceremonious for small mid-conversation follow-ups where the main session already has all the context
 

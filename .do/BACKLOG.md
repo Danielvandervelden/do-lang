@@ -97,12 +97,6 @@ Scope: new file `skills/do/scripts/lib/agent-harness.cjs` + a `__tests__/integra
 
 ---
 
-### Research de-duplication strategy for Claude/Codex skill files
-**id:** skill-dedup-research
-**Problem:** do-lang is growing beyond a personal project, making the maintenance cost of duplicating skill/agent `.md` files across Claude and Codex targets a real concern. The `Agent(...)` call blocks are the only platform-specific parts of reference files — the rest of the prose logic is identical across both skill sets.
-**Fix:** Evaluate two approaches: (1) shared reference files + template build step with `{{SPAWN_AGENT planner}}` markers expanding to platform-specific syntax at install time; (2) accepting markdown duplication with a manual sync discipline and tooling to diff the two sets. Make a proper architectural decision before the file count grows further.
----
-
 ---
 
 ### Executioner should advance task metadata after successful execution
@@ -116,13 +110,3 @@ Scope: new file `skills/do/scripts/lib/agent-harness.cjs` + a `__tests__/integra
 
 ---
 
-### Codex orchestrators should close completed agents after processing output
-**id:** codex-agent-cleanup-after-processing
-
-**Problem:** Codex subagents remain open after they complete unless the orchestrator explicitly closes them. In multi-stage do workflows, completed planner/reviewer/executioner/verifier agents accumulate and can hit the agent thread limit before later stages can spawn required agents.
-
-**Impact:** Valid `/do:task` runs can fail mid-pipeline with an agent limit error even though prior agents are finished and their outputs have already been consumed. This forces manual cleanup and interrupts the workflow.
-
-**Fix:** Add a Codex orchestration rule: after a subagent reaches a terminal status and its output has been processed/logged, call the appropriate close-agent operation before spawning later stages. Apply this to planner, plan reviewers, executioner, code reviewers, council reviewers, verifier, and iteration agents. Include a guard that does not close agents whose output has not yet been consumed.
-
----

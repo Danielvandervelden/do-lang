@@ -114,9 +114,14 @@ Load project context:
 node ~/.codex/skills/do/scripts/load-task-context.cjs "<description>"
 ```
 
-This resolves to this project's database entry via `load-task-context.cjs`. Spot-check the files most likely to be affected based on the task description. No deep research, no broad codebase scan.
+Parse the JSON output for:
 
-Update the Context Loaded section in the task file with the files reviewed.
+- **`project_md_path`** — Read this file (the project's `project.md`). It contains conventions, tech stack, and architectural decisions.
+- **`matched_docs`** — Read each file in this array. These are project-specific convention docs matched to the task description via keyword mapping. They contain the patterns the executioner must follow (e.g., state management wrappers, form utilities, API layer conventions).
+
+No deep research, no broad codebase scan — this is keyword matching only. Do not read docs that are not in `project_md_path` or `matched_docs`.
+
+Update the Context Loaded section in the task file with `project_md_path` and each file from `matched_docs`, noting why it was matched (e.g., "matched via `useSelector` keyword → `store-state.md`").
 
 ---
 

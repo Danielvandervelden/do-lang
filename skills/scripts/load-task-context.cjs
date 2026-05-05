@@ -326,16 +326,27 @@ function fileMatchesKeywords(filePath, keywords) {
 }
 
 /**
- * Get all .md files in a directory (non-recursive)
+ * Escape special regex characters in a string
+ * Prevents user-editable keywords from breaking regex compilation
+ * @param {string} str - String to escape
+ * @returns {string} Escaped string safe for use in RegExp constructor
+ */
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Get all .md files in a directory (non-recursive), sorted for deterministic ordering
  * @param {string} dirPath - Directory path
- * @returns {string[]} Array of absolute paths to .md files
+ * @returns {string[]} Array of absolute paths to .md files, sorted by path
  */
 function getMdFiles(dirPath) {
   try {
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
     return entries
       .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
-      .map((entry) => path.join(dirPath, entry.name));
+      .map((entry) => path.join(dirPath, entry.name))
+      .sort();
   } catch {
     return [];
   }
@@ -368,6 +379,90 @@ function findMatchingDocs(databasePath, keywords) {
     for (const filePath of mdFiles) {
       if (fileMatchesKeywords(filePath, keywords)) {
         matched.push(filePath);
+      }
+    }
+  }
+
+  return matched;
+}
+
+/**
+ * Check whether a keyword matches the task description using the appropriate strategy:
+ * - Compound terms (containing hyphens): phrase match against full lowercased description
+ * - Simple/camelCase terms: word-boundary regex match (\b...\b)
+ *
+ * @param {string} keyword - Keyword to match
+ * @param {string} lowerDescription - Lowercased task description
+ * @returns {boolean} True if keyword matches description
+ */
+function keywordMatchesDescription(keyword, lowerDescription) {
+  const lowerKeyword = keyword.toLowerCase();
+  if (lowerKeyword.includes("-")) {
+    // Compound/hyphenated term: phrase match
+    return lowerDescription.includes(lowerKeyword);
+  }
+  // Simple/camelCase term: word-boundary match with regex escaping
+  const escaped = escapeRegex(lowerKeyword);
+  const pattern = new RegExp(`\\b${escaped}\\b`, "i");
+  return pattern.test(lowerDescription);
+}
+
+/**
+ * Find documentation files matching project-specific context_keywords config.
+ * Resolves doc filename stems to actual .md files in components/, tech/, features/.
+ *
+ * @param {string} databasePath - Path to project's database folder
+ * @param {Object} contextKeywords - Map of doc stem -> keyword array from .do/config.json
+ * @param {string} description - Task description to match keywords against
+ * @returns {string[]} Array of absolute paths to matched docs, in deterministic order
+ */
+function findMatchingDocsByKeywordConfig(
+  databasePath,
+  contextKeywords,
+  description,
+) {
+  if (
+    !databasePath ||
+    !fs.existsSync(databasePath) ||
+    !contextKeywords ||
+    typeof contextKeywords !== "object" ||
+    !description
+  ) {
+    return [];
+  }
+
+  const lowerDescription = description.toLowerCase();
+  const searchDirs = ["components", "tech", "features"];
+  const matched = [];
+  const seenPaths = new Set();
+
+  // Sort stems for deterministic iteration order
+  const stems = Object.keys(contextKeywords).sort();
+
+  for (const stem of stems) {
+    const keywords = contextKeywords[stem];
+    if (!Array.isArray(keywords) || keywords.length === 0) {
+      continue;
+    }
+
+    // Check if any keyword in this group matches the description
+    const isMatch = keywords.some((kw) =>
+      keywordMatchesDescription(kw, lowerDescription),
+    );
+    if (!isMatch) {
+      continue;
+    }
+
+    // Find docs whose filename stem matches the config key
+    for (const dir of searchDirs) {
+      const dirPath = path.join(databasePath, dir);
+      const mdFiles = getMdFiles(dirPath);
+      for (const filePath of mdFiles) {
+        const fileStem = path.basename(filePath, ".md");
+        if (fileStem === stem && !seenPaths.has(filePath)) {
+          matched.push(filePath);
+          seenPaths.add(filePath);
+        }
       }
     }
   }
@@ -442,8 +537,26 @@ function loadTaskContext(projectPath, description) {
   const databasePath = path.join(baseDatabasePath, "projects", projectName);
   const projectMdPath = path.join(databasePath, "project.md");
 
-  // Step 6: Find matching docs
-  const matchedDocs = findMatchingDocs(databasePath, keywords);
+  // Step 6: Find matching docs — context_keywords first, then TECH_TERMS, deduplicated
+  const contextKeywords = projectConfig.context_keywords || null;
+  const configMatches = contextKeywords
+    ? findMatchingDocsByKeywordConfig(databasePath, contextKeywords, description)
+    : [];
+
+  const techTermMatches = findMatchingDocs(databasePath, keywords);
+
+  // Merge: config matches first, then tech-term matches, deduped by path
+  const seenPaths = new Set(configMatches.map((p) => p));
+  const mergedDocs = [...configMatches];
+  for (const p of techTermMatches) {
+    if (!seenPaths.has(p)) {
+      mergedDocs.push(p);
+      seenPaths.add(p);
+    }
+  }
+
+  // Cap at 5 unique docs to prevent context overload
+  const matchedDocs = mergedDocs.slice(0, 5);
 
   return {
     project_md_path: fs.existsSync(projectMdPath) ? projectMdPath : null,
@@ -523,4 +636,11 @@ Output format (JSON):
 }
 
 // Export for programmatic use
-module.exports = { extractKeywords, findMatchingDocs, loadTaskContext };
+module.exports = {
+  extractKeywords,
+  findMatchingDocs,
+  findMatchingDocsByKeywordConfig,
+  getMdFiles,
+  keywordMatchesDescription,
+  loadTaskContext,
+};

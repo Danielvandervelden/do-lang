@@ -41,6 +41,11 @@ Supported `council_reviews.reviewer` values: `claude`, `codex`, `gemini`, `both`
     "onboarded": false,
     "dismissed": false,
     "entry_commands": []
-  }
+  },
+  "context_keywords": {}
 }
 ```
+
+The `context_keywords` field is optional. When present, it enables per-project keyword-to-doc mapping for targeted context loading in both the full planner and the fast-path FE-2 context scan. Keys are doc filename stems (without `.md`) from the project's database `components/`, `tech/`, or `features/` subdirectories. Values are arrays of keywords that trigger loading that doc when found in a task description.
+
+Example: `"store-state": ["useSelector", "useDispatch", "redux"]` will load `tech/store-state.md` whenever a task description mentions `useSelector`, `useDispatch`, or `redux`. Compound keywords like `react-hook-form` use phrase matching; simple words like `api` use word-boundary matching to prevent false positives.

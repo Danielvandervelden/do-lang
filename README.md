@@ -283,7 +283,12 @@ Project-level configuration lives in `.do/config.json`. The JSON below shows the
     "overrides": {}
   },
   "auto_grill_threshold": 0.9,
-  "project_intake_threshold": 0.85
+  "project_intake_threshold": 0.85,
+  "context_keywords": {
+    "store-state": ["useSelector", "useDispatch", "redux", "slice", "store", "rtk"],
+    "forms": ["useForm", "react-hook-form", "validation", "zod"],
+    "api-layer": ["api", "query", "mutation", "endpoint", "rtk-query"]
+  }
 }
 ```
 
@@ -298,6 +303,10 @@ Project-level configuration lives in `.do/config.json`. The JSON below shows the
 **`project_intake_threshold`** — confidence score below which `/do:project new` triggers additional grilling before planning. Default `0.85`.
 
 **`models.overrides`** — per-agent model overrides (e.g. `{"planner": "opus", "debugger": "opus"}`). Agents not listed fall back to `models.default`.
+
+**`context_keywords`** — per-project keyword-to-doc mapping for targeted context loading. Keys are doc filename stems (without `.md`) that exist in the project's database under `components/`, `tech/`, or `features/`. Values are arrays of keywords that, when found in a task description, cause that doc to be loaded. Used by both the full planner and the fast-path FE-2 context scan. Without this key, context loading falls back to the built-in `TECH_TERMS` set.
+
+Matching strategy: compound/hyphenated keywords (e.g., `react-hook-form`, `rtk-query`) use phrase matching; simple words (e.g., `api`, `query`) and camelCase identifiers (e.g., `useSelector`, `useForm`) use word-boundary matching to avoid false positives (e.g., `api` will not match inside `capital`). Keywords should be domain-specific terms, not generic English words.
 
 **State (managed automatically)** — do-lang writes these fields to `.do/config.json` during normal operation. Do not edit them manually:
 

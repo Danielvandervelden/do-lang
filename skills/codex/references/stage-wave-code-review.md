@@ -3,6 +3,11 @@ name: stage-wave-code-review
 description: "Wave code review block for /do:project. Council gate check, parallel reviewer spawning (when enabled), verdict combination, iteration loop via codex-executioner, and escalation rules. Target file: wave.md."
 ---
 
+**Agent authorization:** The caller workflow has authorized spawning all agents
+referenced in this file (codex-code-reviewer, codex-council-reviewer, codex-executioner
+on ITERATE). Spawn them as subagents — do NOT execute their work inline. If spawning
+fails, STOP and report; do not fall back to inline execution.
+
 # Wave Code Review Stage
 
 This reference file is loaded by `skills/codex/project.md` `wave next` after `stage-wave-exec.md` returns COMPLETE. It encodes the full code review logic for the wave's git diff, targeting `wave.md`.

@@ -102,3 +102,16 @@ Scope: new file `skills/do/scripts/lib/agent-harness.cjs` + a `__tests__/integra
 **Problem:** do-lang is growing beyond a personal project, making the maintenance cost of duplicating skill/agent `.md` files across Claude and Codex targets a real concern. The `Agent(...)` call blocks are the only platform-specific parts of reference files — the rest of the prose logic is identical across both skill sets.
 **Fix:** Evaluate two approaches: (1) shared reference files + template build step with `{{SPAWN_AGENT planner}}` markers expanding to platform-specific syntax at install time; (2) accepting markdown duplication with a manual sync discipline and tooling to diff the two sets. Make a proper architectural decision before the file count grows further.
 ---
+
+---
+
+### Executioner should advance task metadata after successful execution
+**id:** executioner-advance-task-stage
+
+**Problem:** In the Codex `/do:task` flow, `codex-executioner` can complete implementation and verification checks but leave the task frontmatter unchanged at `stage: refinement` / `stages.execution: pending`. The orchestrator then has to repair the task file manually before code review can run.
+
+**Impact:** `/do:continue` can route to the wrong stage after execution, especially after a context clear or interruption. This creates stale task state, duplicate planning/execution risk, and manual metadata edits that should be owned by the workflow.
+
+**Fix:** Update the executioner/orchestrator contract so a successful execution pass reliably records completion in task metadata. Options: (1) make `codex-executioner` set `stage: execution` and `stages.execution: complete` before returning success; or (2) make the orchestrator stage wrapper update those fields immediately after the executioner returns successfully. Add a regression test or fixture scan that catches successful execution handoffs without a task-stage advancement.
+
+---

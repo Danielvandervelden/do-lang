@@ -3,6 +3,11 @@ name: stage-code-review
 description: Orchestrator code review block. Council gate check, parallel reviewer spawning (when enabled), verdict combination, iteration loop via codex-executioner, stage update, and escalation rules.
 ---
 
+**Agent authorization:** The caller workflow has authorized spawning all agents
+referenced in this file (codex-code-reviewer, codex-council-reviewer, codex-executioner
+on ITERATE). Spawn them as subagents — do NOT execute their work inline. If spawning
+fails, STOP and report; do not fall back to inline execution.
+
 # Code Review Stage
 
 This reference file is loaded by `do:task` (Step 10) and `do:continue` (stage routing for `execution` + stages.execution: complete). It encodes the full code review logic including council gate, parallel spawning, verdict combination, iteration, stage update, and escalation.

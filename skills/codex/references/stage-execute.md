@@ -3,6 +3,12 @@ name: stage-execute
 description: Implementation execution flow. Handles context clear decision and task execution with logging.
 ---
 
+**Agent authorization note:** This file is loaded by `/do:continue` as part of the
+execution pipeline. The caller workflow has authorized spawning all agents referenced
+in stage files loaded alongside this one. The no-inline-fallback guardrail applies
+throughout the pipeline: if agent spawning fails at any stage, STOP and report; do
+not execute inline.
+
 # Execution Stage
 
 This reference file is loaded by /do:continue when the task is ready for implementation.
@@ -307,7 +313,9 @@ Execution complete. Checking council config before verification.
 
 ### Step E4: Code Review (per council config)
 
-> **Note:** This step is an inline code review path. In the orchestrated pipeline path, code review is handled via `stage-code-review.md` instead (which spawns `codex-code-reviewer` + `codex-council-reviewer` in parallel and auto-iterates up to 3 times). `codex-verifier` handles the subsequent verification step (approach checklist, quality checks, UAT). E4 remains as the inline fallback path for environments where subagent spawning is unavailable.
+> **Note:** This step is the legacy single-agent code review path (inline council invoke). In the orchestrated pipeline, code review is handled via `stage-code-review.md` instead — which spawns `codex-code-reviewer` + `codex-council-reviewer` in parallel and auto-iterates up to 3 times. `codex-verifier` handles the subsequent verification step (approach checklist, quality checks, UAT).
+>
+> **E4 is NOT a fallback for when subagent spawning fails.** If subagent spawning is unavailable or blocked, the workflow must STOP and report — do NOT use E4 as an escape hatch. E4 runs only when `/do:continue` loads this file and the orchestrated pipeline stages (`stage-code-review.md`) are not in use (i.e., the task was created before the orchestrated path existed, or the caller explicitly routes here). New work always uses `stage-code-review.md`.
 
 **Step E4.0: Check if code review already ran**
 

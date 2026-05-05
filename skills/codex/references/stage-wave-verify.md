@@ -3,6 +3,10 @@ name: stage-wave-verify
 description: "Wave verification block for /do:project. Spawns codex-verifier against wave.md. Project-aware failure paths (retry/debug/abandon wave/out_of_scope). Does NOT reference /do:task or active_task."
 ---
 
+**Agent authorization:** The caller workflow has authorized spawning codex-verifier
+referenced in this file. Spawn it as a subagent — do NOT execute its work inline. If
+spawning fails, STOP and report; do not fall back to inline execution.
+
 # Wave Verification Stage
 
 This reference file is loaded by `skills/do/project.md` `wave next` after `stage-wave-code-review.md` returns VERIFIED. It spawns `codex-verifier` against the wave's `wave.md` file and handles project-aware failure paths.

@@ -16,6 +16,29 @@ allowed-tools:
 
 Orchestrate a large multi-phase project: intake grilling → project plan → phase plans → wave execution → phase transitions → project completion.
 
+## Agent Authorization
+
+By invoking this workflow, the user explicitly authorizes spawning the following
+internal agents. These agents are integral to the workflow contract and MUST be
+spawned as subagents — they are not optional. `/do:project` orchestrates the full
+pipeline across multiple waves and phases, so the complete agent set is authorized.
+
+| Agent | Role |
+|-------|------|
+| codex-planner | Curates project.md / phase.md body sections; revises plans on ITERATE |
+| codex-plan-reviewer | Reviews project, phase, and wave plans against quality criteria |
+| codex-council-reviewer | Independent council review during plan and code review stages |
+| codex-griller | Project intake grilling (Pass 1 + Pass 2); per-phase re-grill (Pass 3); per-wave confidence rescue |
+| codex-executioner | Executes wave work against wave.md step by step |
+| codex-code-reviewer | Reviews wave code changes after execution |
+| codex-verifier | Verifies wave implementation (approach checklist, quality checks, UAT) |
+
+**No inline fallback:** If agent spawning is unavailable or blocked, STOP immediately
+and report: "Cannot spawn required agents. This workflow requires subagent spawning to
+function correctly. Please ensure agent spawning is enabled and retry." Do NOT fall back
+to inline execution — inline execution bypasses review gates and breaks the workflow
+contract.
+
 ## Why this exists
 
 Large initiatives span dozens of tasks across multiple phases and sessions. `/do:project` manages the full lifecycle: intake, phase-boundary confidence checks, per-wave execution pipelines, and state tracking across cold-start resumes. Waves use `wave.md` as the execution target — not task files.

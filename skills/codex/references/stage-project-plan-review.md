@@ -3,6 +3,11 @@ name: stage-project-plan-review
 description: "Project plan review block for /do:project. Council gate check, parallel reviewer spawning (when enabled), verdict combination, iteration loop via codex-planner, and escalation rules. Target file: project.md."
 ---
 
+**Agent authorization:** The caller workflow has authorized spawning all agents
+referenced in this file (codex-plan-reviewer, codex-council-reviewer, codex-planner
+on ITERATE). Spawn them as subagents — do NOT execute their work inline. If spawning
+fails, STOP and report; do not fall back to inline execution.
+
 # Project Plan Review Stage
 
 This reference file is loaded by `skills/codex/project.md` after intake completes. It encodes the full plan review logic for `project.md`: council gate, parallel spawning, verdict combination, iteration, and escalation.

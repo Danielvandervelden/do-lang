@@ -16,9 +16,31 @@ allowed-tools:
 
 Orchestrate a complete task workflow using specialized agents.
 
+## Agent Authorization
+
+By invoking this workflow, the user explicitly authorizes spawning the following
+internal agents. These agents are integral to the workflow contract and MUST be
+spawned as subagents — they are not optional.
+
+| Agent | Role |
+|-------|------|
+| codex-planner | Fills in the task file: Problem Statement, Approach, Concerns, confidence score |
+| codex-plan-reviewer | Reviews the plan against 5 criteria (Clarity, Completeness, Feasibility, Atomicity, Risks) |
+| codex-council-reviewer | Independent council review of the plan (when council gate is enabled) |
+| codex-griller | Asks clarifying questions when confidence is below threshold |
+| codex-executioner | Implements the plan step by step, logs progress, handles deviations |
+| codex-code-reviewer | Reviews code changes against 6 criteria after execution |
+| codex-verifier | Runs approach checklist, quality checks, and UAT after code review |
+
+**No inline fallback:** If agent spawning is unavailable or blocked, STOP immediately
+and report: "Cannot spawn required agents. This workflow requires subagent spawning to
+function correctly. Please ensure agent spawning is enabled and retry." Do NOT fall back
+to inline execution — inline execution bypasses review gates and breaks the workflow
+contract.
+
 ## Why this exists
 
-Orchestrates 5 agents to ensure every task gets proper planning, review, execution, and verification.
+Orchestrates 7 specialized agents to ensure every task gets proper planning, review, execution, and verification.
 
 ## Usage
 

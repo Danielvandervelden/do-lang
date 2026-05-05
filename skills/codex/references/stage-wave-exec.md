@@ -3,6 +3,10 @@ name: stage-wave-exec
 description: "Wave execution block for /do:project. Spawns codex-executioner against wave.md. Project-pipeline analogue of stage-execute.md — does NOT reference /do:task or active_task."
 ---
 
+**Agent authorization:** The caller workflow has authorized spawning codex-executioner
+referenced in this file. Spawn it as a subagent — do NOT execute its work inline. If
+spawning fails, STOP and report; do not fall back to inline execution.
+
 # Wave Execution Stage
 
 This reference file is loaded by `skills/codex/project.md` `wave next` after `stage-wave-plan-review.md` returns APPROVED. It spawns `codex-executioner` against the wave's `wave.md` file.

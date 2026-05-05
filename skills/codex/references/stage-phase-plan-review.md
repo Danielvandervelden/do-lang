@@ -3,6 +3,12 @@ name: stage-phase-plan-review
 description: "Phase plan review block for /do:project. Council gate check, parallel reviewer spawning (when enabled), verdict combination, iteration loop via codex-planner, wave-seeding hook, and escalation rules. Target file: phase.md."
 ---
 
+**Agent authorization:** The caller workflow has authorized spawning all agents
+referenced in this file (codex-planner for curate step, codex-plan-reviewer,
+codex-council-reviewer, codex-planner on ITERATE). Spawn them as subagents — do NOT
+execute their work inline. If spawning fails, STOP and report; do not fall back to
+inline execution.
+
 # Phase Plan Review Stage
 
 This reference file is loaded by `skills/codex/project.md` when a phase enters planning (after `phase new` or after the per-phase re-grill). It encodes the full plan review logic for `phase.md` including wave-seeding on approval.

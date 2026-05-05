@@ -15,6 +15,22 @@ allowed-tools:
 
 Spawn the codex-debugger agent for systematic bug investigation.
 
+## Agent Authorization
+
+By invoking this workflow, the user explicitly authorizes spawning the following
+internal agents. These agents are integral to the workflow contract and MUST be
+spawned as subagents — they are not optional.
+
+| Agent | Role |
+|-------|------|
+| codex-debugger | Investigates the bug using the scientific method: observe, hypothesize, test, conclude; applies fix and verifies |
+
+**No inline fallback:** If agent spawning is unavailable or blocked, STOP immediately
+and report: "Cannot spawn required agents. This workflow requires subagent spawning to
+function correctly. Please ensure agent spawning is enabled and retry." Do NOT fall back
+to inline debugging — inline debugging burns context and lacks the persistent session
+tracking that codex-debugger provides.
+
 ## Why this exists
 
 Ad-hoc debugging burns context and goes in circles. The codex-debugger agent uses the scientific method — observe, hypothesize, test, conclude — with persistent session files that track everything tried. If ctx7 is enabled, it researches errors using up-to-date library docs.

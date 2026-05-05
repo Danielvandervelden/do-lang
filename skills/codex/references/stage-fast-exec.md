@@ -3,6 +3,11 @@ name: stage-fast-exec
 description: Fast-path execution block. Task-file creation, quick context scan, codex-executioner spawn, stage override, validation, single code-review round, completion, and /skill-creator reminder. Invoked by do:fast (after entry-criteria confirmation) and by do:task (when Step 0 routes to fast).
 ---
 
+**Agent authorization:** The caller workflow has authorized spawning all agents
+referenced in this file (codex-executioner, codex-code-reviewer). Spawn them as
+subagents — do NOT execute their work inline. If spawning fails, STOP and report;
+do not fall back to inline execution.
+
 # Fast Execution Stage
 
 This reference file is loaded by `do:fast` (after entry-criteria confirmation) and by `do:task` (when Step 0 routes to `fast`). It encodes the full fast-path execution logic from task-file creation through completion.

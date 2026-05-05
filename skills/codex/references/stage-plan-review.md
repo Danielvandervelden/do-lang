@@ -3,6 +3,11 @@ name: stage-plan-review
 description: Orchestrator plan review block. Council gate check, parallel reviewer spawning (when enabled), verdict combination, iteration loop via codex-planner, and escalation rules.
 ---
 
+**Agent authorization:** The caller workflow has authorized spawning all agents
+referenced in this file (codex-plan-reviewer, codex-council-reviewer, codex-planner
+on ITERATE). Spawn them as subagents — do NOT execute their work inline. If spawning
+fails, STOP and report; do not fall back to inline execution.
+
 # Plan Review Stage
 
 This reference file is loaded by `do:task` (Step 6) and `do:continue` (stage routing for `refinement` + plan review not ran). It encodes the full plan review logic including council gate, parallel spawning, verdict combination, iteration, and escalation.

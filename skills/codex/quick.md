@@ -16,6 +16,27 @@ allowed-tools:
 
 Tightest execution tier — orchestrator makes the change inline, council reviews the diff, done. No task file on the happy path.
 
+## Agent Authorization
+
+By invoking this workflow, the user explicitly authorizes spawning the following
+internal agents. These agents are integral to the workflow contract and MUST be
+spawned as subagents — they are not optional.
+
+| Agent | Role |
+|-------|------|
+| codex-council-reviewer | Independent council review of the inline diff (round 1, and round 2 if needed) |
+
+**Note on inline execution:** QE-2 executes the change inline in the main conversation
+by design — the orchestrator IS the executor for the quick-path. This is intentional,
+not a fallback. The no-inline-fallback guardrail below applies only to the council
+reviewer spawn (QE-6, QE-11), not to QE-2.
+
+**No inline fallback for agent spawning:** If spawning `codex-council-reviewer` is
+unavailable or blocked, STOP immediately and report: "Cannot spawn required agents.
+This workflow requires subagent spawning for council review. Please ensure agent
+spawning is enabled and retry." Do NOT skip council review and ship the change
+unreviewed — that defeats the purpose of the quick-path tier.
+
 ## Why this exists
 
 The execution-tier hierarchy was bimodal:

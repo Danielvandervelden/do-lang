@@ -19,7 +19,7 @@ Orchestrate a complete task workflow using specialized agents.
 
 ## Why this exists
 
-Orchestrates 5 agents to ensure every task gets proper planning, review, execution, and verification.
+Orchestrates 7 specialized agents to ensure every task gets proper planning, review, execution, and verification.
 
 ## Usage
 

@@ -166,3 +166,9 @@ Future cold-starts (no `--delivery` passed) will use project defaults silently â
 ## After Any Option
 
 Return control to the caller (task.md Step -1 or fast.md Step 0) with `delivery_contract` set to the contract object (if wired via Option 1) or `null` (if Option 2 or 3). The caller proceeds with the rest of its flow.
+
+**Agent authorization after onboarding:** Once control returns to the caller, the
+caller's own Agent Authorization section governs all downstream agent spawns. No
+additional authorization is required from the onboarding flow â€” the caller's
+authorization (declared in `task.md` or `fast.md`) covers all agents that will be
+spawned for the task. The onboarding flow itself spawns no agents.

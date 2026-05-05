@@ -16,6 +16,29 @@ allowed-tools:
 
 Resume the active task by spawning the appropriate agent for its current stage.
 
+## Agent Authorization
+
+By invoking this workflow, the user explicitly authorizes spawning the following
+internal agents. These agents are integral to the workflow contract and MUST be
+spawned as subagents — they are not optional. `/do:continue` can resume at any
+stage, so the full agent set is authorized.
+
+| Agent | Role |
+|-------|------|
+| codex-planner | Resumes or completes planning (refinement stage resume) |
+| codex-plan-reviewer | Reviews the plan if plan review has not yet run |
+| codex-council-reviewer | Independent council review during plan or code review stages |
+| codex-griller | Asks clarifying questions when confidence is below threshold |
+| codex-executioner | Executes or resumes execution of the plan |
+| codex-code-reviewer | Reviews code changes after execution completes |
+| codex-verifier | Runs verification (approach checklist, quality checks, UAT) |
+
+**No inline fallback:** If agent spawning is unavailable or blocked, STOP immediately
+and report: "Cannot spawn required agents. This workflow requires subagent spawning to
+function correctly. Please ensure agent spawning is enabled and retry." Do NOT fall back
+to inline execution — inline execution bypasses review gates and breaks the workflow
+contract.
+
 ## Why this exists
 
 Tasks span multiple sessions. After a break, context switch, or `/clear`, this skill reloads the task state, shows progress, and spawns the right agent to continue — planner, reviewer, executioner, etc.

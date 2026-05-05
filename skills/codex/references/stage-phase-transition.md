@@ -1,3 +1,8 @@
+**Agent authorization:** The caller workflow has authorized spawning codex-griller
+referenced in this file (per-phase re-grill, PT-3). Spawn it as a subagent — do NOT
+execute its work inline. If spawning fails, STOP and report; do not fall back to
+inline execution.
+
 # Stage: Phase Transition
 
 Handles the post-completion transition after a phase's state has been mutated (status=completed, pointers cleared, backlog cleaned). Called with `<active_project>`, `<completed_phase_slug>`, `<models>`, and `<project_intake_threshold>` as in-session variables.

@@ -11,6 +11,33 @@ allowed-tools:
 
 Token-efficient task execution — accomplishes coding work with minimal overhead by routing to specialized sub-commands.
 
+## Agent Authorization (agent-spawning sub-commands only)
+
+When routing to any of the following sub-commands, the user's invocation of `/do`
+implicitly carries the same agent authorization declared in each sub-command's own
+skill file. No additional authorization is needed from the router itself.
+
+**Sub-commands that spawn agents** (authorization applies):
+
+| Sub-command | Agents authorized |
+|-------------|-------------------|
+| `/do:task` | codex-planner, codex-plan-reviewer, codex-council-reviewer, codex-griller, codex-executioner, codex-code-reviewer, codex-verifier |
+| `/do:continue` | codex-planner, codex-plan-reviewer, codex-council-reviewer, codex-griller, codex-executioner, codex-code-reviewer, codex-verifier |
+| `/do:fast` | codex-executioner, codex-code-reviewer |
+| `/do:quick` | codex-council-reviewer |
+| `/do:debug` | codex-debugger |
+| `/do:project` | codex-planner, codex-plan-reviewer, codex-council-reviewer, codex-griller, codex-executioner, codex-code-reviewer, codex-verifier |
+
+**Sub-commands that do NOT spawn agents** (authorization section does not apply):
+`/do:init`, `/do:scan`, `/do:abandon`, `/do:update`, `/do:optimise`, `/do:backlog` —
+these commands operate entirely inline without agent spawns and proceed normally.
+
+**No inline fallback for agent-spawning sub-commands:** If agent spawning is
+unavailable or blocked when routing to an agent-spawning sub-command, STOP immediately
+and report: "Cannot spawn required agents. The requested workflow requires subagent
+spawning to function correctly. Please ensure agent spawning is enabled and retry."
+Do NOT fall back to inline execution for agent-spawning workflows.
+
 ## Why this exists
 
 Most coding tasks follow predictable patterns: initialize a project, scan for context, create a task, execute it, verify it works, or debug when things break. Rather than loading heavy workflows upfront, /do routes to lean sub-commands that load only what's needed for each step. This keeps context clean and execution fast.

@@ -3,6 +3,11 @@ name: stage-project-intake
 description: "Project intake grilling flow for /do:project new. Implements §4 Pass 1 (vision/users/non-goals/success criteria/constraints/risks/integrations/non-functionals — 10 questions) and Pass 2 (phase seed list/dependencies/MVP marker — 3 questions). Writes Q&A to intake transcript. On threshold-met, spawns codex-planner to curate project.md body sections."
 ---
 
+**Agent authorization:** The caller workflow has authorized spawning all agents
+referenced in this file (codex-griller for Pass 1, Pass 2, and any re-grill;
+codex-planner for PI-6 curation). Spawn them as subagents — do NOT execute their
+work inline. If spawning fails, STOP and report; do not fall back to inline execution.
+
 # Project Intake Stage
 
 This reference file is loaded by `skills/codex/project.md` `new <slug>` after the project folder is scaffolded and `active_project` is set. It runs Passes 1 and 2 of the grilling flow (§4), saves the Q&A transcript, and on threshold-met routes to `stage-project-plan-review.md`.

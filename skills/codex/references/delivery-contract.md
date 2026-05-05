@@ -170,3 +170,13 @@ To wire an entry command (e.g., `/jira:start`) to pass the delivery contract:
 6. Reference `validate-delivery-contract.cjs` to verify the JSON before passing it
 
 After wiring, verify by calling `validateDeliveryContract()` with the constructed object. If it returns `{ valid: false }`, fix the errors before proceeding.
+
+### Authorization Forwarding
+
+Entry commands that route to `/do:task` or `/do:fast` inherit the agent authorization
+declared in those skill files. The entry command itself does NOT need to declare agent
+authorization — it is carried by the target workflow. When an entry command invokes
+`/do:task`, all agents listed in `task.md`'s Agent Authorization section are
+automatically authorized. When it invokes `/do:fast`, the agents listed in `fast.md`'s
+Agent Authorization section are authorized. The delivery contract and `--delivery`
+argument travel alongside this authorization — they are independent concerns.

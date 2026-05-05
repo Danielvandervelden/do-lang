@@ -16,6 +16,23 @@ allowed-tools:
 
 Lightweight fast path for low-risk, small-surface tasks. Skips plan review, grilling, and verification ceremony. One code review round at the end.
 
+## Agent Authorization
+
+By invoking this workflow, the user explicitly authorizes spawning the following
+internal agents. These agents are integral to the workflow contract and MUST be
+spawned as subagents — they are not optional.
+
+| Agent | Role |
+|-------|------|
+| codex-executioner | Implements the plan step by step, logs progress, handles deviations |
+| codex-code-reviewer | Reviews code changes after execution (single round, no council) |
+
+**No inline fallback:** If agent spawning is unavailable or blocked, STOP immediately
+and report: "Cannot spawn required agents. This workflow requires subagent spawning to
+function correctly. Please ensure agent spawning is enabled and retry." Do NOT fall back
+to inline execution — inline execution bypasses review gates and breaks the workflow
+contract.
+
 ## Why this exists
 
 The full `/do:task` workflow (5-7 subagent spawns + review rounds) is disproportionate for trivial 1-3 file changes. `/do:fast` removes ceremony while keeping context scan, execution, validation, and single code review.

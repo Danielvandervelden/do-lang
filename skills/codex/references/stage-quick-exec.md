@@ -3,6 +3,12 @@ name: stage-quick-exec
 description: Quick-path execution block. Inline execution, validation, single council review, one-iteration budget, lazy task-file materialization on escalation. Invoked by do:quick only (after single confirmation prompt). Never invoked from the do:task router.
 ---
 
+**Agent authorization:** The caller workflow has authorized spawning codex-council-reviewer
+(QE-6 and QE-11). Spawn it as a subagent — do NOT skip or execute its review inline.
+If spawning fails, STOP and report; do not fall back to inline execution.
+Note: QE-2 inline execution is intentional and NOT a fallback violation — the
+quick-path orchestrator makes changes directly by design.
+
 # Quick Execution Stage
 
 This reference file is loaded by `do:quick` only (after the single confirmation prompt). It is **not** invoked from the `do:task` router — `/do:quick` is a manual-only tier.

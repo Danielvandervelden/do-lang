@@ -54,7 +54,7 @@ Most coding tasks follow predictable patterns: initialize a project, scan for co
 | `/do:scan`     | Creating documentation for an existing codebase                                                                                     |
 | `/do:task`     | Starting a new piece of work — smart router picks quick vs fast vs full automatically                                               |
 | `/do:project`  | Starting a large multi-phase project — new codebase or massive feature                                                              |
-| `/do:fast`     | Mid-tier fast path — skip the router, run fast-path directly (1-3 files, no shared abstractions)                                    |
+| `/do:fast`     | Mid-tier fast path — skip the router, run fast-path directly (1-6 files for bounded mechanical shared-utility refactors, 1-3 files otherwise)                                    |
 | `/do:quick`    | Tightest tier — mid-conversation follow-ups where context is warm and change is 1-2 files, mechanical; single council review inline |
 | `/do:continue` | Resuming work from a previous session                                                                                               |
 | `/do:abandon`  | Stopping current work to start something else                                                                                       |
@@ -97,7 +97,7 @@ When the user invokes `/do` without specifying a sub-command, infer from context
 
 **Routing note:** `/do:task` is the smart default entry point — it assesses the task and auto-routes between `quick`, `fast`, and the full pipeline. Use `/do:fast` or `/do:quick` to skip the router when you already know what tier you want:
 
-- `/do:fast` — explicit mid-tier override (1-3 files, clearly trivial, no planning needed)
+- `/do:fast` — explicit mid-tier override (1-6 files for bounded mechanical shared-utility refactors, 1-3 files otherwise; no planning needed)
 - `/do:quick` — explicit tightest-tier override (mid-conversation, 1-2 files, already discussed, mechanical)
 
 `/do:quick` can be auto-recommended by the router when context is warm and the change is 1-2 files, mechanical. You can also invoke it directly to skip the router. For ambiguous intent, `/do:task` is always safe (its router defaults to full when unsure).

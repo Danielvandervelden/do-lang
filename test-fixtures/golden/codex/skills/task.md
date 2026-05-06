@@ -152,7 +152,7 @@ Rendered `## Delivery Contract` format (when non-null):
 
 Perform a quick heuristic assessment from `$ARGUMENTS`:
 
-1. **File scope estimate** — if the description mentions specific filenames or components, use a couple of Grep/Glob calls to estimate how many files are likely affected. Otherwise rate as "unclear". Target buckets: `1-3 files` / `3+ files` / `unclear`.
+1. **File scope estimate** — if the description mentions specific filenames or components, use a couple of Grep/Glob calls to estimate how many files are likely affected. Otherwise rate as "unclear". Target buckets: `1-3 files` / `4-6 files (shared-utility reuse)` / `6+ files` / `unclear`. Use the `4-6 files (shared-utility reuse)` bucket when the estimated file count is 4-6 AND the change is bounded mechanical reuse of an existing shared utility (e.g., replacing duplicate helpers with an existing shared function across several consumers) — the shared utility's contract must not be materially changing.
 
 2. **Mechanical-vs-planning signal** — yes/no judgment: can the change be described in 1-2 sentences without branching decisions?
    - Presence of "and", "also", "plus" ≥ 2 times → planning signal
@@ -173,13 +173,16 @@ Perform a quick heuristic assessment from `$ARGUMENTS`:
 
 Rows are evaluated top-to-bottom; first match wins.
 
-| Files   | Mechanical | Confidence | Warm Context | Recommend                                             |
-| ------- | ---------- | ---------- | ------------ | ----------------------------------------------------- |
-| 1-2     | yes        | ≥ 0.8      | yes          | `quick`                                               |
-| 1-3     | yes        | ≥ 0.8      | any          | `fast`                                                |
-| any     | no         | any        | any          | `task`                                                |
-| any     | any        | < 0.8      | any          | `task` (router honesty — default to full when unsure) |
-| unclear | any        | any        | any          | `task`                                                |
+| Files                       | Mechanical | Confidence | Warm Context | Recommend                                             |
+| --------------------------- | ---------- | ---------- | ------------ | ----------------------------------------------------- |
+| 1-2                         | yes        | ≥ 0.8      | yes          | `quick`                                               |
+| 1-3                         | yes        | ≥ 0.8      | any          | `fast`                                                |
+| 4-6 (shared-utility reuse)  | yes        | ≥ 0.8      | any          | `fast`                                                |
+| 4-6                         | any        | any        | any          | `task`                                                |
+| any                         | no         | any        | any          | `task`                                                |
+| any                         | any        | < 0.8      | any          | `task` (router honesty — default to full when unsure) |
+| unclear                     | any        | any        | any          | `task`                                                |
+| any                         | any        | any        | any          | `task` (catch-all)                                    |
 
 **Router honesty:** If signals are ambiguous (description is vague, can't estimate file scope), default to `task` — do not gamble on `fast` or `quick`. Better to over-ceremony a small task than under-ceremony a subtle one. The user can always override down.
 

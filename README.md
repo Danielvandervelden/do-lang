@@ -133,7 +133,7 @@ The orchestrator assesses the task and auto-routes between quick, fast, and the 
 /do:fast "fix the typo in the header component"
 ```
 
-For trivial changes (1-3 files, no shared abstractions). Skips planning ceremony — entry criteria check, execute, validate, single code review round.
+For low-risk mechanical changes (1-6 files for bounded mechanical shared-utility refactors, 1-3 files otherwise; no new shared abstractions). Skips planning ceremony — entry criteria check, execute, validate, single code review round.
 
 **`/do:quick` — tightest tier (router-eligible or manual)**
 
@@ -158,7 +158,7 @@ Reads the task file's YAML frontmatter and picks up at the last completed stage.
 | `/do:init`     | Initialize workspace or project (database structure, config)                          |
 | `/do:scan`     | Scan a project and create a database entry                                            |
 | `/do:task`     | Smart router — auto-selects quick, fast, or full pipeline based on task assessment    |
-| `/do:fast`     | Mid-tier fast path — skip router, run fast-path directly (1-3 files, trivial changes) |
+| `/do:fast`     | Mid-tier fast path — skip router, run fast-path directly (1-6 files for bounded mechanical shared-utility refactors, 1-3 files otherwise) |
 | `/do:quick`    | Tightest tier — inline execution + single council review, no task file on happy path  |
 | `/do:continue` | Resume a task from its last completed stage                                           |
 | `/do:abandon`  | Pause a task and preserve its state for later                                         |

@@ -110,3 +110,8 @@ Scope: new file `skills/do/scripts/lib/agent-harness.cjs` + a `__tests__/integra
 
 ---
 
+### Broaden fast-path criteria for mechanical shared-utility refactors
+**id:** broaden-fast-path-criteria
+**Problem:** `/do:fast` currently requires a very small surface area (1-3 files) and excludes shared abstractions/utilities. That is too narrow for bounded mechanical refactors where an existing shared utility is reused across several consumers. Example: consolidating duplicate FleetLinq `buildCarLabel` helpers into the existing `formatCarString` utility touched 5 files, had focused tests, and no API/schema/auth/routing/state risk, but the current criteria forced full `/do:task` even though the work was fast-path in spirit.
+**Fix:** Adjust `/do:fast` eligibility to allow mechanical edits to existing shared utilities/components when the contract is not materially changing, the affected consumers are bounded (for example up to ~6 files), focused tests exist or can be added, and there is no API/schema/auth/routing/state/business-logic uncertainty. Keep full `/do:task` for new shared abstractions, broad shared behavior changes, generated/API fallout, unclear product behavior, or large/exploratory refactors. Update the router decision matrix and fast workflow entry criteria together so they agree.
+---
